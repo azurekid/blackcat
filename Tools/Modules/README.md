@@ -24,5 +24,5 @@ target_scope: PowerShell functions to attack & exploit Azure
 ### Installing the Module
 
 ```powershell
-Install-Module BlackCat
-``` 
+Install-Module -Name BlackCat
+```
