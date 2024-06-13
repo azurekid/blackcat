@@ -42,9 +42,9 @@ function Read-SASToken {
     )
 
     process {
-
         #region common
 
+        Write-Host $logo -ForegroundColor "Blue"
         Write-Host "[+] Start collection SAS Token information"
         #Variables
         Add-Type -AssemblyName system.web
@@ -73,7 +73,7 @@ function Read-SASToken {
             'Storage Uri' = "$($storageUri)"
         }
 
-        Write-Host '[+] Processing token properties' -ForegroundColor Green
+        Write-Verbose '[+] Processing token properties'
         $tokenArray | ForEach-Object {
             if ($_ -like "spr=*") { $tokenObjects.Protocol           = ($_).substring(4) }
             if ($_ -like "st=*")  { $tokenObjects."Start Time"       = ($_).substring(3) }
@@ -118,7 +118,7 @@ function Read-SASToken {
 
             if ($_ -like "ss=*") {
                     $tokenObjects."Services" = ($_).substring(3)
-                    Write-Host "[+] Processing Services" -ForegroundColor Green
+                    Write-Verbose "[+] Processing Services"
 
                     $tokenObjects."Services".ToCharArray() | ForEach-Object {
                         if ($_ -eq 'b')  { $services += ('Blob') }
@@ -131,7 +131,7 @@ function Read-SASToken {
                 }
         }
 
-        Write-Host "[+] Processing Permissions" -ForegroundColor Green
+        Write-Verbose "[+] Processing Permissions"
         $tokenObjects.Permissions.ToCharArray() | ForEach-Object {
             if ($_ -eq 'r') { $permissionList += ('Read') }
             if ($_ -eq 'a') { $permissionList += ('Add') }
@@ -152,6 +152,6 @@ function Read-SASToken {
 
         $tokenObjects.Permissions = $permissionList
 
-        #return $tokenObjects | ConvertTo-Json | ConvertFrom-Json
+        return $tokenObjects | ConvertTo-Json | ConvertFrom-Json
     }
 }
