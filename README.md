@@ -1,15 +1,18 @@
-<div align="center">
 
 [![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjUsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
 
 ![logo](./media/cateye.png)
 =========
+
+<div align="center">
+
 [![Maintenance](https://img.shields.io/maintenance/yes/2024.svg?style=flat-square)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![Good First Issues](https://img.shields.io/github/issues/azurekid/blackcat/good%20first%20issue?color=important&label=good%20first%20issue&style=flat)](https://github.com/azurekid/blackcat/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 [![Needs Feedback](https://img.shields.io/github/issues/azurekid/blackcat/needs%20feedback?color=blue&label=needs%20feedback%20&style=flat)](https://github.com/azurekid/blackcat/issues?q=is%3Aopen+is%3Aissue+label%3A%22needs+feedback%22)
 
-## Languages & Tools
+Languages & Tools
+=================
 
 <img width="50" src="https://github.com/azurekid/azurekid/assets/40334679/3a926cf3-5a4b-45f7-b24d-affe9b283e63" alt="Bicep" title=Bicep />
 <img width="50" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/powershell/powershell-original.svg" alt="PowerShell" title=PowerShell />
@@ -66,11 +69,14 @@ _italic_
 
 **bold**
 
-inline `code-example` 
+inline `code-example`
 
  -->
 
-## ideas or suggestions?
+<div align="center">
+
+ideas or suggestions?
+=====================
 
 If you encounter any issues or have suggestions, feel free to open an Issue
 
