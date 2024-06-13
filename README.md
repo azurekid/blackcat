@@ -27,10 +27,9 @@ project_name: BlackCat
 codename: B74ck@t
 
 scope: [
- "This project contains templates to build a vulnerable by design Azure environment.  
-  I will also try to include scipts or walk throughs on how to exploit the resources in the environment.  
-  It can be used to test and improve read teaming and pentesting skills for any aspiring cloud hacker."
-]
+"This project provides templates for creating a deliberately vulnerable Azure environment.  
+It also includes scripts and walkthroughs on exploiting the resources within the environment.  
+It serves as a valuable tool for testing and enhancing red teaming and penetration testing skills for aspiring cloud hackers."
 ```
 
 <!-- Not used yet!
