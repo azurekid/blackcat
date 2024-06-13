@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupNames": {
+      "type": "array",
+      "defaultValue": [
+        "0x001-blackcat"
+      ]
+    }
+  },
+  "resources": [
+    {
+      "copy": {
+        "name": "resourceGroups",
+        "count": "[length(parameters('resourceGroupNames'))]"
+      },
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2022-09-01",
+      "name": "[parameters('resourceGroupNames')[copyIndex()]]",
+      "location": "eastus",
+      "tags": {
+        "environment": "devsecops"
+      }
+    }
+  ]
+}
