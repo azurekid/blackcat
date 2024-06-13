@@ -1,4 +1,4 @@
-![logo](./media/sh-banner.png)
+![logo](./media/cateye.png)
 =========
 [![SecureHats](https://img.shields.io/badge/Open_Threat_Research-Community-brightgreen.svg)](https://twitter.com/dijkmanrogier)
 [![Maintenance](https://img.shields.io/maintenance/yes/2023.svg?style=flat-square)]()
