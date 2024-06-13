@@ -16,3 +16,4 @@ function init {
 
     Write-Host $logo -ForegroundColor "Blue"
 }
+
