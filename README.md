@@ -30,6 +30,7 @@ scope: [
 "This project provides templates for creating a deliberately vulnerable Azure environment.  
 It also includes scripts and walkthroughs on exploiting the resources within the environment.  
 It serves as a valuable tool for testing and enhancing red teaming and penetration testing skills for aspiring cloud hackers."
+]
 ```
 
 <!-- Not used yet!
