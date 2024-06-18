@@ -1,0 +1,32 @@
+/* styles.css */
+body {
+    background-color: #000;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.logo {
+    background-image: url("https://0x002blackcat.blob.core.windows.net/media/0aa18c44-798a-465b-acf9-1a565b28fe97.png?sv=2022-11-02&ss=b&srt=c&sp=rwdlac&se=2026-07-16T05:12:13Z&st=2024-06-17T21:12:13Z&spr=https&sig=1tKPW3N%2BHSwpbI8ABe4VPw7BdFTfgzMbJXWWWMhryRM%3D");
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 40%;
+    height: 40%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.secret-text {
+    color: #00ff00;
+    font-family: monospace;
+    font-size: 18px;
+    position: absolute;
+    top: 70%; /* Adjust the vertical position */
+    left: 50%;
+    transform: translateX(-50%);
+}

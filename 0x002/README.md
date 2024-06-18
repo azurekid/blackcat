@@ -1,6 +1,6 @@
 [![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjUsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
 
-![logo](.github/media/cateye.png)
+![logo](../media/cateye.png)
 =========
 
 <div align="center">
@@ -13,6 +13,9 @@
 Languages & Tools
 =================
 
+<img height="50" src="https://user-images.githubusercontent.com/25181517/192108891-d86b6220-e232-423a-bf5f-90903e6887c3.png" alt="logos" title="logos"/>
+<!--
+
 <img width="50" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/powershell/powershell-original.svg" alt="PowerShell" title=PowerShell />
 <img width="50" src="https://user-images.githubusercontent.com/25181517/192107858-fe19f043-c502-4009-8c47-476fc89718ad.png" alt="REST" title="REST"/>
 <img width="50" src="https://github.com/azurekid/azurekid/assets/40334679/d8063807-6ca7-4f4f-86bb-7eabcfdb2f35" alt="JSON" title="JSON"/>
@@ -20,6 +23,8 @@ Languages & Tools
 <br>
 <br>
  </div>
+
+-->
 
 ```yaml
 project_name: BlackCat

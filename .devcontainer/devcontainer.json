@@ -15,7 +15,7 @@
       "resources": "powershell-yaml,Pester,PSScriptAnalyzer,AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
     }
   },
-  "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./src/AzWorkspaceManager.psd1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
+  "postStartCommand": "mkdir /root/.config/powershell", // && echo 'Import-Module -Name ./src/AzWorkspaceManager.psd1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
 
   // Configure tool-specific properties.
   "customizations": {
