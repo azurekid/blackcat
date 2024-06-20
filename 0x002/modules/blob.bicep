@@ -1,5 +1,11 @@
 @description('Name of the blob as it is stored in the blob container')
-param filename string = 'content'
+param filename1 string = 'content'
+
+@description('Name of the blob as it is stored in the blob container')
+param filename2 string = 'index.html'
+
+@description('Name of the blob as it is stored in the blob container')
+param filename3 string = 'styles.css'
 
 @description('UTC timestamp used to create distinct deployment scripts for each deployment')
 param utcValue string = utcNow()
@@ -32,7 +38,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2021-04-01' = {
     }
 
     resource staticweb 'containers' = {
-      name: staticwebContainer
+      name: 
     }
   }
 }
@@ -59,6 +65,58 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: loadTextContent('../data/content')
       }
     ]
-     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${staticwebContainer}" -n "secrets.json"'
+     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${containerName}" -n "secrets.json"'
+  }
+}
+
+resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+  name: 'deployscript-upload-content-${utcValue}'
+  location: location
+  kind: 'AzureCLI'
+  properties: {
+    azCliVersion: '2.26.1'
+    timeout: 'PT5M'
+    retentionInterval: 'PT1H'
+    environmentVariables: [
+      {
+        name: 'AZURE_STORAGE_ACCOUNT'
+        value: storage.name
+      }
+      {
+        name: 'AZURE_STORAGE_KEY'
+        secureValue: storage.listKeys().keys[0].value
+      }
+      {
+        name: 'CONTENT'
+        value: loadTextContent('../data/index.html')
+      }
+    ]
+     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${containerName}" -n "index.html"'
+  }
+}
+
+resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+  name: 'deployscript-upload-content-${utcValue}'
+  location: location
+  kind: 'AzureCLI'
+  properties: {
+    azCliVersion: '2.26.1'
+    timeout: 'PT5M'
+    retentionInterval: 'PT1H'
+    environmentVariables: [
+      {
+        name: 'AZURE_STORAGE_ACCOUNT'
+        value: storage.name
+      }
+      {
+        name: 'AZURE_STORAGE_KEY'
+        secureValue: storage.listKeys().keys[0].value
+      }
+      {
+        name: 'CONTENT'
+        value: loadTextContent('../data/content')
+      }
+    ]
+     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${containerName}" -n "styles.css"'
   }
 }
