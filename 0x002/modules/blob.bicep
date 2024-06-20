@@ -91,7 +91,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: loadTextContent('../data/index.html')
       }
     ]
-     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${containerName}" -n "index.html"'
+     scriptContent: 'echo "$CONTENT" > ${filename2} && az storage blob upload -f ${filename2} -c "${containerName}" -n ${filename2}'
   }
 }
 
@@ -114,9 +114,9 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       }
       {
         name: 'CONTENT'
-        value: loadTextContent('../data/content')
+        value: loadTextContent('../data/styles.css')
       }
     ]
-     scriptContent: 'echo "$CONTENT" > ${filename} && az storage blob upload -f ${filename} -c "${containerName}" -n "styles.css"'
+     scriptContent: 'echo "$CONTENT" > ${filename3} && az storage blob upload -f ${filename3} -c "${containerName}" -n ${filename3}'
   }
 }
