@@ -35,9 +35,11 @@ function Read-SASToken {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
+        [ValidatePattern('^(https?)://([a-zA-Z0-9])', ErrorMessage = "It does not match expected pattern '{1}'")]
         [string]$SasUri,
 
         [Parameter(Mandatory = $false)]
+        [ValidatePattern('(sv=.*?&)')]
         [string]$SasToken
     )
 
@@ -131,29 +133,30 @@ function Read-SASToken {
 
                 $tokenObjects."Services" = $services
             }
+
+            if ($_ -like "sp=*") {
+                Write-Verbose "[+] Processing Permissions"
+                $tokenObjects.Permissions.ToCharArray() | ForEach-Object {
+                    if ($_ -eq 'r') { $permissionList += ('Read') }
+                    if ($_ -eq 'a') { $permissionList += ('Add') }
+                    if ($_ -eq 'c') { $permissionList += ('Create') }
+                    if ($_ -eq 'w') { $permissionList += ('Write') }
+                    if ($_ -eq 'd') { $permissionList += ('Delete') }
+                    if ($_ -eq 'x') { $permissionList += ('Delete Version') }
+                    if ($_ -eq 'y') { $permissionList += ('Permanent Delete') }
+                    if ($_ -eq 'l') { $permissionList += ('List') }
+                    if ($_ -eq 't') { $permissionList += ('Tags') }
+                    if ($_ -eq 'f') { $permissionList += ('Find') }
+                    if ($_ -eq 'm') { $permissionList += ('Move') }
+                    if ($_ -eq 'e') { $permissionList += ('Execute') }
+                    if ($_ -eq 'o') { $permissionList += ('Ownership') }
+                    if ($_ -eq 'P') { $permissionList += ('Permissions') }
+                    if ($_ -eq 'i') { $permissionList += ('Set Immutability Policy') }
+                }
+
+                $tokenObjects."Permissions" = $permissionList
+            }
         }
-
-        Write-Verbose "[+] Processing Permissions"
-        $tokenObjects.Permissions.ToCharArray() | ForEach-Object {
-            if ($_ -eq 'r') { $permissionList += ('Read') }
-            if ($_ -eq 'a') { $permissionList += ('Add') }
-            if ($_ -eq 'c') { $permissionList += ('Create') }
-            if ($_ -eq 'w') { $permissionList += ('Write') }
-            if ($_ -eq 'd') { $permissionList += ('Delete') }
-            if ($_ -eq 'x') { $permissionList += ('Delete Version') }
-            if ($_ -eq 'y') { $permissionList += ('Permanent Delete') }
-            if ($_ -eq 'l') { $permissionList += ('List') }
-            if ($_ -eq 't') { $permissionList += ('Tags') }
-            if ($_ -eq 'f') { $permissionList += ('Find') }
-            if ($_ -eq 'm') { $permissionList += ('Move') }
-            if ($_ -eq 'e') { $permissionList += ('Execute') }
-            if ($_ -eq 'o') { $permissionList += ('Ownership') }
-            if ($_ -eq 'P') { $permissionList += ('Permissions') }
-            if ($_ -eq 'i') { $permissionList += ('Set Immutability Policy') }
-        }
-
-        $tokenObjects.Permissions = $permissionList
-
         return $tokenObjects | ConvertTo-Json | ConvertFrom-Json
     }
 }
