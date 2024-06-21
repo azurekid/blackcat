@@ -5,6 +5,7 @@ $SessionVariables = [ordered]@{
     baseUri    = ''
     ExpiresOn  = ''
     apiVersion = '2023-06-01-preview'
+    Roles = (Invoke-RestMethod 'https://raw.githubusercontent.com/azurekid/blackcat/0x316A1/roles.csv' | ConvertFrom-Csv)
 }
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
 New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Force
@@ -63,4 +64,4 @@ $logo = `
 
 "@
 
-Write-Host $logo -ForegroundColor "Green"
+Write-Host $logo -ForegroundColor "Blue"
