@@ -44,30 +44,32 @@ function Read-SASToken {
     process {
         #region common
 
-        Write-Host $logo -ForegroundColor "Blue"
         Write-Host "[+] Start collection SAS Token information"
+
         #Variables
         Add-Type -AssemblyName system.web
 
 
         if (![string]::IsNullOrWhiteSpace($SasUri)) {
-            $storageUri     = $SasUri -split "\?"
-            $tokenArray     = $storageUri[1] -split '&'
-        } elseif (!([string]::IsNullOrWhiteSpace($SasToken))) {
+            $storageUri = $SasUri -split "\?"
+            $tokenArray = $storageUri[1] -split '&'
+        }
+        elseif (!([string]::IsNullOrWhiteSpace($SasToken))) {
             $tokenArray = $SasToken -split '&'
             if ($tokenArray.count -lt 1) {
                 Write-Host "[-] Error: No valid SAS token provided" -ForegroundColor Red
                 break
             }
-        } else {
+        }
+        else {
             Write-Host "[-] Error: No valid parameters provided" -ForegroundColor Red
             break
         }
 
         $permissionList = New-Object System.Collections.ArrayList
-        $resourceList   = New-Object System.Collections.ArrayList
-        $resourceTypes  = New-Object System.Collections.ArrayList
-        $services       = New-Object System.Collections.ArrayList
+        $resourceList = New-Object System.Collections.ArrayList
+        $resourceTypes = New-Object System.Collections.ArrayList
+        $services = New-Object System.Collections.ArrayList
 
         $tokenObjects = [ordered]@{
             'Storage Uri' = "$($storageUri)"
@@ -75,26 +77,26 @@ function Read-SASToken {
 
         Write-Verbose '[+] Processing token properties'
         $tokenArray | ForEach-Object {
-            if ($_ -like "spr=*") { $tokenObjects.Protocol           = ($_).substring(4) }
-            if ($_ -like "st=*")  { $tokenObjects."Start Time"       = ($_).substring(3) }
-            if ($_ -like "se=*")  { $tokenObjects."Expiry Time"      = ($_).substring(3) }
-            if ($_ -like "sv=*")  { $tokenObjects."Service Version"  = ($_).substring(3) }
-            if ($_ -like "sp=*")  { $tokenObjects."Permissions"      = ($_).substring(3) }
-            if ($_ -like "sip=*") { $tokenObjects."IP Address"       = ($_).substring(4) }
+            if ($_ -like "spr=*") { $tokenObjects.Protocol = ($_).substring(4) }
+            if ($_ -like "st=*") { $tokenObjects."Start Time" = ($_).substring(3) }
+            if ($_ -like "se=*") { $tokenObjects."Expiry Time" = ($_).substring(3) }
+            if ($_ -like "sv=*") { $tokenObjects."Service Version" = ($_).substring(3) }
+            if ($_ -like "sp=*") { $tokenObjects."Permissions" = ($_).substring(3) }
+            if ($_ -like "sip=*") { $tokenObjects."IP Address" = ($_).substring(4) }
 
             if ($_ -like "sig=*") {
-                $tokenObjects."Signature"        = ($_).substring(4)
+                $tokenObjects."Signature" = ($_).substring(4)
                 $tokenObjects."Base64 Signature" = [System.Web.HttpUtility]::UrlDecode($tokenObjects."Signature")
             }
 
             if ($_ -like "srt=*") {
                 $tokenObjects."Resource Types" = ($_).substring(4)
-                $tokenObjects."Token Type"     = 'Account-level SAS'
+                $tokenObjects."Token Type" = 'Account-level SAS'
 
                 $tokenObjects."Resource Types".ToCharArray() | ForEach-Object {
-                    if ($_ -eq 's')  { $resourceTypes += ('Service-level APIs') }
-                    if ($_ -eq 'c')  { $resourceTypes += ('Container-level APIs') }
-                    if ($_ -eq 'o')  { $resourceTypes += ('Object-level APIs') }
+                    if ($_ -eq 's') { $resourceTypes += ('Service-level APIs') }
+                    if ($_ -eq 'c') { $resourceTypes += ('Container-level APIs') }
+                    if ($_ -eq 'o') { $resourceTypes += ('Object-level APIs') }
                 }
 
                 $tokenObjects."Resource Types" = $resourceTypes
@@ -103,32 +105,32 @@ function Read-SASToken {
 
             if ($_ -like "sr=*") {
                 $tokenObjects."Storage Resource" = ($_).substring(3)
-                $tokenObjects."Token Type"       = 'user-level SAS'
+                $tokenObjects."Token Type" = 'user-level SAS'
 
                 $tokenObjects."Storage Resource".ToCharArray() | ForEach-Object {
-                    if ($_ -eq 'b')  { $resourceList += ('Blob') }
+                    if ($_ -eq 'b') { $resourceList += ('Blob') }
                     if ($_ -eq 'bv') { $resourceList += ('Blob version') }
                     if ($_ -eq 'bs') { $resourceList += ('Blob snapshot') }
-                    if ($_ -eq 'c')  { $resourceList += ('Container') }
-                    if ($_ -eq 'd')  { $resourceList += ('Directory') }
+                    if ($_ -eq 'c') { $resourceList += ('Container') }
+                    if ($_ -eq 'd') { $resourceList += ('Directory') }
                 }
 
                 $tokenObjects."Storage Resource" = $resourceList
             }
 
             if ($_ -like "ss=*") {
-                    $tokenObjects."Services" = ($_).substring(3)
-                    Write-Verbose "[+] Processing Services"
+                $tokenObjects."Services" = ($_).substring(3)
+                Write-Verbose "[+] Processing Services"
 
-                    $tokenObjects."Services".ToCharArray() | ForEach-Object {
-                        if ($_ -eq 'b')  { $services += ('Blob') }
-                        if ($_ -eq 'q')  { $services += ('Queue') }
-                        if ($_ -eq 't')  { $services += ('Table') }
-                        if ($_ -eq 'f')  { $services += ('File') }
-                    }
-
-                    $tokenObjects."Services" = $services
+                $tokenObjects."Services".ToCharArray() | ForEach-Object {
+                    if ($_ -eq 'b') { $services += ('Blob') }
+                    if ($_ -eq 'q') { $services += ('Queue') }
+                    if ($_ -eq 't') { $services += ('Table') }
+                    if ($_ -eq 'f') { $services += ('File') }
                 }
+
+                $tokenObjects."Services" = $services
+            }
         }
 
         Write-Verbose "[+] Processing Permissions"

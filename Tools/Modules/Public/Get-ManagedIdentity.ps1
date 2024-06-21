@@ -31,7 +31,7 @@ function Get-ManagedIdentity {
             }
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            Write-Host -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) #-Severity 'Error'
         }
     }
 <#
