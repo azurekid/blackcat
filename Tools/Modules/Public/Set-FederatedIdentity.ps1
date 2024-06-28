@@ -1,10 +1,10 @@
 function Set-FederatedIdentity {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$Id,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Name,
 
         [Parameter(Mandatory = $true)]
@@ -17,16 +17,35 @@ function Set-FederatedIdentity {
         [string]$Branch = 'main'
     )
 
-    $baseUri = 'https://management.azure.com'
-    $uri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $baseUri, $Id, $Name
+    begin {
+        $MyInvocation.MyCommand.Name | Invoke-BlackCat
+    }
 
-    $body = @{
-        properties = @{
-            issuer = "https://token.actions.githubusercontent.com"
-            subject = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
-            audiences = @("api://AzureADTokenExchange")
+    process {
+        try {
+            $baseUri = 'https://management.azure.com'
+            $uri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $baseUri, $Id, $Name
+
+            $body = @{
+                properties = @{
+                    issuer    = "https://token.actions.githubusercontent.com"
+                    subject   = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
+                    audiences = @("api://AzureADTokenExchange")
+                }
+            } | ConvertTo-Json
+
+            $requestParam = @{
+                Headers     = $authHeader
+                Uri         = $uri
+                Method      = 'PUT'
+                ContentType = 'application/json'
+                Body        = $body
+            }
+
+            (Invoke-RestMethod @requestParam)
         }
-    } | ConvertTo-Json
-
-    Invoke-RestMethod -Uri $uri -Method PUT -Body $body @aadRequestHeader -ContentType 'application/json'
+        catch {
+            Write-Host -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) #-Severity 'Error'
+        }
+    }
 }

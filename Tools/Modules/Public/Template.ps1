@@ -19,7 +19,7 @@ function Function-Name {
         try {
 
             Write-Verbose "Information Dialog"
-            $uri = "$($SessionVariables.baseUri)/providers/Microsoft.SecurityInsights/workspaceManagerConfigurations?api-version=$($SessionVariables.apiVersion)"
+            $uri = "$($SessionVariables.baseUri)/providers/Microsoft.<providerName>/<resourceType>?api-version=$($SessionVariables.apiVersion)"
 
             $requestParam = @{
                 Headers = $authHeader
