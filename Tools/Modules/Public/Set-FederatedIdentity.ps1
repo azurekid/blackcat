@@ -1,11 +1,11 @@
 function Set-FederatedIdentity {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Id,
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$Name,
+        [string]$Name = 'federatedCredential',
 
         [Parameter(Mandatory = $true)]
         [string]$GitHubOrganization,
@@ -48,4 +48,31 @@ function Set-FederatedIdentity {
             Write-Host -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) #-Severity 'Error'
         }
     }
+<#
+.SYNOPSIS
+Sets the federated identity to a GitHub repository.
+
+.DESCRIPTION
+The Set-FederatedIdentity function sets the federated identity to a GitHub repository by making a PUT request to the Azure Management API.
+
+.PARAMETER Id
+The ID of the user-assigned managed identity.
+
+.PARAMETER Name
+The name of the user-assigned managed identity.
+
+.PARAMETER GitHubOrganization
+The name of the GitHub organization.
+
+.PARAMETER GitHubRepository
+The name of the GitHub repository.
+
+.PARAMETER Branch
+The branch name of the GitHub repository. Default value is 'main'.
+
+.EXAMPLE
+Set-FederatedIdentity -Id "/subscriptions/xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/MyIdentity" -GitHubOrganization "MyOrg" -GitHubRepository "MyRepo" -Branch "main"
+Sets the federated identity for the GitHub repository "MyRepo" in the organization "MyOrg" with the ID "123456" and the name "MyFederatedIdentity" on the "main" branch.
+
+#>
 }
