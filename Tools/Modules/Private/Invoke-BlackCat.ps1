@@ -7,16 +7,6 @@ function Invoke-BlackCat {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$FunctionName
     )
-    <#
-    .SYNOPSIS
-    Get prerequisites and validate access to the Microsoft Azure API
-    .DESCRIPTION
-    This function is called by all functions to validate if the access token in still valid.
-    .EXAMPLE
-    Invoke-BlackCat
-    .NOTES
-    NAME: Invoke-BlackCat
-    #>
 
     Write-Verbose "Function Name: $($FunctionName)"
     $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile

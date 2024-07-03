@@ -1,12 +1,15 @@
 
 using namespace System.Management.Automation
 
-class ValidServiceNames : IValidateSetValuesGenerator {
+class ServiceNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
-        $Values = (Invoke-RestMethod -uri 'https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json').values | where name -notlike '*.*'
+        # $uri = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object outerHTML -like "*click here to download manually*").href
+        # $uri = 'https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json'
+        $Values = ($script:SessionVariables.serviceTags | Where-Object name -notlike '*.*')
         return $Values.Name
     }
 }
+
 
 function Get-PublicIpAddress {
     [cmdletbinding()]
@@ -16,7 +19,7 @@ function Get-PublicIpAddress {
         [string]$AddressPrefix = '*',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet( [ValidServiceNames] )]
+        [ValidateSet( [ServiceNames] )]
         [string]$ServiceName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -25,40 +28,39 @@ function Get-PublicIpAddress {
     )
 
     begin {
-        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 
     process {
 
         try {
 
-            Write-Verbose "Information Dialog"
-            $uri = "https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json"
+            # Write-Verbose "Information Dialog"
+            # $uri = "https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json"
 
-            $requestParam = @{
-                Uri     = $uri
-                Method  = 'GET'
-            }
+            # $requestParam = @{
+            #     Uri    = $uri
+            #     Method = 'GET'
+            # }
 
-            $apiResponse = (Invoke-RestMethod @requestParam).values
+            # $apiResponse = (Invoke-RestMethod @requestParam).values
 
-                $result = $apiResponse | Where-Object { `
+            # $result = $apiResponse | Where-Object { `
+                $result = $services | Where-Object { `
                     $_.properties.addressPrefixes -like "*$AddressPrefix*" `
                     -and $_.properties.region -like "*$Region*" `
                     -and $_.name -like "*$ServiceName*"
-                }
-
-            return $result.properties
-
+            }
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            # Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            Write-Error $($MyInvocation.MyCommand.Name)
         }
     }
     end {
-        return $result
+        return $result.properties
     }
-<#
+    <#
 .SYNOPSIS
     Retrieves public IP addresses based on specified criteria.
 
@@ -101,3 +103,6 @@ function Get-PublicIpAddress {
     Date:   Current Date
 #>
 }
+
+
+# $LocationURI = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object {$_.href -like "*ServiceTags*"}).href
