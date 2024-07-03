@@ -35,18 +35,7 @@ function Get-PublicIpAddress {
 
         try {
 
-            # Write-Verbose "Information Dialog"
-            # $uri = "https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json"
-
-            # $requestParam = @{
-            #     Uri    = $uri
-            #     Method = 'GET'
-            # }
-
-            # $apiResponse = (Invoke-RestMethod @requestParam).values
-
-            # $result = $apiResponse | Where-Object { `
-                $result = $services | Where-Object { `
+            $result = $SessionVariables.serviceTags | Where-Object { `
                     $_.properties.addressPrefixes -like "*$AddressPrefix*" `
                     -and $_.properties.region -like "*$Region*" `
                     -and $_.name -like "*$ServiceName*"
