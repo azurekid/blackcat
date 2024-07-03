@@ -2,24 +2,29 @@ function Update-ServiceTags {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Region = 'Azure Cloud'
+        [ValidateSet("Azure Public", "Azure China", "Azure Germany", "Azure US Government")]
+        [string]$Region = 'Azure Public'
     )
 
     begin {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        switch ($Region) {
+            "Azure Public" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519" }
+            "Azure China" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57062" }
+            "Azure Germany" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57064" }
+            "Azure US Government" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57063" }
+        }
     }
 
     process {
-
         try {
-
             Write-Verbose "Getting lastest IP Ranges"
-            $uri = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object outerHTML -like "*click here to download manually*").href
-            (Invoke-RestMethod -uri $uri).values | ConvertTo-Json -Depth 100 | Out-File $helperPath\ServiceTags.json -Force
 
-            Write-Verbose "Updating Service Tags"
-            $sessionVariables:serviceTags = (Get-Content $helperPath\ServiceTags.json | ConvertFrom-Json)
+            $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*click here to download manually*").href
+            (Invoke-RestMethod -uri $uri).values | ConvertTo-Json -Depth 100 | Out-File $helperPath/ServiceTags.json -Force
+
+            Write-Verbose "Updating Service Tags for $Region"
+            $sessionVariables.serviceTags = (Get-Content $helperPath/ServiceTags.json | ConvertFrom-Json)
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -27,27 +32,35 @@ function Update-ServiceTags {
     }
 <#
     .SYNOPSIS
-    Updates the service tags by retrieving the latest IP ranges from Microsoft.
+        Updates the service tags for Azure regions.
 
     .DESCRIPTION
-    The Update-ServiceTags function retrieves the latest IP ranges from Microsoft's website and updates the service tags accordingly. It downloads the IP ranges JSON file and converts it to a PowerShell object for further processing.
+        The Update-ServiceTags function is used to update the service tags for Azure regions. It retrieves the latest IP ranges for the specified region and updates the service tags accordingly.
 
     .PARAMETER Region
-    Specifies the region for which the service tags should be updated. The default value is 'Azure Cloud'.
+        Specifies the Azure region for which to update the service tags. The available options are:
+        - Azure Public
+        - Azure China
+        - Azure Germany
+        - Azure US Government
+        The default value is 'Azure Public'.
 
     .EXAMPLE
-    Update-ServiceTags -Region 'West US'
+        Update-ServiceTags -Region "Azure Public"
+        Updates the service tags for the Azure Public region.
 
-    This example updates the service tags for the 'West US' region.
+    .EXAMPLE
+        Update-ServiceTags -Region "Azure China"
+        Updates the service tags for the Azure China region.
 
     .INPUTS
-    None. You cannot pipe input to this function.
+        None. You cannot pipe objects to this function.
 
     .OUTPUTS
-    None. The function does not generate any output.
+        None. The function does not generate any output.
 
     .NOTES
-    Author: Your Name
-    Date: Today's Date
+        Author: Your Name
+        Date: Today's Date
 #>
 }

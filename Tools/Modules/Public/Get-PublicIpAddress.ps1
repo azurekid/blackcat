@@ -1,21 +1,24 @@
 
 using namespace System.Management.Automation
 
+# used for auto-generating the valid values for the ServiceName parameter
 class ServiceNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
-        # $uri = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object outerHTML -like "*click here to download manually*").href
-        # $uri = 'https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json'
-        $Values = ($script:SessionVariables.serviceTags | Where-Object name -notlike '*.*')
-        return $Values.Name
+        return ($script:SessionVariables.serviceTags.properties.systemService | Sort-Object -Unique -Descending) #| Where-Object name -notlike '*.*').Name
     }
 }
 
+class RegionNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.serviceTags.properties.region | Sort-Object -Unique -Descending)
+    }
+}
 
 function Get-PublicIpAddress {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidatePattern('^(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?$|^([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}(?:\/\d{1,3})?$', ErrorMessage = "IP CIDR does not match expected pattern '{1}'")]
+        [ValidatePattern('^(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?$|^([0-9A-Fa-f]{14}:){7}[0-9A-Fa-f]{1,4}(?:\/\d{1,3})?$', ErrorMessage = "IP CIDR does not match expected pattern '{1}'")]
         [string]$AddressPrefix = '*',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -23,22 +26,24 @@ function Get-PublicIpAddress {
         [string]$ServiceName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Region = '*'
+        [ValidateSet( [RegionNames] )]
+        [string]$Region
     )
 
     begin {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        if (-not $SessionVariables.serviceTags) {
+            Update-ServiceTags
+        }
     }
 
     process {
 
         try {
-
             $result = $SessionVariables.serviceTags | Where-Object { `
                     $_.properties.addressPrefixes -like "*$AddressPrefix*" `
                     -and $_.properties.region -like "*$Region*" `
-                    -and $_.name -like "*$ServiceName*"
+                    -and $_.properties.systemService -like "*$ServiceName*"
             }
         }
         catch {
@@ -49,49 +54,29 @@ function Get-PublicIpAddress {
     end {
         return $result.properties
     }
-    <#
-.SYNOPSIS
-    Retrieves public IP addresses based on specified criteria.
+<#
+    .SYNOPSIS
+        Retrieves public IP addresses based on specified criteria.
 
-.DESCRIPTION
-    The Get-PublicIpAddress function retrieves public IP addresses based on the specified criteria such as address prefix, service name, and region.
+    .DESCRIPTION
+        The Get-PublicIpAddress function retrieves public IP addresses based on the specified criteria, such as address prefix, service name, and region.
 
-.PARAMETER AddressPrefix
-    Specifies the address prefix to filter the IP addresses.
+    .PARAMETER AddressPrefix
+        Specifies the address prefix to filter the IP addresses. The default value is '*'.
 
-.PARAMETER ServiceName
-    Specifies the service name to filter the IP addresses.
+    .PARAMETER ServiceName
+        Specifies the service name to filter the IP addresses. The valid values are generated dynamically using the ServiceNames class.
 
-.PARAMETER Region
-    Specifies the region to filter the IP addresses.
+    .PARAMETER Region
+        Specifies the region to filter the IP addresses. The valid values are generated dynamically using the RegionNames class.
 
-.EXAMPLE
-    Get-PublicIpAddress -AddressPrefix '192.168.0.0/24' -ServiceName 'WebApp' -Region 'West US'
-    Retrieves public IP addresses with the address prefix '192.168.0.0/24', service name 'WebApp', and region 'West US'.
-
-.EXAMPLE
-    Get-PublicIpAddress -AddressPrefix '10.0.0.0/8'
-    Retrieves all public IP addresses with the address prefix '10.0.0.0/8'.
-
-.EXAMPLE
-    Get-PublicIpAddress -ServiceName 'WebApp'
-    Retrieves all public IP addresses with the service name 'WebApp'.
-
-.EXAMPLE
-    Get-PublicIpAddress -Region 'West US'
-
-.INPUTS
-    None. You cannot pipe input to this function.
-
-.OUTPUTS
-    System.Object
-    Returns an object representing the retrieved public IP addresses.
-
-.NOTES
-    Author: Your Name
-    Date:   Current Date
+    .EXAMPLE
+        Get-PublicIpAddress -ServiceName 'AzureAppService' -Region 'westus'
+        Retrieves public IP addresses with the service name 'AzureAppService', and region 'West US'.
 #>
 }
 
 
 # $LocationURI = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object {$_.href -like "*ServiceTags*"}).href
+# $uri = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object outerHTML -like "*click here to download manually*").href
+# $uri = 'https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20240701.json'
