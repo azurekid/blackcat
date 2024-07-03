@@ -42,4 +42,39 @@ function ConvertFrom-JWT {
 
         return $result
     }
+<#
+.SYNOPSIS
+Converts a JSON Web Token (JWT) from Base64 encoding to a PowerShell object.
+
+.DESCRIPTION
+The ConvertFrom-JWT function takes a Base64-encoded JWT as input and converts it into a PowerShell object. It splits the JWT into its header and payload parts, decodes them from Base64, and converts them into JSON objects. It also extracts specific properties from the payload and returns them as properties of the resulting object.
+
+.PARAMETER Base64JWT
+The Base64-encoded JWT to convert.
+
+.OUTPUTS
+The function returns a PowerShell object with the following properties:
+- Audience: The audience of the JWT.
+- Issuer: The issuer of the JWT.
+- IssuedAt: The timestamp when the JWT was issued.
+- Expires: The timestamp when the JWT expires.
+- NotBefore: The timestamp when the JWT becomes valid.
+- UPN: The user principal name associated with the JWT.
+- FirstName: The first name of the user associated with the JWT.
+- LastName: The last name of the user associated with the JWT.
+- User Object ID: The object ID of the user associated with the JWT.
+- Auth. Method: The authentication method used for the JWT.
+- IP Address: The IP address associated with the JWT.
+- Tenant ID: The ID of the tenant associated with the JWT.
+- Scope: The scope of the JWT.
+- Roles: An array of roles associated with the JWT.
+
+.EXAMPLE
+$jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJCbGFja0NhdCIsImlhdCI6MTcyMDAzNzg4MCwiZXhwIjoxNzM1Njc2MjgwLCJhdWQiOiJodHRwOi8vZ2l0aHViLmNvbS9henVyZWtpZC9ibGFja2NhdCIsInN1YiI6Impyb2NrZXRAZXhhbXBsZS5jb20iLCJnaXZlbl9uYW1lIjoiSGFybGFuZCIsImZhbWlseV9uYW1lIjoiU2FuZGVycyIsInVwbiI6Imguc2FuZGVyc0BibGFja2NhdC5pbyIsIm9pZCI6IjkyYmUzMGQ4LTNiYzctNDZjNy05ZDJjLWQ5MGY2MTlmOWNkNCIsImFtciI6Ik1GQSIsImlwYWRkciI6IjEyNy4wLjEuMSIsInNjcCI6IkxhYnMiLCJ3aWRzIjoiNjJlOTAzOTQtNjlmNS00MjM3LTkxOTAtMDEyMTc3MTQ1ZTEwIiwidGlkIjoiNmNhZWM2YWEtMDYzYS00ZGMyLTg2MjUtMGQzN2YwM2ViMWNhIn0.ui-Axc5b6EhazRwYtRYLdMFJpESiwykP8l-4rJgnduQ"
+$result = ConvertFrom-JWT -Base64JWT $jwt
+$result
+
+This example demonstrates how to use the ConvertFrom-JWT function to convert a Base64-encoded JWT into a PowerShell object. The resulting object is then assigned to the $result variable and displayed.
+
+#>
 }
