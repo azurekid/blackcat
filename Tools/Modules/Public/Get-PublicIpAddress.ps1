@@ -18,7 +18,6 @@ function Get-PublicIpAddress {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidatePattern('^(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?$|^([0-9A-Fa-f]{14}:){7}[0-9A-Fa-f]{1,4}(?:\/\d{1,3})?$', ErrorMessage = "IP CIDR does not match expected pattern '{1}'")]
         [string]$AddressPrefix = '*',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
