@@ -57,25 +57,6 @@ Export-ModuleMember -Function $publicScripts.BaseName
 # Import Classes
 $helperPath = "$PSScriptRoot/Helpers"
 
-# if (Test-Path "$helperPath/classes.psd1") {
-#     $ClassLoadOrder = Import-PowerShellDataFile -Path "$helperPath/classes.psd1" -ErrorAction SilentlyContinue
-# }
-# else {
-#     Write-Host "Path $helperPath/classes.psd1 not found"
-#     $ClassLoadOrder = @{}
-# }
-
-# foreach ($class in $ClassLoadOrder.order) {
-#     $path = '{0}/{1}.ps1' -f $helperPath, $class
-#     if (Test-Path $path) {
-#         # Write-Host $path
-#         . $path
-#     }
-#     else {
-#         Write-Host "Path $path not found"
-#     }
-# }
-
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
 $version = $manifest.ModuleVersion
 
