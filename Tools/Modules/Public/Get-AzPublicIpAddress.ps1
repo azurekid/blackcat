@@ -14,7 +14,7 @@ class RegionNames : IValidateSetValuesGenerator {
     }
 }
 
-function Get-PublicIpAddress {
+function Get-AzPublicIpAddress {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

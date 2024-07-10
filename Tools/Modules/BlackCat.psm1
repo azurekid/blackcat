@@ -3,6 +3,7 @@ Write-Verbose -Message "Creating modules variables"
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
 $script:SessionVariables = [ordered]@{
     baseUri     = ''
+    graphUri    = 'https://graph.microsoft.com/beta'
     ExpiresOn   = ''
     apiVersion  = '2023-06-01-preview'
     Roles       = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
