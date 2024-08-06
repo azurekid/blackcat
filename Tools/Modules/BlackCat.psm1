@@ -6,6 +6,7 @@ $script:SessionVariables = [ordered]@{
     graphUri    = 'https://graph.microsoft.com/beta'
     ExpiresOn   = ''
     apiVersion  = '2023-06-01-preview'
+    AccessToken =  ''
     Roles       = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
     serviceTags = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
 }

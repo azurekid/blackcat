@@ -1,36 +1,3 @@
-<#
-.SYNOPSIS
-    Reads and processes the information from a Shared Access Signature (SAS) token.
-
-.DESCRIPTION
-    The Read-SASToken function reads and processes the information from a Shared Access Signature (SAS) token. It extracts various properties from the SAS token, such as the storage URI, protocol, start time, expiry time, service version, permissions, IP address, signature, base64 signature, resource types, storage resource, and services.
-
-.PARAMETER SasUri
-    The SAS URI from which to extract the token information. This parameter is optional.
-
-.PARAMETER SasToken
-    The SAS token from which to extract the token information. This parameter is optional.
-
-.EXAMPLE
-    $sasUri = "https://example.blob.core.windows.net/container?sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    $tokenInfo = Read-SASToken -SasUri $sasUri
-
-    $tokenInfo
-
-    This example reads the information from a SAS token specified by the SasUri parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
-
-.EXAMPLE
-    $sasToken = "sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    $tokenInfo = Read-SASToken -SasToken $sasToken
-
-    $tokenInfo
-
-    This example reads the information from a SAS token specified by the SasToken parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
-
-.NOTES
-  Author: Rogier Dijkman (https://securehats.gitbook.io/BlackCat)
-#>
-
 function Read-SASToken {
     [CmdletBinding()]
     param (
@@ -159,4 +126,36 @@ function Read-SASToken {
         }
         return $tokenObjects | ConvertTo-Json | ConvertFrom-Json
     }
+<#
+    .SYNOPSIS
+        Reads and processes the information from a Shared Access Signature (SAS) token.
+
+    .DESCRIPTION
+        The Read-SASToken function reads and processes the information from a Shared Access Signature (SAS) token. It extracts various properties from the SAS token, such as the storage URI, protocol, start time, expiry time, service version, permissions, IP address, signature, base64 signature, resource types, storage resource, and services.
+
+    .PARAMETER SasUri
+        The SAS URI from which to extract the token information. This parameter is optional.
+
+    .PARAMETER SasToken
+        The SAS token from which to extract the token information. This parameter is optional.
+
+    .EXAMPLE
+        $sasUri = "https://example.blob.core.windows.net/container?sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        $tokenInfo = Read-SASToken -SasUri $sasUri
+
+        $tokenInfo
+
+        This example reads the information from a SAS token specified by the SasUri parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
+
+    .EXAMPLE
+        $sasToken = "sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        $tokenInfo = Read-SASToken -SasToken $sasToken
+
+        $tokenInfo
+
+        This example reads the information from a SAS token specified by the SasToken parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
+
+    .NOTES
+    Author: Rogier Dijkman (https://securehats.gitbook.io/BlackCat)
+#>
 }

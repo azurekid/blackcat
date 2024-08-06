@@ -5,14 +5,17 @@ function Invoke-BlackCat {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [string]$FunctionName
+        [string]$FunctionName,
+
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [string]$ResourceTypeName
     )
 
     Write-Verbose "Function Name: $($FunctionName)"
     $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
 
     if ($azProfile.Contexts.Count -ne 0) {
-        if ([string]::IsNullOrEmpty($script:accessToken)) {
+        if ([string]::IsNullOrEmpty($SessionVariables.AccessToken)) {
             try {
                 Get-AccessToken
             }
@@ -36,6 +39,11 @@ function Invoke-BlackCat {
         $SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($SessionVariables.subscriptionId)"
         $script:authHeader = @{
             'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($SessionVariables.AccessToken)))
+        }
+
+        if ($ResourceTypeName) {
+            Write-Verbose "ResourceTypeName: $ResourceTypeName"
+            $script:graphToken = Get-AzAccessToken -ResourceTypeName 'MSGraph'
         }
     }
     else {

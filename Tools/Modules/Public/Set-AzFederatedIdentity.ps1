@@ -35,7 +35,7 @@ function Set-AzFederatedIdentity {
             } | ConvertTo-Json
 
             $requestParam = @{
-                Headers     = $authHeader
+                Headers     = $script:authHeader
                 Uri         = $uri
                 Method      = 'PUT'
                 ContentType = 'application/json'

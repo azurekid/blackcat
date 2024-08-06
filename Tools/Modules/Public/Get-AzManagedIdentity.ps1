@@ -18,7 +18,7 @@ function Get-AzManagedIdentity {
             $uri = "$($SessionVariables.baseUri)/providers/Microsoft.ManagedIdentity/userAssignedIdentities?api-version=2023-01-31"
 
             $requestParam = @{
-                Headers = $authHeader
+                Headers = $script:authHeader
                 Uri     = $uri
                 Method  = 'GET'
             }

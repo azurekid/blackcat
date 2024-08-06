@@ -9,6 +9,9 @@ function ConvertFrom-JWT {
     )
 
     Begin {
+        if ($Base64JWT -like "Bearer *") {
+            $Base64JWT = $Base64JWT -replace "Bearer ", ""
+        }
     }
     Process {
         $Spl = $Base64JWT.Split(".")
