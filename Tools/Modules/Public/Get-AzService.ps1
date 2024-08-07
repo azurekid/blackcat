@@ -1,8 +1,31 @@
+using namespace System.Management.Automation
+
+# used for auto-generating the valid values for the ServiceName parameter
+class ServiceNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.serviceTags.properties.systemService | Sort-Object -Unique -Descending) #| Where-Object name -notlike '*.*').Name
+    }
+}
+
+class RegionNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.serviceTags.properties.region | Sort-Object -Unique -Descending)
+    }
+}
+
 function Get-AzService {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$IpAddress
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [string]$IpAddress,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet( [ServiceNames] )]
+        [string]$ServiceName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet( [RegionNames] )]
+        [string]$Region
     )
 
     begin {
@@ -15,39 +38,57 @@ function Get-AzService {
         # Create filter for the CIDR to improve performance
         if ($CidrRange -match '^([0-9A-Fa-f]{1,4}):([0-9A-Fa-f]{1,4}):') {
             $firstTwoSegments = $ipAddress.split('.')[0..1] -join ':'
-          }
-          else {
+        }
+        else {
             $firstTwoSegments = $ipAddress.split('.')[0..1] -join '.'
-          }
+        }
     }
 
     process {
         try {
-            $SessionVariables.serviceTags | ForEach-Object {
-                # Check if the IP address matches any of the service tag prefixes within the CIDR range
-                Write-Verbose "Checking service tag: $($_.Name)"
-                foreach ($prefix in $_.properties.addressPrefixes) {
-                    if ($prefix -like "$firstTwoSegments*") {
-                        $addresses = @(Get-CidrAddresses -CidrRange $prefix)
+            if ($IpAddress) {
+                $SessionVariables.serviceTags | ForEach-Object {
+                    # Check if the IP address matches any of the service tag prefixes within the CIDR range
+                    Write-Verbose "Checking service tag: $($_.Name)"
+                    foreach ($prefix in $_.properties.addressPrefixes) {
+                        if ($prefix -like "$firstTwoSegments*") {
+                            $addresses = @(Get-CidrAddresses -CidrRange $prefix)
 
-                        if ($addresses -like "*$($ipAddress)*") {
-                            Write-Host "Service tag found: $($_.Name)" -ForegroundColor Green
-                            # if the IP address matches the service tag prefix, set the boolean to true and break the loop of the prefixes
-                            $bool = $true
-                            break
-                        }
-                        else {
-                            continue
+                            if ($addresses -like "*$($ipAddress)*") {
+                                $result = [PSCustomObject]@{
+                                    changeNumber    = $_.properties.changeNumber
+                                    region          = ($_.Name.split('.'))[1]
+                                    regionId        = $_.properties.regionId
+                                    platform        = $_.properties.platform
+                                    systemService   = $_.properties.systemService
+                                    addressPrefixes = $prefix
+                                    networkFeatures = $_.properties.networkFeatures
+                                }
+                                return $result
+                                # if the IP address matches the service tag prefix, set the boolean to true and break the loop of the prefixes
+                                $bool = $true
+                            }
+                            else {
+                                continue
+                            }
                         }
                     }
+                    # if the boolean is true, break the ForEach loop of the jsonContent object
+                    if ($bool -eq $true) {
+                        break
+                    }
                 }
-                # if the boolean is true, break the ForEach loop of the jsonContent object
-                if ($bool -eq $true) {
-                    # break
+                if (-not($result)) {
+                    return "No matching service tag found for the given IP address."
                 }
             }
-
-            return "No matching service tag found for the given IP address."
+            else {
+                $result = $SessionVariables.serviceTags | Where-Object { `
+                        $_.properties.region -like "*$Region*" `
+                        -and $_.properties.systemService -like "*$ServiceName*"
+                }
+                return $result.properties
+            }
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'

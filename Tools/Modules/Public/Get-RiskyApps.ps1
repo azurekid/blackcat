@@ -8,11 +8,11 @@ function Get-RiskyApps {
 
         try {
 
-            Write-Host "   [-] Collecting Enterprise Applications" -ForegroundColor Yellow
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Collecting Enterprise Applications"
             $applications = (Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications")
 
-            Write-Host "User Applications: $($applications.count)"
-            Write-Verbose "      [-] Validating [$($applications.count)] Enterprise Applications" -ForegroundColor Yellow
+            Write-Verbose "User Applications: $($applications.count)"
+            Write-Verbose "      [-] Validating [$($applications.count)] Enterprise Applications"
 
             $permissionList = (Invoke-WebRequest 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/documentation/AppRegistrationPermissions.csv').content | ConvertFrom-Csv
             $riskyGrants = $permissionList | Where-Object Permission -in `

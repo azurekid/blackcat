@@ -31,7 +31,7 @@ function Get-AzManagedIdentity {
             }
         }
         catch {
-            Write-Host -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) #-Severity 'Error'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
 <#

@@ -74,4 +74,4 @@ $logo = `
 
 "@
 
-Write-Host $logo -ForegroundColor "Blue"
+Write-Host $logo -ForegroundColor Blue

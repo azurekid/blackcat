@@ -21,11 +21,13 @@ function Get-CurrentScope {
     }
     <#
     .SYNOPSIS
+        This function retrieves the current scope.
     .DESCRIPTION
-    .PARAMETER Name
-    .PARAMETER ResourceGroupName
+        The Get-CurrentScope function is used to retrieve the current scope. It is designed to be used within a PowerShell script or module.
     .EXAMPLE
-    .EXAMPLE
+        Get-CurrentScope
+        Retrieves the current scope.
     .LINK
-#>
+        More information can be found at: <link>
+    #>
 }

@@ -26,12 +26,12 @@ function Read-SASToken {
         elseif (!([string]::IsNullOrWhiteSpace($SasToken))) {
             $tokenArray = $SasToken -split '&'
             if ($tokenArray.count -lt 1) {
-                Write-Host "[-] Error: No valid SAS token provided" -ForegroundColor Red
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No valid SAS token provided" -Severity 'Error'
                 break
             }
         }
         else {
-            Write-Host "[-] Error: No valid parameters provided" -ForegroundColor Red
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No valid parameters provided" -Severity 'Error'
             break
         }
 
