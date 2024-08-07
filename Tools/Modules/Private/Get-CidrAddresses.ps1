@@ -6,15 +6,26 @@ function Get-CidrAddresses {
     )
 
     # Check if the CIDR range is an IPv6 address
-    $ipv6 = $false
     if ($CidrRange -match '^([0-9A-Fa-f]{1,4}):([0-9A-Fa-f]{1,4}):') {
         $ipv6 = $true
+    } else {
+        $ipv4 = $true
     }
 
     # Parse the CIDR range
     $cidr = $CidrRange -split '/'
     $baseIp = [System.Net.IPAddress]::Parse($cidr[0])
     $subnetMaskLength = [int]$cidr[1]
+
+    if ($ipv6 -and ($subnetMaskLength -lt 117)) {
+        break
+        Write-Host "IPv6 subnet mask length must be at least 117" -ForegroundColor Red
+    }
+
+    if ($ipv4 -and ($subnetMaskLength -lt 19)) {
+        break
+        Write-Host "IPv6 subnet mask length must be at least 19" -ForegroundColor Red
+    }
 
     # Calculate the number of addresses in the subnet
     if ($ipv6) {

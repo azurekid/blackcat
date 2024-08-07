@@ -1,7 +1,7 @@
 function Get-RiskyApps {
 
     begin {
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
     }
 
     process {
@@ -12,7 +12,7 @@ function Get-RiskyApps {
             $applications = (Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications")
 
             Write-Host "User Applications: $($applications.count)"
-            Write-Host "      [-] Validating [$($applications.count)] Enterprise Applications Risks" -ForegroundColor Yellow
+            Write-Verbose "      [-] Validating [$($applications.count)] Enterprise Applications" -ForegroundColor Yellow
 
             $permissionList = (Invoke-WebRequest 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/documentation/AppRegistrationPermissions.csv').content | ConvertFrom-Csv
             $riskyGrants = $permissionList | Where-Object Permission -in `
@@ -73,7 +73,7 @@ function Get-RiskyApps {
             $json = [ordered]@{}
             [void]$json.add("data", ($dataHash))
 
-            return $json
+            return $json.values
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'

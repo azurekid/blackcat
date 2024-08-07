@@ -1,5 +1,7 @@
 #region load module variables
 Write-Verbose -Message "Creating modules variables"
+Update-AzConfig -DisplayBreakingChangeWarning $false
+
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
 $script:SessionVariables = [ordered]@{
     baseUri     = ''
@@ -9,16 +11,6 @@ $script:SessionVariables = [ordered]@{
     AccessToken =  ''
     Roles       = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
     serviceTags = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
-}
-
-if (-not $script:SessionVariables.serviceTags) {
-    Write-Verbose "Updating Service Tags for Azure Public"
-    Write-Verbose "Getting lastest IP Ranges"
-    $uri = ((Invoke-WebRequest -uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519").links | Where-Object outerHTML -like "*click here to download manually*").href
-            (Invoke-RestMethod -uri $uri).values | ConvertTo-Json -Depth 100 | Out-File $PSScriptRoot\Helpers\ServiceTags.json -Force
-
-    Write-Verbose "Updating Service Tags"
-    $sessionVariables.serviceTags = (Get-Content $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json)
 }
 
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force

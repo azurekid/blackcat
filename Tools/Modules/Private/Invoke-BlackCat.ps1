@@ -1,5 +1,5 @@
-#requires -module @{ModuleName = 'Az.Accounts'; ModuleVersion = '2.10.0'}
-#requires -version 6.2
+#requires -module @{ModuleName = 'Az.Accounts'; ModuleVersion = '3.0.0'}
+#requires -version 7.0
 
 function Invoke-BlackCat {
     [CmdletBinding()]
@@ -7,12 +7,11 @@ function Invoke-BlackCat {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$FunctionName,
 
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $false)]
         [string]$ResourceTypeName
     )
 
-    Write-Verbose "Function Name: $($FunctionName)"
-    $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+   $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
 
     if ($azProfile.Contexts.Count -ne 0) {
         if ([string]::IsNullOrEmpty($SessionVariables.AccessToken)) {
@@ -41,9 +40,11 @@ function Invoke-BlackCat {
             'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($SessionVariables.AccessToken)))
         }
 
-        if ($ResourceTypeName) {
-            Write-Verbose "ResourceTypeName: $ResourceTypeName"
+        if ($ResourceTypeName -eq "MSGraph") {
             $script:graphToken = Get-AzAccessToken -ResourceTypeName 'MSGraph'
+            $script:graphHeader = @{
+                'Authorization' = 'Bearer ' + ($script:graphToken).Token
+            }
         }
     }
     else {

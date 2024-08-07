@@ -7,7 +7,7 @@ function Invoke-GraphRecursive {
     )
 
     begin {
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName $ResourceTypeName
     }
 
     process {
@@ -17,7 +17,7 @@ function Invoke-GraphRecursive {
             Write-Verbose "Starting to collect data from Graph API"
 
             $requestParam = @{
-                Headers = $script:graphToken
+                Headers = $script:graphHeader
                 Uri     = $Url
                 Method  = 'GET'
             }
