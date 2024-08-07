@@ -11,6 +11,18 @@
     <div class="secret-text">
         <p>A secret is hidden on this page.</p>
         <p>    Find it if you dare...</p>
+        <input type="text" id="query" placeholder="Enter search term">
+        <button onclick="search()">Search</button>
+        <div id="results"></div>
+    
+        <script>
+            async function search() {
+                const query = document.getElementById('query').value;
+                const response = await fetch(`https://<your-function-app-name>.azurewebsites.net/api/HttpExample?query=${query}`);
+                const data = await response.json();
+                document.getElementById('results').innerHTML = JSON.stringify(data, null, 2);
+            }
+        </script>
     </div>
 </body>
 </html>
