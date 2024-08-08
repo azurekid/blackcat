@@ -17,15 +17,15 @@ function Get-CidrAddresses {
     $baseIp = [System.Net.IPAddress]::Parse($cidr[0])
     $subnetMaskLength = [int]$cidr[1]
 
-    if ($ipv6 -and ($subnetMaskLength -lt 117)) {
-        Write-Error "IPv6 subnet mask length must be at least 117"
-        return
-    }
+    # if ($ipv6 -and ($subnetMaskLength -lt 117)) {
+    #     break
+    #     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 117" -Severity 'Error'
+    # }
 
-    if ($ipv4 -and ($subnetMaskLength -lt 19)) {
-        Write-Error "IPv4 subnet mask length must be at least 19"
-        return
-    }
+    # if ($ipv4 -and ($subnetMaskLength -lt 19)) {
+    #     break
+    #     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 19"  -Severity 'Error'
+    # }
 
     # Calculate the number of addresses in the subnet
     if ($ipv6) {
@@ -34,11 +34,11 @@ function Get-CidrAddresses {
         $numberOfAddresses = [math]::Pow(2, 32 - $subnetMaskLength)
     }
 
-    # Convert base IP to a 128-bit integer for IPv6 or a 32-bit integer for IPv4
+    # Convert base IP to a 32-bit integer
     $baseIpBytes = $baseIp.GetAddressBytes()
     [Array]::Reverse($baseIpBytes)
     if ($ipv6) {
-        $baseIpInt = [System.Numerics.BigInteger]::new($baseIpBytes)
+        $baseIpInt = [BitConverter]::ToUInt64($baseIpBytes, 0) + ([BitConverter]::ToUInt64($baseIpBytes, 8) -shl 64)
     } else {
         $baseIpInt = [BitConverter]::ToUInt32($baseIpBytes, 0)
     }
@@ -48,8 +48,7 @@ function Get-CidrAddresses {
     for ($i = 0; $i -lt $numberOfAddresses; $i++) {
         $currentIpInt = $baseIpInt + $i
         if ($ipv6) {
-            $currentIpBytes = [System.Numerics.BigInteger]::DivRem($currentIpInt, [System.Numerics.BigInteger]::Pow(2, 64), [ref]$currentIpInt)
-            $currentIpBytes = $currentIpBytes.ToByteArray()
+            $currentIpBytes = [BitConverter]::GetBytes($currentIpInt -shr 64) + [BitConverter]::GetBytes($currentIpInt -band 0xFFFFFFFFFFFFFFFF)
         } else {
             $currentIpBytes = [BitConverter]::GetBytes($currentIpInt)
         }
