@@ -45,7 +45,7 @@ function Set-AzFederatedIdentity {
             (Invoke-RestMethod @requestParam)
         }
         catch {
-            Write-Host -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) #-Severity 'Error'
+            Write-Message $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
 <#

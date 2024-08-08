@@ -18,13 +18,13 @@ function Get-CidrAddresses {
     $subnetMaskLength = [int]$cidr[1]
 
     if ($ipv6 -and ($subnetMaskLength -lt 117)) {
-        break
-        Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 117" -Severity 'Error'
+        Write-Error "IPv6 subnet mask length must be at least 117"
+        return
     }
 
     if ($ipv4 -and ($subnetMaskLength -lt 19)) {
-        break
-        Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 19"  -Severity 'Error'
+        Write-Error "IPv4 subnet mask length must be at least 19"
+        return
     }
 
     # Calculate the number of addresses in the subnet
@@ -34,11 +34,11 @@ function Get-CidrAddresses {
         $numberOfAddresses = [math]::Pow(2, 32 - $subnetMaskLength)
     }
 
-    # Convert base IP to a 32-bit integer
+    # Convert base IP to a 128-bit integer for IPv6 or a 32-bit integer for IPv4
     $baseIpBytes = $baseIp.GetAddressBytes()
     [Array]::Reverse($baseIpBytes)
     if ($ipv6) {
-        $baseIpInt = [BitConverter]::ToUInt64($baseIpBytes, 0) + ([BitConverter]::ToUInt64($baseIpBytes, 8) -shl 64)
+        $baseIpInt = [System.Numerics.BigInteger]::new($baseIpBytes)
     } else {
         $baseIpInt = [BitConverter]::ToUInt32($baseIpBytes, 0)
     }
@@ -48,7 +48,8 @@ function Get-CidrAddresses {
     for ($i = 0; $i -lt $numberOfAddresses; $i++) {
         $currentIpInt = $baseIpInt + $i
         if ($ipv6) {
-            $currentIpBytes = [BitConverter]::GetBytes($currentIpInt -shr 64) + [BitConverter]::GetBytes($currentIpInt -band 0xFFFFFFFFFFFFFFFF)
+            $currentIpBytes = [System.Numerics.BigInteger]::DivRem($currentIpInt, [System.Numerics.BigInteger]::Pow(2, 64), [ref]$currentIpInt)
+            $currentIpBytes = $currentIpBytes.ToByteArray()
         } else {
             $currentIpBytes = [BitConverter]::GetBytes($currentIpInt)
         }
