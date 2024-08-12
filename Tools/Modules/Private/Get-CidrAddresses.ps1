@@ -17,15 +17,15 @@ function Get-CidrAddresses {
     $baseIp = [System.Net.IPAddress]::Parse($cidr[0])
     $subnetMaskLength = [int]$cidr[1]
 
-    # if ($ipv6 -and ($subnetMaskLength -lt 117)) {
-    #     break
-    #     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 117" -Severity 'Error'
-    # }
+    if ($ipv6 -and ($subnetMaskLength -lt 117)) {
+        break
+        Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 117" -Severity 'Error'
+    }
 
-    # if ($ipv4 -and ($subnetMaskLength -lt 19)) {
-    #     break
-    #     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 19"  -Severity 'Error'
-    # }
+    if ($ipv4 -and ($subnetMaskLength -lt 18)) {
+        break
+        Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "IPv6 subnet mask length must be at least 19"  -Severity 'Error'
+    }
 
     # Calculate the number of addresses in the subnet
     if ($ipv6) {

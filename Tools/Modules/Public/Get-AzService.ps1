@@ -51,7 +51,28 @@ function Get-AzService {
                     # Check if the IP address matches any of the service tag prefixes within the CIDR range
                     Write-Verbose "Checking service tag: $($_.Name)"
                     foreach ($prefix in $_.properties.addressPrefixes) {
-                        if ($prefix -like "$firstTwoSegments*") {
+                        if ($IpAddress.Contains("*")) {
+                            if ($prefix -like "$firstTwoSegments*") {
+                                $addresses = @(Get-CidrAddresses -CidrRange $prefix)
+                                if ($addresses -like "*$($ipAddress)*") {
+                                    $result = [PSCustomObject]@{
+                                        changeNumber    = $_.properties.changeNumber
+                                        region          = ($_.Name.split('.'))[1]
+                                        regionId        = $_.properties.regionId
+                                        platform        = $_.properties.platform
+                                        systemService   = $_.properties.systemService
+                                        addressPrefixes = $prefix
+                                        networkFeatures = $_.properties.networkFeatures
+                                    }
+                                    return $result
+                                    # if the IP address matches the service tag prefix, set the boolean to true and break the loop of the prefixes
+                                    $bool = $true
+                                }
+                                else {
+                                    continue
+                                }
+                            }
+                        } elseif ($prefix -like "$firstTwoSegments*") {
                             $ip = [System.Net.IPAddress]::Parse($IpAddress)
                             $network = [System.Net.IPNetwork]::Parse($prefix)
 
@@ -70,6 +91,8 @@ function Get-AzService {
                             else {
                                 continue
                             }
+                        } else {
+                            continue
                         }
                     }
                 }

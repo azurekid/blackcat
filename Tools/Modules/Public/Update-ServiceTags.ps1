@@ -7,7 +7,7 @@ function Update-ServiceTags {
     )
 
     begin {
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
         switch ($Region) {
             "Azure Public" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519" }
             "Azure China" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57062" }
