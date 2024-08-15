@@ -1,0 +1,128 @@
+/* styles.css */
+body {
+    background-color: #000;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.logo {
+    background-image: url("0aa18c44-798a-465b-acf9-1a565b28fe98.jpg");
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 600px;
+    height: 400px;
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.secret-text {
+    color: #00ff00;
+    font-family: monospace;
+    font-size: 14px;
+    position: absolute;
+    top: 450px; /* Adjust the vertical position */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Container for the search box */
+.search-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	background-color: #000;	/* Background color to match the website */
+}
+
+/* Container for the table */
+.table-container {
+	width: 100%;
+	overflow-x: auto;	/* Enable horizontal scrolling if needed */
+	margin: 15px 0;
+}
+
+/* Table styling */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	background-color: #000; /* Background color to match the website */
+	color: #00FF00;
+	left: 50%;
+}
+
+th,
+td {
+	padding: 10px;
+	border: 1px solid #00FF00;
+	/* Green border color */
+	text-align: left;
+}
+
+th {
+	background-color: #333;	/* Header background color */
+}
+
+tr:nth-child(even) {
+	background-color: #222;	/* Alternate row background color */
+}
+
+/* Loading indicator styling */
+.loading {
+	display: none;	/* Hidden by default */
+	font-size: 14px;
+	color: #00FF00;
+	margin-top: 20px;
+}
+
+/* No results message styling */
+.no-results {
+    display: none;
+    font-size: 14px;
+    color: red;
+    margin-top: 20px;
+}
+
+/* Error message styling */
+.error {
+	display: none;
+	font-size: 14px;
+	color: red;
+	margin-top: 20px;
+}
+
+/* Loading indicator styling */
+.wildcard {
+	display: none;	/* Hidden by default */
+	font-size: 14px;
+	color: orange;
+	margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+    th, td {
+        padding: 8px;
+        font-size: 14px;
+    }
+}
+
+GitHub link styling
+.github-link {
+    margin-top: 100%;
+    font-size: 16px;
+    text-align: center;
+}
+
+.github-icon {
+    top: 80%;
+    left: 25%;
+	width: 48px;
+    height:48px;
+    vertical-align: left;
+    margin-right: 8px; */
+}
