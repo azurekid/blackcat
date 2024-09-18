@@ -30,14 +30,15 @@ function Get-AzService {
 
     begin {
         # Check if service tags are loaded
-        if (($sessionVariables.serviceTags).count -le 1) {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Service tags not loaded. Please run the 'Update-ServiceTags' function." -Severity 'Error'
-            return
+        if (($script:SessionVariables.serviceTags).count -le 1) {
+            Write-Output "Service tags not loaded. Please run the 'Update-ServiceTags' function."
+            break
         }
 
         # Create filter for the CIDR to improve performance
-        if ($CidrRange -match '^([0-9A-Fa-f]{1,4}):([0-9A-Fa-f]{1,4}):') {
-            $firstTwoSegments = $ipAddress.split('.')[0..1] -join ':'
+        if ($ipAddress -match '^([0-9A-Fa-f]{1,4}):([0-9A-Fa-f]{1,4}):') {
+            Write-Output 'Processing IPv6'
+            $firstTwoSegments = $ipAddress.split(':')[0..1] -join ':'
         }
         else {
             $firstTwoSegments = $ipAddress.split('.')[0..1] -join '.'
@@ -47,14 +48,14 @@ function Get-AzService {
     process {
         try {
             if ($IpAddress) {
-                $SessionVariables.serviceTags | ForEach-Object {
+                $SessionVariables.serviceTags | foreach {
                     # Check if the IP address matches any of the service tag prefixes within the CIDR range
                     Write-Verbose "Checking service tag: $($_.Name)"
                     foreach ($prefix in $_.properties.addressPrefixes) {
                         if ($IpAddress.Contains("*")) {
-                            if ($prefix -like "$firstTwoSegments*") {
+                            if ($prefix -match "^$firstTwoSegments") {
                                 $addresses = @(Get-CidrAddresses -CidrRange $prefix)
-                                if ($addresses -like "*$($ipAddress)*") {
+                                if ($addresses -match "$($ipAddress)") {
                                     $result = [PSCustomObject]@{
                                         changeNumber    = $_.properties.changeNumber
                                         region          = ($_.Name.split('.'))[1]
@@ -65,14 +66,13 @@ function Get-AzService {
                                         networkFeatures = $_.properties.networkFeatures
                                     }
                                     return $result
-                                    # if the IP address matches the service tag prefix, set the boolean to true and break the loop of the prefixes
-                                    $bool = $true
                                 }
                                 else {
                                     continue
                                 }
                             }
-                        } elseif ($prefix -like "$firstTwoSegments*") {
+                        }
+                        elseif ($prefix -match "^$firstTwoSegments") {
                             $ip = [System.Net.IPAddress]::Parse($IpAddress)
                             $network = [System.Net.IPNetwork]::Parse($prefix)
 
@@ -91,7 +91,8 @@ function Get-AzService {
                             else {
                                 continue
                             }
-                        } else {
+                        }
+                        else {
                             continue
                         }
                     }
