@@ -10,13 +10,13 @@ body {
 }
 
 .logo {
-    background-image: url("0aa18c44-798a-465b-acf9-1a565b28fe98.jpg");
+    /* background-image: url("smallrat.jpg"); */
     background-repeat: no-repeat;
     background-size: contain;
-    width: 600px;
-    height: 400px;
+    width: 400px;
+    height: 200px;
     position: absolute;
-    top: 18%;
+    top: 10%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
@@ -26,7 +26,7 @@ body {
     font-family: monospace;
     font-size: 14px;
     position: absolute;
-    top: 450px; /* Adjust the vertical position */
+    top: 250px; /* Adjust the vertical position */
     left: 50%;
     transform: translateX(-50%);
 }
@@ -42,7 +42,6 @@ body {
 
 /* Container for the table */
 .table-container {
-	width: 100%;
 	overflow-x: auto;	/* Enable horizontal scrolling if needed */
 	margin: 15px 0;
 }
@@ -56,7 +55,6 @@ table {
 	left: 50%;
 }
 
-th,
 td {
 	padding: 10px;
 	border: 1px solid #00FF00;
