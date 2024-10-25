@@ -6,7 +6,6 @@
   "image": "mcr.microsoft.com/powershell:latest",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": "true",
       "username": "vscode",
       "upgradePackages": "false",
       "nonFreePackages": "true"
