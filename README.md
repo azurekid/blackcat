@@ -19,8 +19,8 @@
 <img width="50" src="https://github.com/azurekid/azurekid/assets/40334679/d8063807-6ca7-4f4f-86bb-7eabcfdb2f35" alt="JSON" title="JSON"/>
 <img width="50" src="https://user-images.githubusercontent.com/25181517/183911544-95ad6ba7-09bf-4040-ac44-0adafedb9616.png" alt="Microsoft Azure" title="Microsoft Azure"/>
 <br>
-<br>
- </div>
+<!-- <br> -->
+</div>
 
 ```yml
 project_name: BlackCat

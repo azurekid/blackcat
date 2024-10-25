@@ -12,7 +12,7 @@ document.getElementById('functionAppForm').addEventListener('submit', function (
 	errorDiv.style.display = 'none';
 	noResultsDiv.style.display = 'none';
 	wildcardDiv.style.display = 'none';
-	
+
 	if (!ipPattern.test(ip)) {
 		errorDiv.textContent = 'Please enter a valid IP address.';
 		errorDiv.style.display = 'block';
@@ -29,10 +29,9 @@ document.getElementById('functionAppForm').addEventListener('submit', function (
 	loadingDiv.style.display = 'block';
 	errorDiv.style.display = 'none';
 	resultsDiv.innerHTML = ''; // Clear previous results
-	
-	
+
 	const url = `https://blackcat.azurewebsites.net/api/ip?ip=${encodeURIComponent(ip)}`;
-	
+
 	fetch(url)
 		.then(response => {
 			if (!response.ok) {
@@ -84,14 +83,13 @@ document.getElementById('functionAppForm').addEventListener('submit', function (
 			});
 			table.appendChild(tbody);
 			resultsDiv.appendChild(table);
-		
-        })
+		})
 		.catch(error => {
-            // Hide loading indicator in case of error
-            loadingDiv.style.display = 'none';
-            errorDiv.textContent = 'An error occurred while fetching data. Please try again later.';
-            errorDiv.style.display = 'block';
-        });
+			// Hide loading indicator in case of error
+			loadingDiv.style.display = 'none';
+			errorDiv.textContent = 'An error occurred while fetching data. Please try again later.';
+			errorDiv.style.display = 'block';
+		});
 });
 
 function createCell(text) {
