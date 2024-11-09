@@ -3,7 +3,7 @@ using namespace System.Management.Automation
 # used for auto-generating the valid values for the ServiceName parameter
 class ServiceNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
-        return ($script:SessionVariables.serviceTags.properties.systemService | Sort-Object -Unique -Descending) #| Where-Object name -notlike '*.*').Name
+        return ($script:SessionVariables.serviceTags.properties.systemService | Sort-Object -Unique -Descending)
     }
 }
 

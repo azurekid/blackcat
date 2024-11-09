@@ -11,6 +11,7 @@ $script:SessionVariables = [ordered]@{
     AccessToken =  ''
     Roles       = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
     serviceTags = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
+    appRoleIds  = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
 }
 
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
