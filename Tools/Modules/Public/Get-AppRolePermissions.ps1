@@ -40,11 +40,6 @@ function Get-AppRolePermissions {
                 $object = ($script:SessionVariables.appRoleIds | Where-Object appRoleId -eq $appRoleId)
             }
 
-            # $currentItem = [PSCustomObject]@{
-            #     DisplayName = $object.Permission
-            #     Type        = $object.Type
-            #     appRoleId   = $object.Id
-            # }
             return $object
         }
         catch {
