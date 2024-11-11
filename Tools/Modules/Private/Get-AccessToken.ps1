@@ -6,7 +6,7 @@ function Get-AccessToken {
     .SYNOPSIS
     Get an Access Token
     .DESCRIPTION
-    This function is used to get an access token for the Microsoft Azure API
+    This function is used to get an access token for the Microsoft Azure API.
     .EXAMPLE
     Get-AuthToken
     .NOTES
