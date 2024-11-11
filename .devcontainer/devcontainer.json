@@ -11,9 +11,16 @@
       "upgradePackages": "true",
       "nonFreePackages": "true"
     },
-    "ghcr.io/natescherer/devcontainers-custom-features/powershell-resources:1": {
-      "resources": "powershell-yaml, Pester, PSScriptAnalyzer, AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "installModules": "true",
+      "installAz": "true",
+      "installPester": "true",
+      "installPSScriptAnalyzer": "true",
+      "installYaml": "true"
     }
+    // "ghcr.io/natescherer/devcontainers-custom-features/powershell-resources:1": {
+      // "resources": "powershell-yaml, Pester, PSScriptAnalyzer, AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
+    // }
   },
   "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
 
