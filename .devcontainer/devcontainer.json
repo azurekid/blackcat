@@ -3,7 +3,7 @@
 {
   "name": "PowerShell",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/powershell:latest",
+  "image": "mcr.microsoft.com/azure-powershell:latest",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": "true",
@@ -11,19 +11,27 @@
       "upgradePackages": "true",
       "nonFreePackages": "true"
     },
-    "ghcr.io/devcontainers/features/powershell:1": {
-      "installModules": "true",
-      "installAz": "true",
-      "installPester": "true",
-      "installPSScriptAnalyzer": "true",
-      "installYaml": "true"
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "installBicep": "true",
+      "installUsingPython": "true"
+    },
+    // https://github.com/devcontainers/features/tree/main/src/desktop-lite
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "webPort": "6080"
     }
+    // "ghcr.io/devcontainers/features/powershell:latest": {
+    //   "installModules": "true",
+    //   "installAz": "true",
+    //   "installPester": "true",
+    //   "installPSScriptAnalyzer": "true",
+    //   "installYaml": "true"
+    // }
     // "ghcr.io/natescherer/devcontainers-custom-features/powershell-resources:1": {
-      // "resources": "powershell-yaml, Pester, PSScriptAnalyzer, AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
+    // "resources": "powershell-yaml, Pester, PSScriptAnalyzer, AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
     // }
   },
-  "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
-
+  // "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
+  "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1;pwsh -Command 'Install-Module -Name PowerShellGet -Force -AllowClobber;Install-Module -Name PSReadLine -Force -AllowClobber; Install-Module -Name Az -Force -AllowClobber; Install-Module -Name Pester -Force -AllowClobber; Install-Module -Name PSScriptAnalyzer -Force -AllowClobber; Install-Module -Name powershell-yaml -Force -AllowClobber'",
   // Configure tool-specific properties.
   "customizations": {
     // Configure properties specific to VS Code.
@@ -32,24 +40,28 @@
       "settings": {
         "terminal.integrated.shell.linux": "/opt/microsoft/powershell/7/pwsh"
       },
-
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
-		"ms-vscode.powershell",
-		"Gruntfuggly.todo-tree",
-		"TylerLeonhardt.vscode-inline-values-powershell",
-		"GitHub.copilot",
-		"DavidAnson.vscode-markdownlint",
-		"eamodio.gitlens",
-		"shardulm94.trailing-spaces",
-		"GitHub.vscode-github-actions"
-	]
+        "ms-vscode.powershell",
+        "Gruntfuggly.todo-tree",
+        "TylerLeonhardt.vscode-inline-values-powershell",
+        "GitHub.copilot",
+        "DavidAnson.vscode-markdownlint",
+        "eamodio.gitlens",
+        "shardulm94.trailing-spaces",
+        "GitHub.vscode-github-actions"
+      ]
+    }
+  },
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [
+    6080
+  ],
+  "portsAttributes": {
+    "6080": {
+      "label": "desktop"
     }
   }
-
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
-
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"
 }
