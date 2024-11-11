@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function App Caller</title>
+    <link rel="stylesheet" href="https://0x002blackcat.z13.web.core.windows.net/styles.css">
+</head>
+<body>
+    <h1>Call Function App</h1>
+    <form id="functionAppForm">
+        <label for="ipAddress">IP Address:</label>
+        <input type="text" id="ipAddress" name="ipAddress" required>
+        <button type="submit">Call Function</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('functionAppForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const ip = document.getElementById('ipAddress').value;
+            const url = `https://blackcat-0x003.azurewebsites.net/api/HttpExample?ip=${encodeURIComponent(ip)}`;
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data); // Log the response data
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = ''; // Clear previous results
+
+                    // Check if data is an array or a single object
+                    const results = Array.isArray(data) ? data : [data];
+
+                    // Create table
+                    const table = document.createElement('table');
+                    const thead = document.createElement('thead');
+                    const tbody = document.createElement('tbody');
+
+                    // Define table headers
+                    const headers = ['Name', 'ID', 'Change Number', 'Region', 'Region ID', 'Platform', 'System Service', 'Matched Address Prefix'];
+                    const tr = document.createElement('tr');
+                    headers.forEach(header => {
+                        const th = document.createElement('th');
+                        th.textContent = header;
+                        tr.appendChild(th);
+                    });
+                    thead.appendChild(tr);
+                    table.appendChild(thead);
+
+                    // Populate table rows
+                    results.forEach(item => {
+                        const trBody = document.createElement('tr');
+                        trBody.appendChild(createCell(item.name));
+                        trBody.appendChild(createCell(item.id));
+                        trBody.appendChild(createCell(item.changeNumber));
+                        trBody.appendChild(createCell(item.region));
+                        trBody.appendChild(createCell(item.regionId));
+                        trBody.appendChild(createCell(item.platform));
+                        trBody.appendChild(createCell(item.systemService));
+                        trBody.appendChild(createCell(item.AddressPrefixes));
+                        tbody.appendChild(trBody);
+                    });
+
+                    table.appendChild(tbody);
+                    resultsDiv.appendChild(table);
+                })
+                .catch(error => {
+                    console.error('Error calling function app:', error);
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = `<div class="result-item">Error: ${error.message}</div>`;
+                });
+        });
+
+        function createCell(content) {
+            const td = document.createElement('td');
+            td.textContent = content;
+            return td;
+        }
+    </script>
+</body>
+</html>

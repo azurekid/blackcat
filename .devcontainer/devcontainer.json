@@ -1,22 +1,12 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/powershell
 {
-  "name": "PowerShell",
+  "name": "BlackCat",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/powershell:latest",
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "vscode",
-      "upgradePackages": "false",
-      "nonFreePackages": "true"
-    },
-    "ghcr.io/natescherer/devcontainers-custom-features/powershell-resources:1": {
-      "resources": "powershell-yaml,Pester,PSScriptAnalyzer,AZ" //https://github.com/natescherer/devcontainers-custom-features/blob/main/src/powershell-resources/README.md
-    }
-  },
-  "postStartCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./src/AzWorkspaceManager.psd1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1",
-
-  // Configure tool-specific properties.
+  "image": "mcr.microsoft.com/azure-powershell:latest",
+  // "build": {
+  //   "dockerfile": "Dockerfile"
+  // },
   "customizations": {
     // Configure properties specific to VS Code.
     "vscode": {
@@ -24,24 +14,32 @@
       "settings": {
         "terminal.integrated.shell.linux": "/opt/microsoft/powershell/7/pwsh"
       },
-
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
-		"ms-vscode.powershell",
-		"Gruntfuggly.todo-tree",
-		"TylerLeonhardt.vscode-inline-values-powershell",
-		"GitHub.copilot",
-		"DavidAnson.vscode-markdownlint",
-		"eamodio.gitlens",
-		"shardulm94.trailing-spaces",
-		"GitHub.vscode-github-actions"
-	]
+        "ms-vscode.powershell",
+        "ms-azuretools.vscode-bicep",
+        "GitHub.copilot",
+        "shardulm94.trailing-spaces",
+        "GitHub.vscode-github-actions"
+      ]
     }
-  }
-
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "true",
+      "username": "vscode",
+      "upgradePackages": "true",
+      "nonFreePackages": "false"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "installBicep": "true",
+      "installUsingPython": "true"
+    }
+  },
+  "postCreateCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1"
+  // Configure tool-specific properties.
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
-
+  // "forwardPorts": []
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"
 }
