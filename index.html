@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Azure IP Lookup</title>
+</head>
+<body>
+	<img src="smallrat.jpg" alt="GitHub" class="logo">
+	<div class="secret-text">
+        <p>Azure IP Lookup</p>
+        <p>Find it if you dare...</p>
+        <form id="functionAppForm">
+            <label for="ipAddress">IP Address:</label>
+            <input type="text" id="ipAddress" name="ipAddress" required>
+            <button type="submit">submit</button>
+        </form>
+        <div id="loading" class="loading" style="display: none;">Loading...</div>
+        <div id="wildcard" class="wildcard"></div>
+		<div id="error" class="error"></div>
+        <div id="noResults" class="no-results">No results found.</div>
+		<div id="results" class="table-container"></div>
+	<footer>
+		<div class="github-link">
+			<a href="https://github.com/azurekid/blackcat" target="_blank">
+				<img src="https://user-images.githubusercontent.com/25181517/192108374-8da61ba1-99ec-41d7-80b8-fb2f7c0a4948.png" alt="GitHub" class="github-icon">
+			</a>
+		</div>
+	</footer>
+	</div>
+	<script src="scripts.js"></script>
+</body>
