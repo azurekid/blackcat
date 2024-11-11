@@ -16,7 +16,7 @@
         "count": "[length(parameters('resourceGroupNames'))]"
       },
       "type": "Microsoft.Resources/resourceGroups",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2018-05-01",
       "name": "[parameters('resourceGroupNames')[copyIndex()]]",
       "location": "eastus",
       "tags": {

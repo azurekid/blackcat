@@ -11,4 +11,3 @@ resource resourceGroups 'Microsoft.Resources/resourceGroups@2022-09-01' = [for (
         environment: 'devsecops'
     }
 }]
-

@@ -17,7 +17,8 @@
         "ms-azuretools.vscode-bicep",
         "GitHub.copilot",
         "shardulm94.trailing-spaces",
-        "GitHub.vscode-github-actions"
+        "GitHub.vscode-github-actions",
+        "DavidAnson.vscode-markdownlint"
       ]
     }
   },
