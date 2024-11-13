@@ -5,6 +5,7 @@ function ConvertFrom-JWT {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             Position = 0)]
+            # [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match a valid JWT Token")]
         $Base64JWT
     )
 
