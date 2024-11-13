@@ -1,11 +1,11 @@
-function Get-RiskyApps {
+function Get-AzPrivilegedApps {
     begin {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
     }
 
     process {
         try {
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Collecting Enterprise Applications"
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Collecting Enterprise Applications" -Severity 'Information'
             $applications = Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications"
 
             Write-Verbose "User Applications: $($applications.count)"
@@ -41,6 +41,7 @@ function Get-RiskyApps {
                         DisplayName     = $application.DisplayName
                         CreatedDateTime = $application.CreatedDateTime
                         Permission      = $permissionObjects | Sort-Object -Unique
+                        Owners          = @((Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications/$($application.id)/owners").userPrincipalName)
                     }
 
                     if ($application.PasswordCredentials.KeyId) {

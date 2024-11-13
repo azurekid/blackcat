@@ -13,7 +13,7 @@ class RegionNames : IValidateSetValuesGenerator {
     }
 }
 
-function Get-AzService {
+function Invoke-AzServiceTags {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -118,13 +118,13 @@ function Get-AzService {
         Retrieves the Azure service tag associated with a given IP address.
 
     .DESCRIPTION
-        The Get-AzService function retrieves the Azure service tag that corresponds to a specified IP address. It checks if the IP address matches any of the service tag prefixes and returns the corresponding service tag name.
+        The Invoke-AzServiceTags function retrieves the Azure service tag that corresponds to a specified IP address. It checks if the IP address matches any of the service tag prefixes and returns the corresponding service tag name.
 
     .PARAMETER IpAddress
         Specifies the IP address for which to retrieve the Azure service tag.
 
     .EXAMPLE
-        Get-AzService -IpAddress "192.168.1.10"
+        Invoke-AzServiceTags -IpAddress "192.168.1.10"
         Retrieves the Azure service tag associated with the IP address "192.168.1.10".
 
     .NOTES

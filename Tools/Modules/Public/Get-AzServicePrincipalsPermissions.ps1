@@ -1,4 +1,4 @@
-function Get-AzManagedIdentityPermissions {
+function Get-AzServicePrincipalsPermissions {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]

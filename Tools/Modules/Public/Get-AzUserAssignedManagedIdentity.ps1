@@ -1,4 +1,4 @@
-function Get-AzManagedIdentity {
+function Get-AzUserAssignedManagedIdentity {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -38,16 +38,16 @@ function Get-AzManagedIdentity {
     .SYNOPSIS
     Retrieves information about managed identities.
     .DESCRIPTION
-    The Get-ManagedIdentity function retrieves information about managed identities from the specified API endpoint.
+    The Get-AzUserAssignedManagedIdentity function retrieves information about managed identities from the specified API endpoint.
     It can return all available managed identities or filter the results based on a specific name.
     .PARAMETER Name
     Specifies the name of the managed identity to retrieve.
     The name must match the expected pattern '^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$'.
     .EXAMPLE
-    Get-ManagedIdentity -Name "myManagedIdentity"
+    Get-AzUserAssignedManagedIdentity -Name "myManagedIdentity"
     Retrieves the managed identity with the name "myManagedIdentity".
     .EXAMPLE
-    Get-ManagedIdentity
+    Get-AzUserAssignedManagedIdentity
     Retrieves all available managed identities.
     .INPUTS
     None. You cannot pipe input to this function.

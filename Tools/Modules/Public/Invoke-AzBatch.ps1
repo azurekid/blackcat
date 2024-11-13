@@ -1,4 +1,4 @@
-function Invoke-EnumerateResources {
+function Invoke-AzBatch {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -49,14 +49,14 @@ function Invoke-EnumerateResources {
     Enumerates resources of a specified type using Azure Resource Graph.
 
 .DESCRIPTION
-    The Invoke-EnumerateResources function queries Azure Resource Graph to enumerate resources of a specified type.
+    The Invoke-AzBatch function queries Azure Resource Graph to enumerate resources of a specified type.
     It constructs a query based on the provided resource type and sends an API request to retrieve the resources.
 
 .PARAMETER ResourceType
     The type of resources to enumerate. This parameter is optional and can be provided via pipeline by property name.
 
 .EXAMPLE
-    PS> Invoke-EnumerateResources -ResourceType "Microsoft.Compute/virtualMachines"
+    PS> Invoke-AzBatch -ResourceType "Microsoft.Compute/virtualMachines"
     Enumerates all virtual machines in the Azure subscription.
 
 .NOTES
