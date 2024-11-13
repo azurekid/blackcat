@@ -2,7 +2,7 @@ function Invoke-MSGraph {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$Endpoint
+        [string]$relativeUrl
     )
 
     begin {
@@ -14,7 +14,7 @@ function Invoke-MSGraph {
         try {
 
             Write-Verbose "Information Dialog"
-            return Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/$Endpoint"
+            return Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/$relativeUrl"
 
         }
         catch {
@@ -30,7 +30,7 @@ function Invoke-MSGraph {
         It handles authentication and constructs the appropriate headers for the request.
 
     .EXAMPLE
-        Invoke-MSGraph -Endpoint "applications"
+        Invoke-MSGraph -relativeUrl "applications"
 
         This example sends a GET request to the Microsoft Graph API to retrieve information about the applications.
 #>
