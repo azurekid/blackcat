@@ -13,8 +13,26 @@ function Invoke-MSGraph {
 
         try {
 
-            Write-Verbose "Information Dialog"
-            return Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/$relativeUrl"
+            $payload = @{
+                requests = @(
+                    @{
+                        id     = "List"
+                        method = 'GET'
+                        url    = '/{0}?$count=true&$top=999' -f "$relativeUrl"
+                    }
+                )
+            }
+
+            $requestParam = @{
+                Headers     = $script:graphHeader
+                Uri         = '{0}/$batch' -f $sessionVariables.graphUri
+                Method      = 'POST'
+                ContentType = 'application/json'
+                Body        = $payload | ConvertTo-Json -Depth 10
+            }
+
+            $apiResponse = (Invoke-RestMethod @requestParam)
+            return $apiResponse.responses.body.value
 
         }
         catch {
@@ -35,3 +53,4 @@ function Invoke-MSGraph {
         This example sends a GET request to the Microsoft Graph API to retrieve information about the applications.
 #>
 }
+
