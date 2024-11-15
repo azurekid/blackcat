@@ -34,7 +34,7 @@
       "installUsingPython": "true"
     }
   },
-  "postCreateCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./Tools/Modules/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1"
+  "postCreateCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./src/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1"
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": []
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
