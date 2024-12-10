@@ -9,7 +9,20 @@
     "vscode": {
       // Set *default* container specific settings.json values on container create.
       "settings": {
-        "terminal.integrated.shell.linux": "/opt/microsoft/powershell/7/pwsh"
+        "debug.javascript.terminal.activateWithCurrentFile": false,
+        "debug.javascript.autoAttachFilter": "disabled",
+        "debug.javascript.automaticallyTunnelRemoteServer": false,
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
+          },
+          "BlackCat": {
+            "path": "/opt/microsoft/powershell/7/pwsh",
+            "icon": "terminal-powershell"
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "BlackCat"
       },
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
@@ -24,7 +37,7 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": "true",
+      "installZsh": "false",
       "username": "vscode",
       "upgradePackages": "true",
       "nonFreePackages": "false"

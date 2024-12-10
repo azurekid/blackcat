@@ -8,7 +8,10 @@ function Invoke-BlackCat {
         [string]$FunctionName,
 
         [Parameter(Mandatory = $false, ValueFromPipeline = $false)]
-        [string]$ResourceTypeName
+        [string]$ResourceTypeName,
+
+        [Switch]
+        $ChangeProfile = $False
     )
 
    $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
@@ -25,6 +28,14 @@ function Invoke-BlackCat {
         }
         elseif ($SessionVariables.ExpiresOn - [datetime]::UtcNow.AddMinutes(-5) -le 0) {
             # if token expires within 5 minutes, request a new access token
+            try {
+                Get-AccessToken
+            }
+            catch {
+                Write-Error -Exception $_.Exception.Message
+                break
+            }
+        } elseif ($ChangeProfile) {
             try {
                 Get-AccessToken
             }
