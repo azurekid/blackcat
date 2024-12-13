@@ -2,7 +2,6 @@ function Get-AzPublicStorageAccounts {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        # [ValidatePattern('^[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [string]$StorageAccountName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -10,97 +9,103 @@ function Get-AzPublicStorageAccounts {
         [string]$Type = 'blob',
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$WordList
+        [string]$WordList,
+
+        [Parameter(Mandatory = $false)]
+        [int]$ThrottleLimit = 100,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeEmpty
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
+        # Create thread-safe collections
+        $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $publicContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        # Add progress counters
+        $script:dnsProgress = 0
+        $script:containerProgress = 0
     }
 
     process {
         try {
-            if ($WordList){
-                Get-Content $WordList| ForEach-Object {
-                     $sessionVariables.permutations += $_
-                }
+            # Read word list efficiently
+            $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
+            Write-Host "Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Yellow
+            $permutations += $sessionVariables.permutations
+            Write-Host "Loaded $($permutations.Count) permutations from session" -ForegroundColor Yellow
+            
+            # Generate DNS names more efficiently
+            $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($item in $permutations) {
+                $null = $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
+                $null = $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
             }
-            # Create thread-safe collection to receive output
-            $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+            $null = $dnsNames.Add(('{0}.{1}.core.windows.net' -f $StorageAccountName, $type))
 
+            $totalDns = $dnsNames.Count
+            Write-Host "Starting DNS resolution for $totalDns names..." -ForegroundColor Yellow
 
-            foreach ($item in $sessionVariables.permutations) {
-                $dnsNames += @(
-                    '{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $item, $type
-                    '{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $item, $type
-                )
-            }
-            $dnsNames += '{0}.{1}.core.windows.net' -f $StorageAccountName, $type
-
-            $dnsNames | Foreach-Object -Parallel {
+            # Parallel DNS resolution with improved error handling and progress
+            $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 try {
-                    $localResultsArray = $using:validDnsNames
-                    $exists = [System.Net.Dns]::Resolve($_)
-
-                    if ($exists) {
+                    $validDnsNames = $using:validDnsNames
+                    $script:dnsProgress = $using:dnsProgress
+                    if ([System.Net.Dns]::GetHostEntry($_)) {
+                        $validDnsNames.Add($_)
                         Write-Host "Storage Account '$_' is valid" -ForegroundColor Green
-                        $localResultsArray.Add("$_")
-                    }
-                    else {
-                        Write-Verbose "Storage Account '$_' does not exist"
                     }
                 }
-                catch {}
+                catch [System.Net.Sockets.SocketException] {
+                    Write-Verbose "Storage Account '$_' does not exist"
+                }
             }
 
-            $uriArray = @()
-            foreach ($validDnsName in $validDnsNames) {
-                foreach ($item in $sessionVariables.permutations) {
-                    $uri = "$validDnsName/$item"
-                    $uriArray += $uri
-                }
-                $uri = "$validDnsName/$validDnsName"
-            }
+            # Generate and test URIs in parallel
+            if ($validDnsNames.Count -gt 0) {
+                $totalContainers = $validDnsNames.Count * $permutations.Count
+                Write-Host "Starting container checks for $totalContainers combinations..." -ForegroundColor Yellow
 
-            $uriArray | Foreach-Object -Parallel {
-                $statusCode = (Invoke-WebRequest -Uri "https://$($_)/?comp=list" -Method GET -UseBasicParsing -SkipHttpErrorCheck).StatusCode
-                if ($statusCode -eq 200) {
-                    Write-Host "Storage Account Container 'https://$($_)/?comp=list' is public" -ForegroundColor Green
+                $validDnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+                    $dns = $_
+                    $permutations = $using:permutations
+                    $publicContainers = $using:publicContainers
+                    $includeEmpty = $using:IncludeEmpty
+
+                    foreach ($item in $permutations) {
+                        $uri = "https://$dns/$item/?restype=container&comp=list"
+                        try {
+                            $response = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -SkipHttpErrorCheck
+                            if ($response.StatusCode -eq 200) {
+                                if ($includeEmpty -or $response.Content -match '<Blob>') {
+                                    $publicContainers.Add($uri)
+                                    $message = if ($response.Content -match '<Blob>') {
+                                        "Storage Account Container '$uri' is public and contains data"
+                                    } else {
+                                        "Storage Account Container '$uri' is public but empty"
+                                    }
+                                    Write-Host $message -ForegroundColor Green
+                                }
+                            }
+                        }
+                        catch {
+                            Write-Verbose "Storage Account Container '$uri' is not public"
+                        }
+                    }
                 }
-                else {
-                    Write-Verbose "Storage Account Container 'https://$_' is not public"
-                }
-            } -ThrottleLimit 100
+            }
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            Write-Error -Message $_.Exception.Message -ErrorAction Continue
         }
-    } end {
-        Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
     }
 
-    <#
-    .SYNOPSIS
-        Retrieves and checks the validity of Azure public storage accounts based on the provided name and type.
-
-    .DESCRIPTION
-        The Get-AzPublicStorageAccounts function generates permutations of the provided storage account name and checks if they are valid DNS names for Azure storage accounts. It then tests if the storage account containers are publicly accessible.
-
-    .PARAMETER Name
-        The base name of the storage account. This parameter is mandatory.
-
-    .PARAMETER type
-        The type of Azure storage service to check. Valid values are 'blob', 'file', 'queue', and 'table'. The default value is 'blob'.
-
-    .EXAMPLE
-        Get-AzPublicStorageAccounts -Name "mystorageaccount"
-        Retrieves and checks the validity of public storage accounts with the base name "mystorageaccount" for the default type 'blob'.
-
-    .EXAMPLE
-        Get-AzPublicStorageAccounts -Name "mystorageaccount" -type "file"
-        Retrieves and checks the validity of public storage accounts with the base name "mystorageaccount" for the type 'file'.
-
-    .LINK
-        https://docs.microsoft.com/en-us/powershell/module/az.storage
-    #>
-    #>
+    end {
+        Write-Progress -Activity "Resolving DNS Names" -Completed
+        Write-Progress -Activity "Checking Containers" -Completed
+        Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
+        # Return results
+        $publicContainers
+    }
 }
