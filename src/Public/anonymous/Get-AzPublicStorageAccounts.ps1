@@ -5,7 +5,7 @@ function Get-AzPublicStorageAccounts {
         [string]$StorageAccountName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet('blob', 'file', 'queue', 'table', ErrorMessage = "Type must be one of the following: Blob, File, Queue, Table")]
+        [ValidateSet('blob', 'file', 'queue', 'table', 'dfs', ErrorMessage = "Type must be one of the following: Blob, File, Queue, Table")]
         [string]$Type = 'blob',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -20,16 +20,15 @@ function Get-AzPublicStorageAccounts {
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
+
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
         $publicContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        # Add progress counters
-        $script:dnsProgress = 0
-        $script:containerProgress = 0
+        $result = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
-        # try {
+        try {
             # Read word list efficiently
             if ($WordList) {
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
@@ -52,14 +51,11 @@ function Get-AzPublicStorageAccounts {
 
             # Parallel DNS resolution with improved error handling and progress
             $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
-                # Initialize progress bar for DNS resolution
-                # Write-Progress -Activity "Resolving DNS Names" -Status "$_" -PercentComplete 0
                 try {
                     $validDnsNames = $using:validDnsNames
-                    $script:dnsProgress = $using:dnsProgress
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
-                        Write-Host "Storage Account '$_' is valid" -ForegroundColor Green
+                        Write-Host "Get-AzPublicStorageAccounts: '$_' is valid" -ForegroundColor Green
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
@@ -70,13 +66,14 @@ function Get-AzPublicStorageAccounts {
             # Generate and test URIs in parallel
             if ($validDnsNames.Count -gt 0) {
                 $totalContainers = $validDnsNames.Count * $permutations.Count
-                Write-Host "Starting container checks for $totalContainers combinations..." -ForegroundColor Yellow
+                Write-Host "Get-AzPublicStorageAccounts: Starting container checks for $totalContainers combinations..."
 
                 $validDnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                     $dns = $_
-                    $permutations = $using:permutations
+                    $permutations     = $using:permutations
                     $publicContainers = $using:publicContainers
-                    $includeEmpty = $using:IncludeEmpty
+                    $includeEmpty     = $using:IncludeEmpty
+                    $result           = $using:result
 
                     foreach ($item in $permutations) {
                         $uri = "https://$dns/$item/?restype=container&comp=list"
@@ -86,9 +83,9 @@ function Get-AzPublicStorageAccounts {
                                 if ($includeEmpty -or $response.Content -match '<Blob>') {
                                     $publicContainers.Add($uri)
                                     $message = if ($response.Content -match '<Blob>') {
-                                        "Storage Account Container '$uri' is public and contains data"
+                                        "Get-AzPublicStorageAccounts: Container '$uri' is public and contains data"
                                     } else {
-                                        "Storage Account Container '$uri' is public but empty"
+                                        "Get-AzPublicStorageAccounts: Container '$uri' is public but empty"
                                     }
                                     Write-Host $message -ForegroundColor Green
                                 }
@@ -100,10 +97,10 @@ function Get-AzPublicStorageAccounts {
                     }
                 }
             }
-        # }
-        # catch {
-        #     Write-Error -Message $_.Exception.Message -ErrorAction Continue
-        # }
+        }
+        catch {
+            Write-Error -Message $_.Exception.Message -ErrorAction Continue
+        }
     }
 
     end {
@@ -115,5 +112,3 @@ function Get-AzPublicStorageAccounts {
         # $publicContainers
     }
 }
-
-[System.Net.Dns]::GetHostEntry('ftpvalidation.blob.core.windows.net')

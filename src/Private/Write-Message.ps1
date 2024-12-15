@@ -18,7 +18,7 @@ function Write-Message {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("Error", "Information", "Debug")]
-        [string]$Severity,
+        [string]$Severity = 'Information',
 
         [Parameter(Mandatory = $false)]
         [string]$FunctionName
