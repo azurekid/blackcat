@@ -50,29 +50,41 @@ function Set-AzFederatedIdentity {
     }
 <#
 .SYNOPSIS
-Sets the federated identity to a GitHub repository.
+Sets a federated identity credential for a user-assigned managed identity to enable GitHub Actions authentication.
 
 .DESCRIPTION
-The Set-FederatedIdentity function sets the federated identity to a GitHub repository by making a PUT request to the Azure Management API.
+The Set-AzFederatedIdentity cmdlet creates or updates a federated identity credential that enables GitHub Actions workflows 
+to authenticate to Azure using OpenID Connect. This links a specific GitHub repository and branch to a user-assigned managed identity.
 
 .PARAMETER Id
-The ID of the user-assigned managed identity.
+The resource ID of the user-assigned managed identity in Azure. This should be the full resource ID path.
 
-.PARAMETER Name
-The name of the user-assigned managed identity.
+.PARAMETER Name 
+The name of the federated credential to create. Defaults to 'federatedCredential'.
 
 .PARAMETER GitHubOrganization
-The name of the GitHub organization.
+The GitHub organization name where the repository is located.
 
 .PARAMETER GitHubRepository
-The name of the GitHub repository.
+The name of the GitHub repository to federate with the managed identity.
 
 .PARAMETER Branch
-The branch name of the GitHub repository. Default value is 'main'.
+The branch name to associate with the federated credential. Defaults to 'main'.
 
 .EXAMPLE
-Set-FederatedIdentity -Id "/subscriptions/xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/MyIdentity" -GitHubOrganization "MyOrg" -GitHubRepository "MyRepo" -Branch "main"
-Sets the federated identity for the GitHub repository "MyRepo" in the organization "MyOrg" with the ID "123456" and the name "MyFederatedIdentity" on the "main" branch.
+Set-AzFederatedIdentity -Id "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity" -GitHubOrganization "myorg" -GitHubRepository "myrepo"
 
+Creates a federated credential for the specified managed identity, linking it to the main branch of the myorg/myrepo GitHub repository.
+
+.EXAMPLE
+Set-AzFederatedIdentity -Id "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity" -Name "dev-credential" -GitHubOrganization "myorg" -GitHubRepository "myrepo" -Branch "development"
+
+Creates a federated credential named "dev-credential" for the specified managed identity, linking it to the development branch of the myorg/myrepo GitHub repository.
+
+.NOTES
+Requires appropriate Azure RBAC permissions to manage managed identities.
+The function uses Azure REST API version 2023-01-31.
+
+.LINK
+https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust-github
 #>
-}
