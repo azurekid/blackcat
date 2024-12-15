@@ -4,7 +4,7 @@ function Set-AzFederatedIdentity {
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string]$Id,
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$Name = 'federatedCredential',
 
         [Parameter(Mandatory = $true)]
@@ -88,3 +88,4 @@ The function uses Azure REST API version 2023-01-31.
 .LINK
 https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust-github
 #>
+}
