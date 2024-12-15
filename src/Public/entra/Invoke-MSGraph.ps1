@@ -1,4 +1,4 @@
-function Invoke-MSGraph {
+function Invoke-MsGraph {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
@@ -53,4 +53,3 @@ function Invoke-MSGraph {
         This example sends a GET request to the Microsoft Graph API to retrieve information about the applications.
 #>
 }
-

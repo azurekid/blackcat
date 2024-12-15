@@ -7,7 +7,7 @@ class appRoleNames : IValidateSetValuesGenerator {
     }
 }
 
-function Get-AppRolePermissions {
+function Get-MsAppRolePermissions {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

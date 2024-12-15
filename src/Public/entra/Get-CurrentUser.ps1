@@ -25,14 +25,16 @@ function Get-CurrentUser {
                 $requestParam.Uri = "$($sessionVariables.graphUri)/me/"
 
                 Invoke-RestMethod @requestParam
-            } catch {
+            }
+            catch {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Information'
             }
-        } catch {
+        }
+        catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-<#
+    <#
 .SYNOPSIS
 Retrieves information about the current authenticated user from Microsoft Graph API.
 
@@ -60,3 +62,4 @@ This function requires:
 Returns a PSCustomObject containing the current user's information from Microsoft Graph API.
 The exact properties returned depend on the permissions granted to the authenticated session.
 #>
+}

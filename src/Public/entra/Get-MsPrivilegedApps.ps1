@@ -1,4 +1,4 @@
-function Get-AzPrivilegedApps {
+function Get-MsPrivilegedApps {
     begin {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
     }
