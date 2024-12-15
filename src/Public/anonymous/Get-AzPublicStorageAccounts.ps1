@@ -8,7 +8,7 @@ function Get-AzPublicStorageAccounts {
         [ValidateSet('blob', 'file', 'queue', 'table', ErrorMessage = "Type must be one of the following: Blob, File, Queue, Table")]
         [string]$Type = 'blob',
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
@@ -29,26 +29,31 @@ function Get-AzPublicStorageAccounts {
     }
 
     process {
-        try {
+        # try {
             # Read word list efficiently
-            $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
-            Write-Host "Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Yellow
+            if ($WordList) {
+                $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
+                Write-Verbose "Loaded $($permutations.Count) permutations from '$WordList'"
+            }
+
             $permutations += $sessionVariables.permutations
-            Write-Host "Loaded $($permutations.Count) permutations from session" -ForegroundColor Yellow
-            
+            Write-Verbose "Loaded $($permutations.Count) permutations from session"
+
             # Generate DNS names more efficiently
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($item in $permutations) {
-                $null = $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
-                $null = $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
+                [void] $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
+                [void] $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
             }
-            $null = $dnsNames.Add(('{0}.{1}.core.windows.net' -f $StorageAccountName, $type))
+            [void] $dnsNames.Add(('{0}.{1}.core.windows.net' -f $StorageAccountName, $type))
 
             $totalDns = $dnsNames.Count
-            Write-Host "Starting DNS resolution for $totalDns names..." -ForegroundColor Yellow
+            Write-Verbose "Starting DNS resolution for $totalDns names..."
 
             # Parallel DNS resolution with improved error handling and progress
             $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+                # Initialize progress bar for DNS resolution
+                # Write-Progress -Activity "Resolving DNS Names" -Status "$_" -PercentComplete 0
                 try {
                     $validDnsNames = $using:validDnsNames
                     $script:dnsProgress = $using:dnsProgress
@@ -95,17 +100,20 @@ function Get-AzPublicStorageAccounts {
                     }
                 }
             }
-        }
-        catch {
-            Write-Error -Message $_.Exception.Message -ErrorAction Continue
-        }
+        # }
+        # catch {
+        #     Write-Error -Message $_.Exception.Message -ErrorAction Continue
+        # }
     }
 
     end {
         Write-Progress -Activity "Resolving DNS Names" -Completed
         Write-Progress -Activity "Checking Containers" -Completed
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
+
         # Return results
-        $publicContainers
+        # $publicContainers
     }
 }
+
+[System.Net.Dns]::GetHostEntry('ftpvalidation.blob.core.windows.net')
