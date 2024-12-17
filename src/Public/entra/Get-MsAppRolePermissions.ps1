@@ -10,13 +10,13 @@ class appRoleNames : IValidateSetValuesGenerator {
 function Get-MsAppRolePermissions {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet( [appRoleNames] )]
-        [string]$appRoleName,
-
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$appRoleId,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet( [appRoleNames] )]
+        [string]$appRoleName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidateSet( 'Application', 'Delegated' )]
