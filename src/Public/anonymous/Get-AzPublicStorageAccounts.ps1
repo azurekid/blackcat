@@ -15,7 +15,10 @@ function Get-AzPublicStorageAccounts {
         [int]$ThrottleLimit = 100,
 
         [Parameter(Mandatory = $false)]
-        [switch]$IncludeEmpty
+        [switch]$IncludeEmpty,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeMetadata
     )
 
     begin {
@@ -23,8 +26,7 @@ function Get-AzPublicStorageAccounts {
 
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $publicContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $result = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $result = New-Object System.Collections.ArrayList
     }
 
     process {
@@ -50,12 +52,11 @@ function Get-AzPublicStorageAccounts {
             Write-Verbose "Starting DNS resolution for $totalDns names..."
 
             # Parallel DNS resolution with improved error handling and progress
-            $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+            $dnsNames | ForEach-Object -Parallel {
                 try {
                     $validDnsNames = $using:validDnsNames
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
-                        Write-Host "Get-AzPublicStorageAccounts: '$_' is valid" -ForegroundColor Green
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
@@ -66,33 +67,56 @@ function Get-AzPublicStorageAccounts {
             # Generate and test URIs in parallel
             if ($validDnsNames.Count -gt 0) {
                 $totalContainers = $validDnsNames.Count * $permutations.Count
-                Write-Host "Get-AzPublicStorageAccounts: Starting container checks for $totalContainers combinations..."
+                Write-Verbose "Get-AzPublicStorageAccounts: Starting container checks for $totalContainers combinations..."
 
-                $validDnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+                $validDnsNames | ForEach-Object -Parallel {
                     $dns = $_
-                    $permutations     = $using:permutations
-                    $publicContainers = $using:publicContainers
-                    $includeEmpty     = $using:IncludeEmpty
-                    $result           = $using:result
+                    $permutations = $using:permutations
+                    $result = $using:result
+                    $includeEmpty = $using:IncludeEmpty
+                    $IncludeMetadata = $using:IncludeMetadata
 
-                    foreach ($item in $permutations) {
-                        $uri = "https://$dns/$item/?restype=container&comp=list"
-                        try {
-                            $response = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -SkipHttpErrorCheck
-                            if ($response.StatusCode -eq 200) {
-                                if ($includeEmpty -or $response.Content -match '<Blob>') {
-                                    $publicContainers.Add($uri)
-                                    $message = if ($response.Content -match '<Blob>') {
-                                        "Get-AzPublicStorageAccounts: Container '$uri' is public and contains data"
-                                    } else {
-                                        "Get-AzPublicStorageAccounts: Container '$uri' is public but empty"
-                                    }
-                                    Write-Host $message -ForegroundColor Green
+                    $permutations | ForEach-Object -Parallel {
+                        $dns = $using:dns
+                        $result = $using:result
+                        $includeEmpty = $using:IncludeEmpty
+                        $IncludeMetadata = $using:IncludeMetadata
+
+                        $uri = "https://$dns/$_/?restype=container&comp=list"
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -SkipHttpErrorCheck
+
+                        if ($response.StatusCode -eq 200) {
+                            if ($includeEmpty -or $response.Content -match '<Blob>') {
+
+                                $currentItem = [PSCustomObject]@{
+                                    "StorageAccountName" = $dns.split('.')[0]
+                                    "Container"          = $_
+                                    "FileCount" = (Select-String -InputObject $response.Content -Pattern "/Url" -AllMatches).Matches.Count
+                                }
+
+                                if ($response.Content -match '<Blob>') {
+                                    $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $false
+
+                                }
+                                else {
+                                    $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $true
                                 }
                             }
-                        }
-                        catch {
-                            Write-Verbose "Storage Account Container '$uri' is not public"
+
+                            if ($IncludeMetadata) {
+                                $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UseBasicParsing -SkipHttpErrorCheck
+
+                                $metaHeaders = @{}
+                                $metaResponse.Headers.GetEnumerator() | Where-Object { $_.Key -like 'x-ms-meta-*' } | ForEach-Object {
+                                    $metaHeaders[$_.Key] = $_.Value
+                                    if ($metaHeaders) {$currentItem | Add-Member -NotePropertyName Metadata -NotePropertyValue $metaHeaders -Force}
+                                }
+                            }
+
+                            # $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
+
+                            [void] $result.Add($currentItem)
                         }
                     }
                 }
@@ -107,8 +131,6 @@ function Get-AzPublicStorageAccounts {
         Write-Progress -Activity "Resolving DNS Names" -Completed
         Write-Progress -Activity "Checking Containers" -Completed
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
-
-        # Return results
-        # $publicContainers
+        return $result
     }
 }
