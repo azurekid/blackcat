@@ -26,6 +26,7 @@ function Get-AzPublicStorageAccounts {
 
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $userAgents = $sessionVariables.userAgents.agents
         $result = New-Object System.Collections.ArrayList
     }
 
@@ -72,19 +73,21 @@ function Get-AzPublicStorageAccounts {
 
                 $validDnsNames | ForEach-Object -Parallel {
                     $dns = $_
-                    $permutations = $using:permutations
-                    $result = $using:result
-                    $includeEmpty = $using:IncludeEmpty
+                    $permutations    = $using:permutations
+                    $result          = $using:result
+                    $includeEmpty    = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
+                    $userAgents      = $using:userAgents
 
                     $permutations | ForEach-Object -Parallel {
-                        $dns = $using:dns
-                        $result = $using:result
-                        $includeEmpty = $using:IncludeEmpty
+                        $dns             = $using:dns
+                        $result          = $using:result
+                        $includeEmpty    = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
+                        $userAgents      = $using:userAgents
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
-                        $response = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -SkipHttpErrorCheck
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
                             if ($includeEmpty -or $response.Content -match '<Blob>') {
@@ -106,7 +109,7 @@ function Get-AzPublicStorageAccounts {
 
                             if ($IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
-                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UseBasicParsing -SkipHttpErrorCheck
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
                                 $metaResponse.Headers.GetEnumerator() | Where-Object { $_.Key -like 'x-ms-meta-*' } | ForEach-Object {

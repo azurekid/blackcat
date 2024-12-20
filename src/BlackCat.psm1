@@ -15,7 +15,7 @@ $script:SessionVariables = [ordered]@{
     serviceTags      = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
     appRoleIds       = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
     permutations     = if (Test-Path $PSScriptRoot\Helpers\permutations.txt) { Get-Content -Path $PSScriptRoot\Helpers\permutations.txt }
-    userAgents      = if (Test-Path $PSScriptRoot\Helpers\userAgents.json) { Get-Content -Path $PSScriptRoot\Helpers\userAgents.json | ConvertFrom-Json }
+    userAgents       = if (Test-Path $PSScriptRoot\Helpers\userAgents.json) { Get-Content -Path $PSScriptRoot\Helpers\userAgents.json | ConvertFrom-Json }
 }
 
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
