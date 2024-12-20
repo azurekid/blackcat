@@ -34,22 +34,22 @@ function Get-AzPublicStorageAccounts {
             # Read word list efficiently
             if ($WordList) {
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
-                Write-Verbose "Loaded $($permutations.Count) permutations from '$WordList'"
+                Write-Information "$($MyInvocation.MyCommand.Name): Loaded $($permutations.Count) permutations from '$WordList'" -InformationAction Continue
             }
 
             $permutations += $sessionVariables.permutations
-            Write-Verbose "Loaded $($permutations.Count) permutations from session"
+            Write-Information "$($MyInvocation.MyCommand.Name): Loaded $($permutations.Count) permutations from session"  -InformationAction Continue
 
             # Generate DNS names more efficiently
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($item in $permutations) {
-                [void] $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
-                [void] $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $item, $type))
+                [void] $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $($item), $type))
+                [void] $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $StorageAccountName, $($item), $type))
             }
             [void] $dnsNames.Add(('{0}.{1}.core.windows.net' -f $StorageAccountName, $type))
 
             $totalDns = $dnsNames.Count
-            Write-Verbose "Starting DNS resolution for $totalDns names..."
+            Write-Information "$($MyInvocation.MyCommand.Name): Starting DNS resolution for $totalDns names..."  -InformationAction Continue
 
             # Parallel DNS resolution with improved error handling and progress
             $dnsNames | ForEach-Object -Parallel {
@@ -60,14 +60,15 @@ function Get-AzPublicStorageAccounts {
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
-                    Write-Verbose "Storage Account '$_' does not exist"
+                    Write-Information "$($MyInvocation.MyCommand.Name): Storage Account '$_' does not exist"  -InformationAction Continue
                 }
             }
 
             # Generate and test URIs in parallel
             if ($validDnsNames.Count -gt 0) {
+                Write-Information "$($MyInvocation.MyCommand.Name): Found $($validDnsNames.Count) valid DNS names"  -InformationAction Continue
                 $totalContainers = $validDnsNames.Count * $permutations.Count
-                Write-Verbose "Get-AzPublicStorageAccounts: Starting container checks for $totalContainers combinations..."
+                Write-Information "$($MyInvocation.MyCommand.Name): Starting container checks for $totalContainers combinations..."  -InformationAction Continue
 
                 $validDnsNames | ForEach-Object -Parallel {
                     $dns = $_
@@ -118,6 +119,15 @@ function Get-AzPublicStorageAccounts {
 
                             [void] $result.Add($currentItem)
                         }
+                        else {
+                            $currentItem = [PSCustomObject]@{
+                                "StorageAccountName" = $dns.split('.')[0]
+                                "Container"          = $_
+                                "FileCount"          = 0
+                                "IsEmpty"            = $true
+                                "Uri"                = $uri
+                            }
+                        }
                     }
                 }
             }
@@ -131,6 +141,10 @@ function Get-AzPublicStorageAccounts {
         Write-Progress -Activity "Resolving DNS Names" -Completed
         Write-Progress -Activity "Checking Containers" -Completed
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
-        return $result
+        if (-not($result) -or $result.Count -eq 0) {
+            Write-Information -MessageData "No public storage account containers found" -InformationAction Continue
+        } else {
+            return $result
+        }
     }
 }
