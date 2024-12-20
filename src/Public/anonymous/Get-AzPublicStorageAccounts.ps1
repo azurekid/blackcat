@@ -91,7 +91,7 @@ function Get-AzPublicStorageAccounts {
                                 $currentItem = [PSCustomObject]@{
                                     "StorageAccountName" = $dns.split('.')[0]
                                     "Container"          = $_
-                                    "FileCount" = (Select-String -InputObject $response.Content -Pattern "/Url" -AllMatches).Matches.Count
+                                    "FileCount" = (Select-String -InputObject $response.Content -Pattern "/Name" -AllMatches).Matches.Count
                                 }
 
                                 if ($response.Content -match '<Blob>') {
@@ -114,7 +114,7 @@ function Get-AzPublicStorageAccounts {
                                 }
                             }
 
-                            # $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
+                            $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
 
                             [void] $result.Add($currentItem)
                         }

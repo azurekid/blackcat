@@ -17,8 +17,8 @@ function Get-AzPublicResources {
     )
 
     begin {
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
-        # Create thread-safe collections
+        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        # # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
@@ -36,21 +36,25 @@ function Get-AzPublicResources {
             Write-Verbose "Loaded $($permutations.Count) permutations from session"
 
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-            foreach ($item in $permutations) {
-                [void] $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $Name, $item, $type))
-                [void] $dnsNames.Add(('{1}{0}.{2}.core.windows.net' -f $Name, $item, $type))
-                [void] $dnsNames.Add(('{0}.vault.azure.net' -f $Name))
-                [void] $dnsNames.Add(('{0}{1}.vault.azure.net' -f $Name, $item))
-                [void] $dnsNames.Add(('{1}{0}.vault.azure.net' -f $Name, $item))
-                [void] $dnsNames.Add(('{0}.azurewebsites.net' -f $Name))
-                [void] $dnsNames.Add(('{1}{0}.azurewebsites.net' -f $Name, $item))
-                [void] $dnsNames.Add(('{0}{1}.azurewebsites.net' -f $Name, $item))
-                [void] $dnsNames.Add(('{0}.documents.azure.com' -f $Name))
-                [void] $dnsNames.Add(('{0}{1}.documents.azure.com' -f $Name, $item))
-                [void] $dnsNames.Add(('{1}{0}.documents.azure.com' -f $Name, $item))
+
+            $domains = @(
+                'blob.core.windows.net',
+                'table.core.windows.net',
+                'queue.core.windows.net',
+                'vault.azure.net',
+                'azurewebsites.net',
+                'documents.azure.com'
+            )
+
+            $domains | ForEach-Object {
+                $domain = $_
+                $permutations | ForEach-Object {
+                    [void] $dnsNames.Add(('{0}{1}.{2}' -f $Name, $_, $domain))
+                    [void] $dnsNames.Add(('{1}{0}.{2}' -f $Name, $_, $domain))
+                    [void] $dnsNames.Add(('{0}.{1}' -f $Name, $domain))
+                }
             }
-            Write-Output $dnsNames | Sort-Object
-            pause
+
             [void] $dnsNames.Add(('{0}.{1}.core.windows.net' -f $Names, $type))
 
             $totalDns = $dnsNames.Count
