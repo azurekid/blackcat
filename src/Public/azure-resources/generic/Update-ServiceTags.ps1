@@ -7,20 +7,23 @@ function Update-ServiceTags {
     )
 
     begin {
-        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
-        switch ($Region) {
-            "Azure Public" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519" }
-            "Azure China" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57062" }
-            "Azure Germany" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57064" }
-            "Azure US Government" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57063" }
-        }
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
     }
 
     process {
         try {
+            switch ($Region) {
+                "Azure Public" { $uri = "https://www.microsoft.com/download/details.aspx?id=56519" }
+                "Azure China" { $uri = "https://www.microsoft.com/download/details.aspx?id=57062" }
+                "Azure Germany" { $uri = "https://www.microsoft.com/download/details.aspx?id=57064" }
+                "Azure US Government" { $uri = "https://www.microsoft.com/download/details.aspx?id=57063" }
+            }
+
             Write-Verbose "Getting lastest IP Ranges"
 
-            $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*click here to download manually*").href
+            $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*Azure IP Ranges*").href
+
+            Write-Host "Downloading Service Tags from $uri"
             (Invoke-RestMethod -uri $uri).values | ConvertTo-Json -Depth 100 | Out-File $helperPath/ServiceTags.json -Force
 
             Write-Verbose "Updating Service Tags for $Region"

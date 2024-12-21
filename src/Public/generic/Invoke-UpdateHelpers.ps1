@@ -2,22 +2,10 @@ function Invoke-UpdateHelpers {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet("Azure Public", "Azure China", "Azure Germany", "Azure US Government")]
-        [string]$Region = 'Azure Public',
-
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet("Azure Public", "Azure China", "Azure Germany", "Azure US Government")]
         [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Helpers/'
     )
 
     begin {
-        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
-        switch ($Region) {
-            "Azure Public" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519" }
-            "Azure China" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57062" }
-            "Azure Germany" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57064" }
-            "Azure US Government" { $uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57063" }
-        }
 
         $filesArray = @(
             'permutations.txt',
@@ -34,7 +22,6 @@ function Invoke-UpdateHelpers {
         try {
             Write-Verbose "Downloading support files"
 
-            # $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*click here to download manually*").href
             foreach ($file in $filesArray) {
                 $fileUri = "$Repository$file"
                 $destinationPath = "$helperPath/$file"
@@ -49,26 +36,21 @@ function Invoke-UpdateHelpers {
     }
 <#
     .SYNOPSIS
-        Updates the service tags for Azure regions.
+        Downloads and updates helper files from a specified repository.
 
     .DESCRIPTION
-        The Update-ServiceTags function is used to update the service tags for Azure regions. It retrieves the latest IP ranges for the specified region and updates the service tags accordingly.
+        The Invoke-UpdateHelpers function downloads a set of predefined helper files from a specified repository URL and saves them to a local directory. This function is useful for keeping local helper files up-to-date with the latest versions available in the repository.
 
-    .PARAMETER Region
-        Specifies the Azure region for which to update the service tags. The available options are:
-        - Azure Public
-        - Azure China
-        - Azure Germany
-        - Azure US Government
-        The default value is 'Azure Public'.
+    .PARAMETER Repository
+        Specifies the base URL of the repository from which to download the helper files. The default value is 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Helpers/'.
 
     .EXAMPLE
-        Update-ServiceTags -Region "Azure Public"
-        Updates the service tags for the Azure Public region.
+        Invoke-UpdateHelpers
+        Downloads the helper files from the default repository URL and saves them to the local directory.
 
     .EXAMPLE
-        Update-ServiceTags -Region "Azure China"
-        Updates the service tags for the Azure China region.
+        Invoke-UpdateHelpers -Repository 'https://example.com/helpers/'
+        Downloads the helper files from the specified repository URL and saves them to the local directory.
 
     .INPUTS
         None. You cannot pipe objects to this function.

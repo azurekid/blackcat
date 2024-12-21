@@ -13,7 +13,7 @@ function Get-AzPublicResources {
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [int]$ThrottleLimit = 100
+        [int]$ThrottleLimit = 1000
     )
 
     begin {
@@ -67,7 +67,7 @@ function Get-AzPublicResources {
             Write-Verbose "Starting DNS resolution for $totalDns names..."
 
             # Parallel DNS resolution with improved error handling and progress
-            $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+            $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 try {
                     $validDnsNames = $using:validDnsNames
                     if ([System.Net.Dns]::GetHostEntry($_)) {

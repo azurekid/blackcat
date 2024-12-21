@@ -1,6 +1,11 @@
 #region load module variables
 Write-Verbose -Message "Creating modules variables"
-Update-AzConfig -DisplayBreakingChangeWarning $false
+try {
+    Update-AzConfig -DisplayBreakingChangeWarning $false
+}
+catch {
+    Write-Error -Message "Failed to update AzConfig: $_"
+}
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
 $script:SessionVariables = [ordered]@{
