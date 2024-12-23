@@ -58,6 +58,7 @@ function Get-AzPublicStorageAccounts {
                     $validDnsNames = $using:validDnsNames
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
+                        $sessionVariables.permutations += $_.split('.')[0]
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
@@ -72,7 +73,7 @@ function Get-AzPublicStorageAccounts {
                 Write-Information "$($MyInvocation.MyCommand.Name): Starting container checks for $totalContainers combinations..."  -InformationAction Continue
 
                 $validDnsNames | ForEach-Object -Parallel {
-                    $dns = $_
+                    $dns             = $_
                     $permutations    = $using:permutations
                     $result          = $using:result
                     $includeEmpty    = $using:IncludeEmpty
