@@ -56,9 +56,11 @@ function Get-AzPublicStorageAccounts {
             $dnsNames | ForEach-Object -Parallel {
                 try {
                     $validDnsNames = $using:validDnsNames
+                    $permutations = $using:permutations
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
-                        $sessionVariables.permutations += $_.split('.')[0]
+                        Write-Host $_
+                        $permutations += $($_).split('.')[0]
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
