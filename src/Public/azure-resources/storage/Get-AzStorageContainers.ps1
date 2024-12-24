@@ -48,10 +48,10 @@ function Get-AzStorageContainers {
             }
 
             Write-Verbose "Returning API response"
-            $apiResponse | ForEach-Object {
-                $_ | Add-Member -MemberType NoteProperty -Name "storageAccountName" -Value ($Id -split "/")[8]
-                $_ | Add-Member -MemberType NoteProperty -Name "uri" -Value $('https://{0}.blob.core.windows.net/{1}/?restype=container&comp=list' -f (($Id -split "/")[8]), $_.name)
-            }
+            # $apiResponse | ForEach-Object {
+            #     $_ | Add-Member -MemberType NoteProperty -Name "storageAccountName" -Value ($Id -split "/")[8]
+            #     $_ | Add-Member -MemberType NoteProperty -Name "uri" -Value $('https://{0}.blob.core.windows.net/{1}/?restype=container&comp=list' -f (($Id -split "/")[8]), $_.name)
+            # }
             return $apiResponse
         }
         catch {
