@@ -7,6 +7,8 @@ function Invoke-UpdateHelpers {
 
     begin {
 
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
+
         $filesArray = @(
             'permutations.txt',
             'userAgents.json',
@@ -19,6 +21,9 @@ function Invoke-UpdateHelpers {
     }
 
     process {
+        Write-Verbose "Creating helper directory"
+        Test-Path -Path $PSScriptRoot/Helpers -ErrorAction SilentlyContinue | New-Item -ItemType Directory -Name Helpers -Force
+        
         try {
             Write-Verbose "Downloading support files"
 

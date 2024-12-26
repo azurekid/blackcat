@@ -58,8 +58,10 @@ foreach ($script in @($privateScripts + $publicScripts)) {
 
 Export-ModuleMember -Function $publicScripts.BaseName
 
-# Import Classes
 $helperPath = "$PSScriptRoot/Helpers"
+if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
+    Invoke-UpdateHelpers
+}
 
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
 $version = $manifest.ModuleVersion
