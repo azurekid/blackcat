@@ -57,6 +57,7 @@ function Get-AzPublicStorageAccounts {
                 try {
                     $validDnsNames = $using:validDnsNames
                     $permutations = $using:permutations
+                    
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
                         Write-Host $_
@@ -94,20 +95,18 @@ function Get-AzPublicStorageAccounts {
 
                         if ($response.StatusCode -eq 200) {
                             if ($includeEmpty -or $response.Content -match '<Blob>') {
-
                                 $currentItem = [PSCustomObject]@{
                                     "StorageAccountName" = $dns.split('.')[0]
                                     "Container"          = $_
                                     "FileCount" = (Select-String -InputObject $response.Content -Pattern "/Name" -AllMatches).Matches.Count
                                 }
-
                                 if ($response.Content -match '<Blob>') {
                                     $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $false
-
                                 }
                                 else {
                                     $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $true
                                 }
+                                $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
                             }
 
                             if ($IncludeMetadata) {
@@ -121,18 +120,7 @@ function Get-AzPublicStorageAccounts {
                                 }
                             }
 
-                            $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
-
                             [void] $result.Add($currentItem)
-                        }
-                        else {
-                            $currentItem = [PSCustomObject]@{
-                                "StorageAccountName" = $dns.split('.')[0]
-                                "Container"          = $_
-                                "FileCount"          = 0
-                                "IsEmpty"            = $true
-                                "Uri"                = $uri
-                            }
                         }
                     }
                 }
