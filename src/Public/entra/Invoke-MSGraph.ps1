@@ -10,30 +10,36 @@ function Invoke-MsGraph {
     }
 
     process {
-
         try {
+            $allResults = @()
+            $nextLink = '/{0}?$count=true&$top=999' -f "$relativeUrl"
 
-            $payload = @{
-                requests = @(
-                    @{
-                        id     = "List"
-                        method = 'GET'
-                        url    = '/{0}?$count=true&$top=999' -f "$relativeUrl"
-                    }
-                )
-            }
+            do {
+                $payload = @{
+                    requests = @(
+                        @{
+                            id     = "List"
+                            method = 'GET'
+                            url    = $nextLink
+                        }
+                    )
+                }
 
-            $requestParam = @{
-                Headers     = $script:graphHeader
-                Uri         = '{0}/$batch' -f $sessionVariables.graphUri
-                Method      = 'POST'
-                ContentType = 'application/json'
-                Body        = $payload | ConvertTo-Json -Depth 10
-            }
+                $requestParam = @{
+                    Headers     = $script:graphHeader
+                    Uri         = '{0}/$batch' -f $sessionVariables.graphUri
+                    Method      = 'POST'
+                    ContentType = 'application/json'
+                    Body        = $payload | ConvertTo-Json -Depth 10
+                }
 
-            $apiResponse = (Invoke-RestMethod @requestParam)
-            return $apiResponse.responses.body.value
+                $apiResponse = (Invoke-RestMethod @requestParam)
+                $allResults += $apiResponse.responses.body.value
 
+                $nextLink = $apiResponse.responses.body.'@odata.nextLink'
+            } while ($nextLink)
+
+            return $allResults
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
