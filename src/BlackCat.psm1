@@ -7,25 +7,6 @@ catch {
     Write-Error -Message "Failed to update AzConfig: $_"
 }
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
-$script:SessionVariables = [ordered]@{
-    baseUri          = ''
-    graphUri         = 'https://graph.microsoft.com/beta'
-    batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01'
-    resourceGraphUri = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01'
-    ExpiresOn        = ''
-    apiVersion       = '2023-06-01-preview'
-    AccessToken      = ''
-    Roles            = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
-    serviceTags      = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
-    appRoleIds       = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
-    permutations     = if (Test-Path $PSScriptRoot\Helpers\permutations.txt) { Get-Content -Path $PSScriptRoot\Helpers\permutations.txt }
-    userAgents       = if (Test-Path $PSScriptRoot\Helpers\userAgents.json) { Get-Content -Path $PSScriptRoot\Helpers\userAgents.json | ConvertFrom-Json }
-}
-
-New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
-New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Force
-
 #region Handle Module Removal
 $OnRemoveScript = {
     Remove-Variable -Name SessionVariables -Scope Script -Force
@@ -62,6 +43,26 @@ $helperPath = "$PSScriptRoot/Helpers"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
     Invoke-UpdateHelpers
 }
+
+[System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
+$script:SessionVariables = [ordered]@{
+    baseUri          = ''
+    graphUri         = 'https://graph.microsoft.com/beta'
+    batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01'
+    resourceGraphUri = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01'
+    ExpiresOn        = ''
+    apiVersion       = '2023-06-01-preview'
+    AccessToken      = ''
+    Roles            = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
+    serviceTags      = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
+    appRoleIds       = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
+    permutations     = if (Test-Path $PSScriptRoot\Helpers\permutations.txt) { Get-Content -Path $PSScriptRoot\Helpers\permutations.txt }
+    userAgents       = if (Test-Path $PSScriptRoot\Helpers\userAgents.json) { Get-Content -Path $PSScriptRoot\Helpers\userAgents.json | ConvertFrom-Json }
+}
+
+New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
+New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Force
+
 
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
 $version = $manifest.ModuleVersion

@@ -17,7 +17,6 @@ function Get-AzPublicResources {
     )
 
     begin {
-        # $MyInvocation.MyCommand.Name | Invoke-BlackCat
         # # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
