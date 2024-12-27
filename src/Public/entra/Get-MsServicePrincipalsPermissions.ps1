@@ -1,9 +1,13 @@
 function Get-MsServicePrincipalsPermissions {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
-        [string]$servicePrincipalId
+        [string]$servicePrincipalId,
+        
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        [string]$id
     )
 
     begin {
@@ -48,9 +52,4 @@ This example retrieves the app role assignments for the specified service princi
 The function uses the Invoke-RestMethod cmdlet to send a GET request to the Microsoft Graph API and returns the app role assignments for the specified service principal.
 
 #>
-<#
-.EXAMPLE
-PS> Get-MsServicePrincipalsPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
-This example retrieves the app role assignments for the specified service principal.
-
 }
