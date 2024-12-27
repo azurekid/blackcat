@@ -1,4 +1,4 @@
-function Invoke-UpdateHelpers {
+function Invoke-Update {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -44,17 +44,17 @@ function Invoke-UpdateHelpers {
         Downloads and updates helper files from a specified repository.
 
     .DESCRIPTION
-        The Invoke-UpdateHelpers function downloads a set of predefined helper files from a specified repository URL and saves them to a local directory. This function is useful for keeping local helper files up-to-date with the latest versions available in the repository.
+        The Invoke-Update function downloads a set of predefined helper files from a specified repository URL and saves them to a local directory. This function is useful for keeping local helper files up-to-date with the latest versions available in the repository.
 
     .PARAMETER Repository
         Specifies the base URL of the repository from which to download the helper files. The default value is 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Helpers/'.
 
     .EXAMPLE
-        Invoke-UpdateHelpers
+        Invoke-Update
         Downloads the helper files from the default repository URL and saves them to the local directory.
 
     .EXAMPLE
-        Invoke-UpdateHelpers -Repository 'https://example.com/helpers/'
+        Invoke-Update -Repository 'https://example.com/helpers/'
         Downloads the helper files from the specified repository URL and saves them to the local directory.
 
     .INPUTS
@@ -67,4 +67,3 @@ function Invoke-UpdateHelpers {
         Author: Your Name
         Date: Today's Date
 #>
-}

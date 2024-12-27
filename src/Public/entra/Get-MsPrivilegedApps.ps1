@@ -1,5 +1,6 @@
 function Get-MsPrivilegedApps {
     begin {
+        Write-Verbose "Invoking BlackCat for MSGraph"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
     }
 
@@ -65,4 +66,27 @@ function Get-MsPrivilegedApps {
             Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message $_.Exception.Message -Severity 'Error'
         }
     }
+    <#
+.SYNOPSIS
+Retrieves and analyzes privileged enterprise applications from Microsoft Graph.
+
+.DESCRIPTION
+The Get-MsPrivilegedApps function collects enterprise applications from Microsoft Graph and identifies those with risky permissions. It validates the applications against a predefined list of risky permissions and returns detailed information about the applications that have these permissions.
+
+.PARAMETER None
+This function does not take any parameters.
+
+.OUTPUTS
+System.Collections.ArrayList
+Returns an array list of PSCustomObjects containing details of the applications with risky permissions.
+
+.NOTES
+Author: Rogier Dijkman
+FilePath: /c:/Users/RogierDijkman/GitHub/blackcat/src/Public/entra/Get-MsPrivilegedApps.ps1
+
+.EXAMPLE
+PS> Get-MsPrivilegedApps
+This command retrieves and analyzes privileged enterprise applications from Microsoft Graph and returns detailed information about those with risky permissions.
+
+#>
 }

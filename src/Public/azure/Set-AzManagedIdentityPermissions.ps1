@@ -1,3 +1,10 @@
+# used for auto-generating the valid values for the AppRoleName parameter
+class appRoleNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.appRoleIds.Permission)
+    }
+}
+
 function Set-AzManagedIdentityPermissions {
     [cmdletbinding()]
     param (
@@ -9,9 +16,13 @@ function Set-AzManagedIdentityPermissions {
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$resourceId,
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
-        [string]$appRoleId
+        [string]$appRoleId,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet( [appRoleNames] )]
+        [string]$appRoleName
 
     )
 
@@ -24,6 +35,8 @@ function Set-AzManagedIdentityPermissions {
 
         try {
 
+            $appRoleId = (Get-MsAppRolePermissions -appRoleName $appRoleName).appRoleId
+            
             Write-Verbose "Get Service Principals App Role Assignments"
             $uri = "$($sessionVariables.graphUri)/servicePrincipals/$servicePrincipalId/appRoleAssignments"
 

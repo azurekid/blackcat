@@ -7,6 +7,7 @@ function Get-AzManagedIdentity {
     )
 
     begin {
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 
@@ -14,7 +15,7 @@ function Get-AzManagedIdentity {
 
         try {
 
-            Write-Verbose "Information Dialog"
+            Write-Verbose "Get Managed Identity"
             $uri = "$($SessionVariables.baseUri)/providers/Microsoft.ManagedIdentity/userAssignedIdentities?api-version=2023-01-31"
 
             $requestParam = @{

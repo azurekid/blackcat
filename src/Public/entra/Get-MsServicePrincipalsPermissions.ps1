@@ -30,4 +30,27 @@ function Get-MsServicePrincipalsPermissions {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
+<#
+.SYNOPSIS
+Retrieves the app role assignments for a specified service principal from Microsoft Graph.
+
+.DESCRIPTION
+The Get-MsServicePrincipalsPermissions function retrieves the app role assignments for a specified service principal from Microsoft Graph. It requires the service principal ID as a mandatory parameter.
+
+.PARAMETER servicePrincipalId
+The unique identifier (GUID) of the service principal. This parameter is mandatory and must match the expected GUID pattern.
+
+.EXAMPLE
+PS> Get-MsServicePrincipalsPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
+This example retrieves the app role assignments for the specified service principal.
+
+.NOTES
+The function uses the Invoke-RestMethod cmdlet to send a GET request to the Microsoft Graph API and returns the app role assignments for the specified service principal.
+
+#>
+<#
+.EXAMPLE
+PS> Get-MsServicePrincipalsPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
+This example retrieves the app role assignments for the specified service principal.
+
 }
