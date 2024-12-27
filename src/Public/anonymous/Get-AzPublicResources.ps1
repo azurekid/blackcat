@@ -17,7 +17,7 @@ function Get-AzPublicResources {
     )
 
     begin {
-        # # Create thread-safe collections
+        # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 

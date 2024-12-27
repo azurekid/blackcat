@@ -32,13 +32,18 @@ function Invoke-MsGraph {
             }
 
             $initialResponse = (Invoke-RestMethod @requestParam)
-            $allItems = Get-AllPages -initialResponse $initialResponse
+            $allItems = Get-AllPages -ProcessLink $initialResponse
             return $allItems
 
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            if ($_.Exception.Message -contains "*401") {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Unauthorized access to the Graph API." -Severity 'Error'
+            } else {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            }
         }
+        
     }
     <#
     .SYNOPSIS
@@ -53,35 +58,4 @@ function Invoke-MsGraph {
 
         This example sends a GET request to the Microsoft Graph API to retrieve information about the applications.
 #>
-}
-
-function Get-AllPages {
-    param (
-        [Parameter(Mandatory = $true)]
-        [object]$initialResponse
-    )
-
-    $allItems = @($initialResponse.responses.body.value)
-    $nextLink = $initialResponse.responses.body.'@odata.nextLink'
-    $pageCount = 1
-
-    while ($nextLink) {
-        $percentComplete = [math]::Min((($allItems.Count / 100) * 100), 100)
-        Write-Progress -Activity "Fetching data from MS Graph" -Status "Processing page $pageCount" -PercentComplete $percentComplete
-
-        $requestParam = @{
-            Headers     = $script:graphHeader
-            Uri         = $nextLink
-            Method      = 'GET'
-            ContentType = 'application/json'
-        }
-
-        $apiResponse = (Invoke-RestMethod @requestParam)
-        $allItems += $apiResponse.value
-        $nextLink = $apiResponse.'@odata.nextLink'
-        $pageCount++
-    }
-
-    Write-Progress -Activity "Fetching data from MS Graph" -Completed
-    return $allItems
 }

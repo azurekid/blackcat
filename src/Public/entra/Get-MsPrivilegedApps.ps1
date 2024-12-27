@@ -6,7 +6,7 @@ function Get-MsPrivilegedApps {
     process {
         try {
             Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Collecting Enterprise Applications" -Severity 'Information'
-            $applications = Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications"
+            $applications = Invoke-MsGraph -relativeUrl "applications"
 
             Write-Verbose "User Applications: $($applications.count)"
             Write-Verbose "      [-] Validating [$($applications.count)] Enterprise Applications"
@@ -41,7 +41,7 @@ function Get-MsPrivilegedApps {
                         DisplayName     = $application.DisplayName
                         CreatedDateTime = $application.CreatedDateTime
                         Permission      = $permissionObjects | Sort-Object -Unique
-                        Owners          = @((Invoke-GraphRecursive -Url "$($sessionVariables.graphUri)/applications/$($application.id)/owners").userPrincipalName)
+                        Owners          = @((Invoke-MSGraph -relativeUrl "applications/$($application.id)/owners").userPrincipalName)
                     }
 
                     if ($application.PasswordCredentials.KeyId) {
