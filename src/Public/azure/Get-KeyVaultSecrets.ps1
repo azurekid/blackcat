@@ -2,7 +2,7 @@ function Get-KeyVaultSecrets {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [object]$id,
+        [array]$Name,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [int]$ThrottleLimit = 10000
@@ -14,24 +14,26 @@ function Get-KeyVaultSecrets {
 
         $result  = New-Object System.Collections.ArrayList
         $secrets = New-Object System.Collections.ArrayList
+        $secretsUri = New-Object System.Collections.ArrayList
 
-        $totalItems = $id.Count
+        $totalItems = $Name.Count
         $currentItemIndex = 0
     }
 
     process {
         try {
-            Write-Verbose "Retrieving Key Vault secrets for $(($id).count) vaults"
+            Write-Verbose "Retrieving Key Vault secrets for $(($Name).count) vaults"
 
-            $id | ForEach-Object -Parallel {
+            $Name | ForEach-Object -Parallel {
                 $authHeader       = $using:script:keyVaultHeader
                 $result           = $using:result
                 $secrets          = $using:secrets
+                $secretsUri       = $using:secretsUri
                 $totalItems       = $using:totalItems
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
-                $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_.split('/')[-1]
-                Write-Verbose "Retrieving secrets from $uri"
+                $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_
+                
                 $requestParam = @{
                     Headers = $authHeader
                     Uri     = $uri
@@ -41,20 +43,21 @@ function Get-KeyVaultSecrets {
                 $apiResponse = Invoke-RestMethod @requestParam
 
                 if ($apiResponse.value.Count -gt 0) {
-                    [void] $secrets.Add($apiResponse.value)
+                    [void] $secretsUri.Add($apiResponse.value)
                 }
             } -ThrottleLimit $ThrottleLimit
 
-            if ($secrets.count -gt 0) {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($secrets.count) Key Vaults that contains secrets" -Severity 'Information'
-                $secrets.id | ForEach-Object -Parallel {
+            if ($secretsUri.count -gt 0) {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($secretsUri.count) Key Vaults that contains secrets" -Severity 'Information'
+                
+                $secretsUri.id | ForEach-Object -Parallel {
                     $authHeader = $using:script:keyVaultHeader
                     $result     = $using:result
-                    $secrets    = $using:secrets
-
+                    
+                    
                     $requestParam = @{
                         Headers = $authHeader
-                        Uri     = "$_/?api-version=7.4"
+                        Uri     = '{0}/?api-version=7.4' -f $_
                         Method  = 'GET'
                     }
 
@@ -67,7 +70,7 @@ function Get-KeyVaultSecrets {
                             "Value"        = $secretResponse.value
                         }
 
-                        [void] $result.Add($currentItem) | Sort-Object -Unique
+                        [void] $result.Add($currentItem)
                     }
                     catch {
                         if ($_.Exception.Message -match "Forbidden") {
@@ -90,6 +93,6 @@ function Get-KeyVaultSecrets {
 
     end {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
-        return $result
+        return $result | Sort-Object KeyVaultName, SecretName, Value -Unique
     }
 }
