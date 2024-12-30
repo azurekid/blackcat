@@ -31,7 +31,7 @@ function Get-KeyVaultSecrets {
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
                 $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_.split('/')[-1]
-                Write-Host "Retrieving secrets for keyvault $uri"
+                Write-Verbose "Retrieving secrets from $uri"
                 $requestParam = @{
                     Headers = $authHeader
                     Uri     = $uri
