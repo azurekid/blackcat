@@ -57,7 +57,7 @@ function Get-AzPublicStorageAccounts {
                 try {
                     $validDnsNames = $using:validDnsNames
                     $permutations = $using:permutations
-                    
+
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
                         Write-Host $_
@@ -67,7 +67,7 @@ function Get-AzPublicStorageAccounts {
                 catch [System.Net.Sockets.SocketException] {
                     Write-Information "$($MyInvocation.MyCommand.Name): Storage Account '$_' does not exist"  -InformationAction Continue
                 }
-            }
+            } -ThrottleLimit $ThrottleLimit
 
             # Generate and test URIs in parallel
             if ($validDnsNames.Count -gt 0) {

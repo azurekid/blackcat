@@ -57,6 +57,13 @@ function Invoke-BlackCat {
                 'Authorization' = 'Bearer ' + ($script:graphToken).Token
             }
         }
+
+        if ($ResourceTypeName -eq "KeyVault") {
+            $script:keyVaultToken = Get-AzAccessToken -ResourceTypeName 'KeyVault'
+            $script:keyVaultHeader = @{
+                'Authorization' = 'Bearer ' + ($script:keyVaultToken).Token
+            }
+        }
     }
     else {
         Write-Message -FunctionName $MyInvocation.MyCommand.Name "Run Connect-AzAccount to login" -Severity 'Error'
