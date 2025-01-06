@@ -28,7 +28,7 @@ function Get-AzStorageContainers {
                 $authHeader       = $using:script:authHeader
                 $result           = $using:result
                 $totalItems       = $using:totalItems
-                $batchUri          = $using:sessionVariables.batchUri
+                $batchUri         = $using:sessionVariables.batchUri
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
                 $payload = @{
@@ -46,7 +46,7 @@ function Get-AzStorageContainers {
 
                 $requestParam = @{
                     Headers     = $authHeader
-                    Uri         = $sessionVariables.batchUri
+                    Uri         = $batchUri
                     Method      = 'POST'
                     ContentType = 'application/json'
                     Body        = $payload | ConvertTo-Json -Depth 10
