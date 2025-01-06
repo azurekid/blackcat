@@ -63,6 +63,10 @@ function Get-AzStorageContainers {
 
                 Write-Verbose "Returning API response"
                 [void]$result.Add($apiResponse)
+
+                # Update progress bar
+                $percentComplete = [math]::Round(($currentItemIndex / $totalItems) * 100)
+                Write-Progress -Activity "Processing containers" -Status "$currentItemIndex of $totalItems completed" -PercentComplete $percentComplete
             } -ThrottleLimit $ThrottleLimit
         }
         catch {
