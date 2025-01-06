@@ -6,7 +6,7 @@ function Export-AccessToken {
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidateNotNullOrEmpty()]
-        [string]$OutputFile = "AccessTokens.txt"
+        [string]$OutputFile = "AccessTokens.json"
     )
 
     begin {
@@ -39,7 +39,7 @@ function Export-AccessToken {
             }
 
             Write-Verbose "Exporting tokens to file $OutputFile"
-            $tokens | Out-File -FilePath $OutputFile
+            $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
         }
         catch {
             Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
