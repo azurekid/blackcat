@@ -21,7 +21,7 @@ function Export-AccessToken {
             foreach ($resourceTypeName in $ResourceTypeNames) {
                 try {
                     $accessToken = Get-AzAccessToken -ResourceTypeName $resourceTypeName
-                    $tokenContent = ConvertFrom-JWT -JWT $accessToken
+                    $tokenContent = ConvertFrom-JWT -Base64JWT $accessToken
 
                     $tokenObject = [PSCustomObject]@{
                         Resource = $resourceTypeName
