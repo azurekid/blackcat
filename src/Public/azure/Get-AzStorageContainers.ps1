@@ -62,7 +62,7 @@ function Get-AzStorageContainers {
                 }
 
                 Write-Verbose "Returning API response"
-                [void]$result.AddRange($apiResponse)
+                [void]$result.Add($apiResponse)
             } -ThrottleLimit $ThrottleLimit
         }
         catch {
