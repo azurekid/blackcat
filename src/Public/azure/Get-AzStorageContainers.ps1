@@ -2,7 +2,7 @@ function Get-AzStorageContainers {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [array]$id,
+        [object]$id,
 
         [Parameter(Mandatory = $false)]
         [switch]$PublicAccess
