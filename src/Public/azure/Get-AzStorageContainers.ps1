@@ -28,6 +28,7 @@ function Get-AzStorageContainers {
                 $authHeader       = $using:script:authHeader
                 $result           = $using:result
                 $totalItems       = $using:totalItems
+                $batchUri          = $using:sessionVariables.batchUri
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
                 $payload = @{
