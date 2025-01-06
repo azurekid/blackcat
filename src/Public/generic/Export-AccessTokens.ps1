@@ -1,4 +1,4 @@
-function Export-AccessToken {
+function Export-AccessTokens {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -28,7 +28,8 @@ function Export-AccessToken {
                         UPN      = $tokenContent.UPN
                         Audience = $tokenContent.Audience
                         Roles    = $tokenContent.Roles
-                        Tenant   = $tokenContent.Tenant
+                        Scope    = $tokenContent.Scope
+                        Tenant   = $tokenContent.'Tenant ID'
                         Token    = $accessToken
                     }
                     $tokens += $tokenObject
@@ -51,31 +52,31 @@ function Export-AccessToken {
     }
 
     <#
-    .SYNOPSIS
-        This function exports access tokens for specified resource types to a text file.
+.SYNOPSIS
+    This function exports access tokens for specified resource types to a JSON file.
 
-    .DESCRIPTION
-        The Export-AccessToken function requests access tokens for the specified resource types and exports them to a text file. It handles errors and logs messages accordingly.
+.DESCRIPTION
+    The Export-AccessToken function requests access tokens for the specified resource types and exports them to a JSON file. It handles errors and logs messages accordingly.
 
-    .PARAMETER ResourceTypeNames
-        The ResourceTypeNames parameter is an optional array of strings that specifies the resource types for which to request access tokens. Default values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
+.PARAMETER ResourceTypeNames
+    The ResourceTypeNames parameter is an optional array of strings that specifies the resource types for which to request access tokens. Default values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
 
-    .PARAMETER OutputFile
-        The OutputFile parameter is an optional string that specifies the path to the file where the tokens will be exported. The default value is "AccessTokens.txt".
+.PARAMETER OutputFile
+    The OutputFile parameter is an optional string that specifies the path to the file where the tokens will be exported. The default value is "AccessTokens.json".
 
-    .EXAMPLE
-        ```powershell
-        Export-AccessToken -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.txt"
-        ```
-        This example calls the Export-AccessToken function with specified resource types and output file.
+.EXAMPLE
+    Export-AccessToken -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
+    This example calls the Export-AccessToken function with specified resource types and output file.
 
-    .EXAMPLE
-        ```powershell
-        Export-AccessToken -OutputFile "AccessTokens.txt"
-        ```
-        This example calls the Export-AccessToken function with the default resource types and a specified output file.
+.EXAMPLE
+    Export-AccessToken -OutputFile "AccessTokens.json"
+    This example calls the Export-AccessToken function with the default resource types and a specified output file.
 
-    .LINK
-        For more information, see the related documentation or contact support.
-    #>
+.EXAMPLE
+    $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json
+    This example shows how to read the exported JSON file back into a PowerShell object for further use.
+
+.LINK
+    For more information, see the related documentation or contact support.
+#>
 }
