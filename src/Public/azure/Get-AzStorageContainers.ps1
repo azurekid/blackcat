@@ -8,7 +8,7 @@ function Get-AzStorageContainers {
         [switch]$PublicAccess,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 10
+        [int]$ThrottleLimit = 10000
     )
 
     begin {
