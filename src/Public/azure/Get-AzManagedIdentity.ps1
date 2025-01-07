@@ -36,30 +36,29 @@ function Get-AzManagedIdentity {
         }
     }
 <#
-    .SYNOPSIS
-    Retrieves information about managed identities.
-    .DESCRIPTION
-    The Get-AzUserAssignedManagedIdentity function retrieves information about managed identities from the specified API endpoint.
-    It can return all available managed identities or filter the results based on a specific name.
-    .PARAMETER Name
-    Specifies the name of the managed identity to retrieve.
-    The name must match the expected pattern '^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$'.
-    .EXAMPLE
-    Get-AzUserAssignedManagedIdentity -Name "myManagedIdentity"
-    Retrieves the managed identity with the name "myManagedIdentity".
-    .EXAMPLE
-    Get-AzUserAssignedManagedIdentity
-    Retrieves all available managed identities.
-    .INPUTS
-    None. You cannot pipe input to this function.
-    .OUTPUTS
-    System.Object
-    The function returns an object representing the retrieved managed identities.
-    If a name is specified, it returns a single managed identity object.
-    If no name is specified, it returns an array of all available managed identity objects.
-    .NOTES
-    This function requires the Invoke-BlackCat and Invoke-RestMethod cmdlets to be available.
-    .LINK
-    Invoke-BlackCat
+.SYNOPSIS
+Retrieves Azure Managed Identities.
+
+.DESCRIPTION
+The `Get-AzManagedIdentity` function retrieves user-assigned managed identities from Azure. It can filter the identities by name if provided.
+
+.PARAMETER Name
+The name of the managed identity to retrieve. This parameter is optional and can be provided from the pipeline by property name.
+
+.EXAMPLE
+# Example 1: Retrieve all managed identities
+Get-AzManagedIdentity
+
+.EXAMPLE
+# Example 2: Retrieve a specific managed identity by name
+Get-AzManagedIdentity -Name "myManagedIdentity"
+
+.DEPENDENCIES
+- `Invoke-BlackCat`: This function is invoked at the beginning of the script.
+- `Invoke-RestMethod`: This cmdlet is used to make REST API calls to Azure.
+- `Write-Message`: This function is used to log error messages.
+
+.NOTES
+- The function requires the `Microsoft.ManagedIdentity` provider and the `2023-01-31` API version.
 #>
 }

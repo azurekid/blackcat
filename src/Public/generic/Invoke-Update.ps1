@@ -22,7 +22,7 @@ function Invoke-Update {
 
     process {
         Write-Verbose "Creating helper directory"
-        Test-Path -Path $PSScriptRoot/Helpers -ErrorAction SilentlyContinue | New-Item -ItemType Directory -Name Helpers -Force
+        Test-Path -Path $helperPath -ErrorAction SilentlyContinue | New-Item -ItemType Directory -Path $helperPath -Force
         
         try {
             Write-Verbose "Downloading support files"

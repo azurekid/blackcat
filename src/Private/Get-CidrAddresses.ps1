@@ -41,4 +41,35 @@ function Get-CidrAddresses {
     }
 
     return $ipAddresses
+    
+    <#
+    .SYNOPSIS
+    Generates all possible IP addresses within a given CIDR range.
+
+    .DESCRIPTION
+    The `Get-CidrAddresses` function takes a CIDR range as input and generates all possible IP addresses within that range. It supports both IPv4 and IPv6 addresses.
+
+    .PARAMETER CidrRange
+    The CIDR range to generate IP addresses for. This parameter is mandatory and must be a valid CIDR notation for either IPv4 or IPv6.
+
+    .DEPENDENCIES
+    - System.Net.IPAddress
+    - System.BitConverter
+    - System.Math
+
+    .EXAMPLES
+    # Example 1
+    # Generate all IP addresses within the IPv4 CIDR range 192.168.1.0/24
+    $ipv4Addresses = Get-CidrAddresses -CidrRange '192.168.1.0/24'
+    $ipv4Addresses
+
+    # Example 2
+    # Generate all IP addresses within the IPv6 CIDR range 2001:db8::/64
+    $ipv6Addresses = Get-CidrAddresses -CidrRange '2001:db8::/64'
+    $ipv6Addresses
+
+    .NOTES
+    IPv4 subnet mask length must be at least 18.
+    IPv6 subnet mask length must be at least 117.
+    #>
 }

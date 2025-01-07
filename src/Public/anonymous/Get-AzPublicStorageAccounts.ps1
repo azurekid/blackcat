@@ -12,7 +12,7 @@ function Get-AzPublicStorageAccounts {
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [int]$ThrottleLimit = 100,
+        [int]$ThrottleLimit = 1000,
 
         [Parameter(Mandatory = $false)]
         [switch]$IncludeEmpty,
@@ -141,4 +141,54 @@ function Get-AzPublicStorageAccounts {
             return $result
         }
     }
+<#
+.SYNOPSIS
+Retrieves public Azure Storage Accounts and their containers.
+
+.DESCRIPTION
+The Get-AzPublicStorageAccounts function retrieves public Azure Storage Accounts and their containers by performing DNS resolution and container checks. It supports parallel processing for efficient DNS resolution and container checks.
+
+.PARAMETER StorageAccountName
+The name of the Azure Storage Account to check. This parameter is optional.
+
+.PARAMETER Type
+The type of storage service to check. Valid values are 'blob', 'file', 'queue', 'table', 'dfs'. The default value is 'blob'.
+
+.PARAMETER WordList
+A file path to a list of words to use for generating permutations of DNS names. This parameter is optional.
+
+.PARAMETER ThrottleLimit
+The maximum number of concurrent operations for parallel processing. The default value is 1000.
+
+.PARAMETER IncludeEmpty
+A switch to include empty containers in the results. This parameter is optional.
+
+.PARAMETER IncludeMetadata
+A switch to include metadata of the containers in the results. This parameter is optional.
+
+.EXAMPLE
+PS> Get-AzPublicStorageAccounts -StorageAccountName "mystorageaccount"
+
+Retrieves public containers for the specified storage account.
+
+.EXAMPLE
+PS> Get-AzPublicStorageAccounts -StorageAccountName "mystorageaccount" -Type "file" -IncludeEmpty
+
+Retrieves public file containers for the specified storage account, including empty containers.
+
+.EXAMPLE
+PS> Get-AzPublicStorageAccounts -WordList "C:\wordlist.txt" -ThrottleLimit 500
+
+Loads permutations from the specified word list and performs DNS resolution with a throttle limit of 500.
+
+.DEPENDENCIES
+- System.Collections.Concurrent.ConcurrentBag
+- System.Collections.Generic.HashSet
+- System.Net.Dns
+- System.Net.Sockets.SocketException
+- Invoke-WebRequest
+
+.NOTES
+Author: Rogier Dijkman
+#>
 }

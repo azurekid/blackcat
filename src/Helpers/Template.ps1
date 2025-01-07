@@ -61,6 +61,8 @@ function Function-Name {
 
     .LINK
         For more information, see the related documentation or contact support.
+
+    .NOTES
+    Author: Rogier Dijkman
     #>
-#>
 }

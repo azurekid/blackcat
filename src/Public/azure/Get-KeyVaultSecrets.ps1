@@ -95,4 +95,31 @@ function Get-KeyVaultSecrets {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result | Sort-Object KeyVaultName, SecretName, Value -Unique
     }
+<#
+.SYNOPSIS
+Retrieves secrets from specified Azure Key Vaults.
+
+.DESCRIPTION
+The Get-KeyVaultSecrets function retrieves secrets from the specified Azure Key Vaults. It supports parallel processing to handle multiple vaults and secrets efficiently.
+
+.PARAMETER Name
+An array of Key Vault names from which to retrieve secrets. This parameter is mandatory and accepts pipeline input by property name.
+
+.PARAMETER ThrottleLimit
+An optional parameter that specifies the maximum number of concurrent threads to use for parallel processing. The default value is 1000.
+
+.EXAMPLE
+PS C:\> Get-KeyVaultSecrets -Name "MyKeyVault1", "MyKeyVault2"
+
+This command retrieves secrets from the specified Key Vaults "MyKeyVault1" and "MyKeyVault2".
+
+.EXAMPLE
+PS C:\> "MyKeyVault1", "MyKeyVault2" | Get-KeyVaultSecrets
+
+This command retrieves secrets from the specified Key Vaults "MyKeyVault1" and "MyKeyVault2" using pipeline input.
+
+.NOTES
+This function requires the Azure Key Vault REST API and appropriate permissions to access the secrets in the specified Key Vaults.
+
+#>
 }

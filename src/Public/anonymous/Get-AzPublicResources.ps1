@@ -101,7 +101,14 @@ function Get-AzPublicResources {
         An optional path to a file containing a list of words to use for generating permutations of DNS names.
 
     .PARAMETER ThrottleLimit
-        An optional parameter to specify the throttle limit for parallel DNS resolution. The default value is 100.
+        An optional parameter to specify the throttle limit for parallel DNS resolution. The default value is 1000.
+
+    .DEPENDENCIES
+        - PowerShell 5.1 or later
+        - Azure PowerShell module (Az.Resources)
+        - System.Collections.Concurrent.ConcurrentBag
+        - System.Collections.Generic.HashSet
+        - System.Net.Dns
 
     .EXAMPLE
         Get-AzPublicResources -Name "example" -Type "blob"

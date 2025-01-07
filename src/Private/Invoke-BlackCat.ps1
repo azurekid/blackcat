@@ -69,4 +69,39 @@ function Invoke-BlackCat {
         Write-Message -FunctionName $MyInvocation.MyCommand.Name "Run Connect-AzAccount to login" -Severity 'Error'
         break
     }
+<#
+    .SYNOPSIS
+        Invokes the BlackCat function to manage Azure resources.
+
+    .DESCRIPTION
+        The Invoke-BlackCat function is used to manage Azure resources by obtaining access tokens and setting the appropriate headers for API requests. It supports different resource types such as MSGraph and KeyVault.
+
+    .PARAMETER FunctionName
+        The name of the function to be invoked. This parameter is mandatory and accepts pipeline input.
+
+    .PARAMETER ResourceTypeName
+        The type of resource for which the access token is required. This parameter is optional and does not accept pipeline input. Supported values are "MSGraph" and "KeyVault".
+
+    .PARAMETER ChangeProfile
+        A switch parameter that indicates whether to change the Azure profile. If specified, a new access token will be requested.
+
+    .DEPENDENCIES
+        - Az.Accounts module version 3.0.0 or higher.
+        - PowerShell version 7.0 or higher.
+
+    .EXAMPLE
+        ```powershell
+        # Example 1: Invoke the BlackCat function for a specific function name
+        Invoke-BlackCat -FunctionName "MyFunction"
+
+        # Example 2: Invoke the BlackCat function for a specific function name and resource type
+        Invoke-BlackCat -FunctionName "MyFunction" -ResourceTypeName "MSGraph"
+
+        # Example 3: Invoke the BlackCat function and change the Azure profile
+        Invoke-BlackCat -FunctionName "MyFunction" -ChangeProfile
+        ```
+
+    .NOTES
+        Ensure that you are logged in to Azure using Connect-AzAccount before invoking this function.
+#>
 }

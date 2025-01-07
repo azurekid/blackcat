@@ -2,20 +2,6 @@
 #requires -version 6.2
 
 function Get-AccessToken {
-    <#
-    .SYNOPSIS
-    Get an Access Token
-
-    .DESCRIPTION
-    This function is used to get an access token for the Microsoft Azure API.
-
-    .EXAMPLE
-    Get-AuthToken
-
-    .NOTES
-    NAME: Get-AccessToken
-    #>
-
     [CmdletBinding()]
     param (
     )
@@ -44,4 +30,34 @@ function Get-AccessToken {
         Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message 'An error has occured requesting the Access Token' -Severity 'Error'
         break
     }
+    <#
+    .SYNOPSIS
+    Get an Access Token
+
+    .DESCRIPTION
+    This function is used to get an access token for the Microsoft Azure API. It retrieves the current Azure profile and acquires an access token for the specified tenant.
+
+    .PARAMETERS
+    This function does not take any parameters.
+
+    .EXAMPLE
+    Get-AccessToken
+    This example retrieves an access token for the current Azure profile.
+
+    .NOTES
+    NAME: Get-AccessToken
+    AUTHOR: Rogier Dijkman
+    REQUIRES: Az.Accounts module version 2.10.0 or higher
+    REQUIRES: PowerShell version 6.2 or higher
+
+    .DEPENDENCIES
+    - Az.Accounts module version 2.10.0 or higher
+    - Microsoft.Azure.Commands.Common.Authentication.Abstractions
+    - Microsoft.Azure.Commands.ResourceManager.Common
+
+    .OUTPUTS
+    - Base64 encoded access token
+    - Expiration date and time of the access token
+
+    #>
 }
