@@ -18,6 +18,7 @@ function Get-AzStorageContainers {
         $result = New-Object System.Collections.ArrayList
         $totalItems = $id.Count
         $currentItemIndex = 0
+        $sync = [PSCustomObject]@{ CurrentItemIndex = 0 }
     }
 
     process {
