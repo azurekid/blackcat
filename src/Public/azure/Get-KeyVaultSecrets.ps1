@@ -5,7 +5,7 @@ function Get-KeyVaultSecrets {
         [array]$Name,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 10000
+        [int]$ThrottleLimit = 1000
     )
 
     begin {
