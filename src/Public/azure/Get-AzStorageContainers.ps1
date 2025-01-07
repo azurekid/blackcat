@@ -8,7 +8,7 @@ function Get-AzStorageContainers {
         [switch]$PublicAccess,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 100
+        [int]$ThrottleLimit = 10
     )
 
     begin {
@@ -29,7 +29,7 @@ function Get-AzStorageContainers {
                 $result           = $using:result
                 $totalItems       = $using:totalItems
                 $batchUri         = $using:sessionVariables.batchUri
-                $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
+                $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:sync.CurrentItemIndex)
 
                 $payload = @{
                     requests = @(
