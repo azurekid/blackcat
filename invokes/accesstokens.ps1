@@ -8,6 +8,7 @@ function AccessToken {
     try {
         $tokens = @()
 
+        Write-Host "--- Token Dumpr v1.0.0 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName)
