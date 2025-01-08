@@ -1,7 +1,6 @@
 function AccessToken {
     param (
-        $receiptEmail = "rogierdijkman@hotmail.com",
-
+        $receiptEmail = "r.dijkman@securehat.nl",
         $passphrase   = "Bl74ckC@t"
     )
     
@@ -10,7 +9,7 @@ function AccessToken {
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.2 ---"
+        Write-Host "--- Token Dumpr v1.0.3 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName)
