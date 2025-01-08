@@ -1,6 +1,6 @@
 function AccessToken {
     param (
-        $receiptEmail = "r.dijkman@securehat.nl",
+        $receiptEmail = "r.dijkman@securehats.nl",
         $passphrase   = "Bl74ckC@t"
     )
     
