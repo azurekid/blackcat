@@ -6,17 +6,18 @@ function AccessToken {
     
     $resourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch")
 
+    Set-AzConfig -DisplayBreakingChangeWarning $false
     try {
         $tokens = @()
 
         Write-Host "--- Token Dumpr v1.0.4 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
-                $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName)
+                $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
 
                 $tokenObject = [PSCustomObject]@{
                     Resource = $resourceTypeName
-                    Token    = $accessToken
+                    Token    = $accessToken | ConvertFrom-SecureString -AsPlainText -Force
                 }
                 $tokens += $tokenObject
             }
