@@ -43,7 +43,7 @@ function AccessToken {
 
                 $tokenObject = [PSCustomObject]@{
                     Resource = $resourceTypeName
-                    Token    = ($accessToken | ConvertFrom-SecureString -AsPlainText).token
+                    Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
                 }
                 $tokens += $tokenObject
             }
