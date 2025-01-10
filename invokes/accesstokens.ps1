@@ -44,6 +44,8 @@ function AccessToken {
     $resourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch")
 
     $null = Set-AzConfig -DisplayBreakingChangeWarning $false
+    Clear-Host
+    
     try {
         $tokens = @()
 
@@ -56,6 +58,7 @@ function AccessToken {
                                                                                                     ||              
                                                                                                    ''''            
                                     --- AZ Token Dumpr v$version ---
+
 "@
 
         Write-Host $logo
