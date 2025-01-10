@@ -28,7 +28,7 @@ function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
         $passphrase = "B74ckC@t"
-        v$version '1.0.9'
+        $version '1.0.9'
     )   
     
     if (-not(Get-Module -Name 'Az.Accounts')) {
