@@ -39,14 +39,14 @@ function AccessToken {
         Write-Output "Please sign in to your Azure account using Connect-AzAccount before running this function."
         exit
     }
-    
+
     $resourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch")
 
     Set-AzConfig -DisplayBreakingChangeWarning $false
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.6 ---"
+        Write-Host "--- Token Dumpr v1.0.7 ---"
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
