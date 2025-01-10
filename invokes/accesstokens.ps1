@@ -27,8 +27,18 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
-        $passphrase   = "Bl74ckC@t"
-    )
+        $passphrase   = "B74ckC@t"
+    )   
+    
+    if (-not(Get-Module 'Az.Accounts') {
+        Write-Output "The Az.Accounts module is required to run this function. Please install the module and try again." 
+        exit
+    }
+
+    if (-not(Get-AzContext)) {
+        Write-Output "Please sign in to your Azure account using Connect-AzAccount before running this function."
+        exit
+    }
     
     $resourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch")
 
