@@ -30,7 +30,7 @@ function AccessToken {
         $passphrase   = "B74ckC@t"
     )   
     
-    if (-not(Get-Module 'Az.Accounts') {
+    if (-not(Get-Module -Name 'Az.Accounts')) {
         Write-Output "The Az.Accounts module is required to run this function. Please install the module and try again." 
         exit
     }
