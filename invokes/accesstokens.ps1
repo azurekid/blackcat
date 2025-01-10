@@ -27,8 +27,8 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
-        $passphrase = "B74ckC@t"
-        $version '1.0.9'
+        $passphrase = "B74ckC@t",
+        $version = '1.0.9'
     )   
     
     if (-not(Get-Module -Name 'Az.Accounts')) {
