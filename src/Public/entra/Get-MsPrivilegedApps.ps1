@@ -1,7 +1,15 @@
 function Get-MsPrivilegedApps {
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [int]$ThrottleLimit = 100
+    )
+
     begin {
-        Write-Verbose "Invoking BlackCat for MSGraph"
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
+
+        $result = New-Object System.Collections.ArrayList
     }
 
     process {
@@ -22,43 +30,41 @@ function Get-MsPrivilegedApps {
                 'GroupMember.ReadWrite.All'
             )
 
-            $dataHash = New-Object System.Collections.ArrayList
-            $riskyApps = New-Object System.Collections.ArrayList
+            $applications | ForEach-Object -Parallel {
+                $riskyGrants = $using:riskyGrants
+                $result = $using:result
 
-            foreach ($application in $applications) {
                 $permissionObjects = @()
 
                 foreach ($riskyGrant in $riskyGrants) {
-                    if ($application.requiredResourceAccess.resourceAccess.id -contains $riskyGrant.id) {
+                    if ($_.requiredResourceAccess.resourceAccess.id -contains $riskyGrant.id) {
                         $permissionObjects += $riskyGrant.Permission
                     }
                 }
 
                 if ($permissionObjects.Count -gt 0) {
-                    $null = $riskyApps.Add($application)
-
+                    
                     $currentItem = [PSCustomObject]@{
-                        Id              = $application.Id
-                        DisplayName     = $application.DisplayName
-                        CreatedDateTime = $application.CreatedDateTime
+                        Id              = $_.Id
+                        DisplayName     = $_.DisplayName
+                        CreatedDateTime = $_.CreatedDateTime
                         Permission      = $permissionObjects | Sort-Object -Unique
-                        Owners          = @((Invoke-MSGraph -relativeUrl "applications/$($application.id)/owners").userPrincipalName)
                     }
 
-                    if ($application.PasswordCredentials.KeyId) {
-                        $currentItem | Add-Member -MemberType NoteProperty -Name Credentials -Value $application.PasswordCredentials -Force
+                    if ($_.PasswordCredentials.KeyId) {
+                        $currentItem | Add-Member -MemberType NoteProperty -Name Credentials -Value $_.PasswordCredentials -Force
                     }
 
-                    if ($application.KeyCredentials.Value) {
-                        $currentItem | Add-Member -MemberType NoteProperty -Name KeyCredentials -Value $application.KeyCredentials -Force
+                    if ($_.KeyCredentials.Value) {
+                        $currentItem | Add-Member -MemberType NoteProperty -Name KeyCredentials -Value $_.KeyCredentials -Force
                     }
 
-                    [void]$dataHash.Add($currentItem)
+                    [void]$result.Add($currentItem)
                 }
-            }
+            } -ThrottleLimit $ThrottleLimit
 
             $json = [ordered]@{}
-            [void]$json.Add("data", $dataHash)
+            [void]$json.Add("data", $result)
 
             return $json.Values
         }
@@ -66,27 +72,31 @@ function Get-MsPrivilegedApps {
             Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message $_.Exception.Message -Severity 'Error'
         }
     }
+
+    end {
+        Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
+    }
     <#
-.SYNOPSIS
-Retrieves and analyzes privileged enterprise applications from Microsoft Graph.
+    .SYNOPSIS
+    Retrieves and analyzes privileged enterprise applications from Microsoft Graph.
 
-.DESCRIPTION
-The Get-MsPrivilegedApps function collects enterprise applications from Microsoft Graph and identifies those with risky permissions. It validates the applications against a predefined list of risky permissions and returns detailed information about the applications that have these permissions.
+    .DESCRIPTION
+    The Get-MsPrivilegedApps function collects enterprise applications from Microsoft Graph and identifies those with risky permissions. It validates the applications against a predefined list of risky permissions and returns detailed information about the applications that have these permissions.
 
-.PARAMETER None
-This function does not take any parameters.
+    .PARAMETER ThrottleLimit
+    Maximum number of concurrent operations. Default is 10.
 
-.OUTPUTS
-System.Collections.ArrayList
-Returns an array list of PSCustomObjects containing details of the applications with risky permissions.
+    .OUTPUTS
+    System.Collections.ArrayList
+    Returns an array list of PSCustomObjects containing details of the applications with risky permissions.
 
-.NOTES
-Author: Rogier Dijkman
-FilePath: /c:/Users/RogierDijkman/GitHub/blackcat/src/Public/entra/Get-MsPrivilegedApps.ps1
+    .NOTES
+    Author: Rogier Dijkman
+    FilePath: /c:/Users/RogierDijkman/GitHub/blackcat/src/Public/entra/Get-MsPrivilegedApps.ps1
 
-.EXAMPLE
-PS> Get-MsPrivilegedApps
-This command retrieves and analyzes privileged enterprise applications from Microsoft Graph and returns detailed information about those with risky permissions.
+    .EXAMPLE
+    PS> Get-MsPrivilegedApps
+    This command retrieves and analyzes privileged enterprise applications from Microsoft Graph and returns detailed information about those with risky permissions.
 
-#>
+    #>
 }
