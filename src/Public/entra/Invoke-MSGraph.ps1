@@ -1,8 +1,11 @@
 function Invoke-MsGraph {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$relativeUrl
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $false)]
+        [string]$relativeUrl,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [switch]$NoBatch
     )
 
     begin {
@@ -12,13 +15,22 @@ function Invoke-MsGraph {
     process {
 
         try {
-
+            if ($NoBatch) {
+                $uri = "$($sessionVariables.graphUri)/$relativeUrl"
+                $requestParam = @{
+                    Headers = $script:graphHeader
+                    Uri     = $uri
+                    Method  = 'GET'
+                }
+            } 
+            else {
+            
             $payload = @{
                 requests = @(
                     @{
                         id     = "List"
                         method = 'GET'
-                        url    = '/{0}?$count=true&$top=999' -f "$relativeUrl"
+                        url    = '/{0}' -f "$relativeUrl"
                     }
                 )
             }
@@ -30,6 +42,7 @@ function Invoke-MsGraph {
                 ContentType = 'application/json'
                 Body        = $payload | ConvertTo-Json -Depth 10
             }
+        }
 
             $initialResponse = (Invoke-RestMethod @requestParam)
             $allItems = Get-AllPages -ProcessLink $initialResponse
