@@ -1,7 +1,7 @@
 function Get-MsFederatedApplications {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [string]$Id
     )
@@ -13,10 +13,8 @@ function Get-MsFederatedApplications {
     process {
 
         try {
-
-            Write-Verbose "Get Federated Identity Credentials"
-            Invoke-MsGraph -relativeUrl "applications/$Id/federatedIdentityCredentials"
-
+                Write-Verbose "Get Federated Identity Credentials for Application $($id)"
+                Invoke-MsGraph -relativeUrl "applications/$Id/federatedIdentityCredentials"
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
