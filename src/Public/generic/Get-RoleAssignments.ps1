@@ -48,7 +48,6 @@ function Get-RoleAssignments {
                     $roleAssignmentsList = $using:roleAssignmentsList
 
                     $subscriptionId = $_
-                    Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
                     $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
                     $roleDefinitionsRequestParam = @{
                         Headers = $authHeader
@@ -56,11 +55,12 @@ function Get-RoleAssignments {
                         Method  = 'GET'
                     }
 
-                    $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                    return $roleDefinitionResponse
-                    pause
+                    Write-Host "Retrieving role definitions for subscription: $subscriptionId"
 
-                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
+                    $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                    Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
+
+                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
                     $roleAssignmentsRequestParam = @{
                         Headers = $authHeader
