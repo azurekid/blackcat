@@ -22,9 +22,9 @@ function Invoke-MsGraph {
                     Uri     = $uri
                     Method  = 'GET'
                 }
-            } 
+            }
             else {
-            
+
             $payload = @{
                 requests = @(
                     @{
@@ -56,7 +56,6 @@ function Invoke-MsGraph {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
             }
         }
-        
     }
     <#
     .SYNOPSIS
