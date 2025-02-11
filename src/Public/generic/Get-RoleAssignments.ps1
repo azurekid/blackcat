@@ -1,8 +1,15 @@
 function Get-RoleAssignments {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [string]$UserId,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [switch]$CurrentUser,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [ValidateSet('User', 'Group', 'ServicePrincipal', 'Other')]
+        [string]$PrincipalType,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [string]$ObjectId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [int]$ThrottleLimit = 1000
@@ -39,7 +46,6 @@ function Get-RoleAssignments {
                     $baseUri = $using:baseUri
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
-                    $UserId = $using:UserId
 
                     $subscriptionId = $_
                     Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
@@ -65,12 +71,16 @@ function Get-RoleAssignments {
                         $roleAssignmentObject = [PSCustomObject]@{
                             PrincipalType    = $roleAssignment.properties.principalType
                             PrincipalId      = $roleAssignment.properties.principalId
-                            RoleDefinitionId = $roleAssignment.properties.roleDefinitionId
                             Scope            = $roleAssignment.properties.scope
                         }
 
-                        $roleId = ($roleAssignmentObject.RoleDefinitionId -split '/')[-1]
-                        $roleAssignmentObject | Add-Member -MemberType NoteProperty -Name RoleName -Value ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
+                        $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
+                        $memberObject = @{
+                            MemberType	= 'NoteProperty'
+                            Name		= 'RoleName'
+                            Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
+                        }
+                        $roleAssignmentObject | Add-Member @memberObject
                         $roleAssignmentsList.Add($roleAssignmentObject)
                     }
                 }
@@ -83,41 +93,64 @@ function Get-RoleAssignments {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
-        if ($UserId) {
-            return $roleAssignmentsList | Where-Object { $_.principalId -eq $UserId }
+        $filteredAssignments = $roleAssignmentsList
+
+        if ($CurrentUser) {
+            $UserId = (Get-CurrentScope).'User Object Id'
+            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalId -eq $UserId }
         }
-        else {
-            return $roleAssignmentsList
+
+        if ($ObjectId) {
+            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalId -eq $ObjectId }
         }
-    }
+
+        if ($PrincipalType) {
+            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalType -eq $PrincipalType }
+        }
+
+        if ($filteredAssignments.Count -eq 0) {
+            Write-Verbose "No role assignments found for the specified criteria."
+        }
+
+        return $filteredAssignments | Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope}
 
     <#
     .SYNOPSIS
-        This function retrieves all role assignments for all subscriptions for the current user context.
+        Retrieves all role assignments for all subscriptions for the current user context.
 
     .DESCRIPTION
-        The Get-RoleAssignments function makes API calls to retrieve all subscriptions and their respective role assignments for the current user context. It filters the role assignments based on the provided user ID.
+        The Get-RoleAssignments function makes API calls to retrieve all subscriptions and their respective role assignments for the current user context. It can filter the role assignments based on the provided PrincipalType, ObjectId, or CurrentUser switch.
 
-    .PARAMETER UserId
-        The UserId parameter is an optional string that is used to identify the user whose role assignments are to be retrieved.
+    .PARAMETER CurrentUser
+        If specified, filters the role assignments to only include those for the current user.
+
+    .PARAMETER PrincipalType
+        Specifies the type of principal to filter the role assignments. Valid values are 'User', 'Group', 'ServicePrincipal', 'Other'.
+
+    .PARAMETER ObjectId
+        Specifies the ObjectId to filter the role assignments.
 
     .PARAMETER ThrottleLimit
-        Specifies the maximum number of concurrent operations that can be performed in parallel.
-        Default value is 1000.
+        Specifies the maximum number of concurrent operations that can be performed in parallel. Default value is 1000.
 
     .OUTPUTS
         Returns a collection of PSCustomObjects containing the following properties:
         - PrincipalType: The type of principal (e.g., User, Group, ServicePrincipal)
         - PrincipalId: The unique identifier of the principal
-        - RoleDefinitionId: The unique identifier of the role definition
-        - Scope: The scope of the role assignment
         - RoleName: The name of the role
+        - Scope: The scope of the role assignment
 
     .EXAMPLE
         ```powershell
-        Get-RoleAssignments -UserId "exampleUserId"
+        Get-RoleAssignments -CurrentUser
         ```
-        This example calls the Get-RoleAssignments function with the specified UserId.
+        This example calls the Get-RoleAssignments function to retrieve role assignments for the current user.
+
+    .EXAMPLE
+        ```powershell
+        Get-RoleAssignments -PrincipalType 'User' -ObjectId 'exampleObjectId'
+        ```
+        This example calls the Get-RoleAssignments function to retrieve role assignments for a specific user with the given ObjectId.
 
     .LINK
         For more information, see the related documentation or contact support.
