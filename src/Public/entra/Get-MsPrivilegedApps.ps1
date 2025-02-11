@@ -45,7 +45,7 @@ function Get-MsPrivilegedApps {
                 }
 
                 if ($permissionObjects.Count -gt 0) {
-                    
+
                     $currentItem = [PSCustomObject]@{
                         Id              = $_.Id
                         DisplayName     = $_.DisplayName

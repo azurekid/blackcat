@@ -47,17 +47,17 @@ function Get-StorageAccountKeys {
                     }
 
                     $apiResponse = Invoke-RestMethod @requestParam
-                    
+
                     $currentItem = [PSCustomObject]@{
                         "StorageAccountName" = $_.split('/')[-1]
-                        "Keys"               = $apiResponse.keys            
+                        "Keys"               = $apiResponse.keys
                     }
 
                     [void] $result.Add($currentItem)
 
                     $percentComplete = [math]::Round(($currentItemIndex / $totalItems) * 100)
                     Write-Progress -Activity "Retrieving Storage Account Keys" -Status "$percentComplete% Complete" -PercentComplete $percentComplete
-                    
+
                 }
                 catch {
                     Write-Information "$($MyInvocation.MyCommand.Name): Storage Account '$_' does not exist"  -InformationAction Continue
