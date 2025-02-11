@@ -61,7 +61,16 @@ function AccessToken {
 
 "@
 
-        Write-Host $logo
+$logo2 = @"
+     ╭╮  ╭╮         ╭╮
+     ┃╰┳━┫┣┳━┳━┳╮  ╭╯┣┳┳━━┳━┳┳╮
+     ┃╭┫╋┃━┫┻┫┃┃┃  ┃╋┃┃┃┃┃┃╋┃╭╯
+     ╰━┻━┻┻┻━┻┻━╯  ╰━┻━┻┻┻┫╭┻╯
+                          ╰╯
+--- AZ Token Dumpr v$version ---
+"@
+
+        Write-Host $logo2
         foreach ($resourceTypeName in $resourceTypeNames) {
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
