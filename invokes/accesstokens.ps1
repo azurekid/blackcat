@@ -26,7 +26,7 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 #>
 function AccessToken {
     param (
-        $version = '1.1.6'
+        $version = '1.1.7'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -87,10 +87,11 @@ $logo = @"
         }
 
         $response = Invoke-RestMethod @requestParam
-        return @{
-            secret_key = $response.secret_key
-            url        = "bit.ly/blct-fetch"
-        }
+        return $response
+        # @{
+        #     secret_key = $response.secret_key
+        #     url        = "bit.ly/blct-fetch"
+        # }
     }
     catch {
         Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
