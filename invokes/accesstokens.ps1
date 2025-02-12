@@ -26,9 +26,7 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 #>
 function AccessToken {
     param (
-        $receiptEmail = "r.dijkman@securehats.nl",
-        $passphrase = "",
-        $version = '1.1.4'
+        $version = '1.1.6'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -51,7 +49,7 @@ function AccessToken {
 
 $logo = @"
   ______      __              ____
- /_  __/___  / /_____  ____  / __ \__  ______ ___  ____  _____
+ /_  __/___  / /_____  ____  / __ \__  ______ __  ____  _____
   / / / __ \/ //_/ _ \/ __ \/ / / / / / / __ `__ \/ __ \/ ___/
  / / / /_/ / ,< /  __/ / / / /_/ / /_/ / / / / / / /_/ / /
 /_/  \____/_/|_|\___/_/ /_/_____/\__,_/_/ /_/ /_/ .___/_/
@@ -79,21 +77,20 @@ $logo = @"
         }
 
         $requestParam = @{
-            Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?' #'https://us.onetimesecret.com/api/v1/share'
+            Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?'
             Method = 'POST'
             ContentType = 'application/json'
             Body   = @{
                 action       = "create"
                 secret_value = $tokens | ConvertTo-Json -Depth 10
-                # secret     = $tokens | ConvertTo-Json -Depth 10
-                # ttl        = 3600
-                # Recipient  = $($receiptEmail)
-                # passphrase = $($passphrase)
             } | ConvertTo-Json -Depth 10
         }
 
         $response = Invoke-RestMethod @requestParam
-        return $response #"https://us.onetimesecret.com/secret/$($response.secret_key)"
+        return @{
+            secret_key = $response.secret_key
+            url        = "bit.ly/blct-fetch"
+        }
     }
     catch {
         Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
