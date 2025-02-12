@@ -36,7 +36,7 @@ function Set-AzManagedIdentityPermissions {
         try {
 
             $appRoleId = (Get-MsAppRolePermissions -appRoleName $appRoleName).appRoleId
-            
+
             Write-Verbose "Get Service Principals App Role Assignments"
             $uri = "$($sessionVariables.graphUri)/servicePrincipals/$servicePrincipalId/appRoleAssignments"
 
