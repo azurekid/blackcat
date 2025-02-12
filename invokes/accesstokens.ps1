@@ -26,7 +26,7 @@ Generates access tokens and shares them via One-Time Secret with the specified e
 #>
 function AccessToken {
     param (
-        $version = '1.2.0'
+        $version = '1.2.1'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
