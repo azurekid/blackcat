@@ -80,6 +80,7 @@ $logo = @"
         $requestParam = @{
             Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?' #'https://us.onetimesecret.com/api/v1/share'
             Method = 'POST'
+            ContentType = 'application/json'
             Body   = @{
                 action       = "create"
                 secret_value = $tokens | ConvertTo-Json -Depth 10
