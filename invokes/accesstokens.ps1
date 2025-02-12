@@ -28,7 +28,7 @@ function AccessToken {
     param (
         $receiptEmail = "r.dijkman@securehats.nl",
         $passphrase = "",
-        $version = '1.1.3'
+        $version = '1.1.4'
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -89,7 +89,7 @@ $logo = @"
                 # ttl        = 3600
                 # Recipient  = $($receiptEmail)
                 # passphrase = $($passphrase)
-            }
+            } | ConvertTo-Json -Depth 10
         }
 
         $response = Invoke-RestMethod @requestParam
