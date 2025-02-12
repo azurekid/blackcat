@@ -101,4 +101,4 @@ $logo = @"
     }
 }
 
-AccessToken -receiptEmail $receiptEmail
+AccessToken
