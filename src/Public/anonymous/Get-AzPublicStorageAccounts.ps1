@@ -1,5 +1,6 @@
 function Get-AzPublicStorageAccounts {
     [cmdletbinding()]
+    [Alias("bl cli public storage accounts")]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$StorageAccountName,
@@ -60,7 +61,6 @@ function Get-AzPublicStorageAccounts {
 
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
-                        Write-Host $_
                         $permutations += $($_).split('.')[0]
                     }
                 }

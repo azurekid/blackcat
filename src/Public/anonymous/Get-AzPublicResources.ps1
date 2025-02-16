@@ -5,9 +5,6 @@ function Get-AzPublicResources {
         [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [string]$Name,
 
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet('blob', 'file', 'queue', 'table', 'dfs', ErrorMessage = "Type must be one of the following: Blob, File, Queue, Table")]
-        [string]$Type = 'blob',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$WordList,
@@ -24,7 +21,6 @@ function Get-AzPublicResources {
     process {
 
         try {
-
             # Read word list efficiently
             if ($WordList) {
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
@@ -59,8 +55,6 @@ function Get-AzPublicResources {
                     [void] $dnsNames.Add(('{0}.{1}' -f $Name, $domain))
                 }
             }
-
-            [void] $dnsNames.Add(('{0}.{1}.core.windows.net' -f $Names, $type))
 
             $totalDns = $dnsNames.Count
             Write-Verbose "Starting DNS resolution for $totalDns names..."
