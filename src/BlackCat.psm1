@@ -54,6 +54,7 @@ $script:SessionVariables = [ordered]@{
     apiVersion       = '2023-06-01-preview'
     AccessToken      = ''
     Roles            = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
+    AzureRoles       = if (Test-Path $PSScriptRoot\Helpers\AzureRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\AzureRoles.csv | ConvertFrom-Csv }
     serviceTags      = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
     appRoleIds       = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
     permutations     = if (Test-Path $PSScriptRoot\Helpers\permutations.txt) { Get-Content -Path $PSScriptRoot\Helpers\permutations.txt }
