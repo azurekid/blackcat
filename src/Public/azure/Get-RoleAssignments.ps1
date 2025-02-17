@@ -48,7 +48,7 @@ function Get-RoleAssignments {
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
 
-                    # $subscriptionId = $_
+                    $subscriptionId = $_
                     # $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
                     # $roleDefinitionsRequestParam = @{
                     #     Headers = $authHeader
