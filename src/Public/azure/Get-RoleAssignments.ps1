@@ -47,7 +47,7 @@ function Get-RoleAssignments {
                     $baseUri = $using:baseUri
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
-                    $azureRoles = $using:script:SessionVariables.Roles
+                    $azureRoles = $using:script:SessionVariables.AzureRoles
 
                     $subscriptionId = $_
 
@@ -69,24 +69,27 @@ function Get-RoleAssignments {
                         }
 
                         $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
+                        $roleName = ($azureRoles | Where-Object {$_.id -match $roleId} ).Name
+
+                        if (-not($roleName)) {
+                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
+                            $roleDefinitionsRequestParam = @{
+                                Headers = $authHeader
+                                Uri     = $roleDefinitionsUri
+                                Method  = 'GET'
+                            }
+
+                            Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
+                            $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                            $roleName = ($roleDefinitionResponse | Where-Object {$_.id -match $roleId} ).Name
+                        }
+
                         $memberObject = @{
                             MemberType	= 'NoteProperty'
                             Name		= 'RoleName'
-                            Value		= ($azureRoles | Where-Object id -match $roleId ).Name
+                            Value		= ($azureRoles | Where-Object {$_.id -match $roleId} ).Name
                         }
                         $roleAssignmentObject | Add-Member @memberObject
-
-# /////////////////////////////////////////////
-# $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
-# $roleDefinitionsRequestParam = @{
-#     Headers = $authHeader
-#     Uri     = $roleDefinitionsUri
-#     Method  = 'GET'
-# }
-
-# Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
-# $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-# /////////////////////////////////////////////
 
                         $roleAssignmentsList.Add($roleAssignmentObject)
                     }
