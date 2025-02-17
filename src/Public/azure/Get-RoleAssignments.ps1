@@ -35,6 +35,7 @@ function Get-RoleAssignments {
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
             $subscriptions = $subscriptionsResponse.subscriptionId
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($subscriptions.Count) subscriptions" -Severity 'Information'
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -46,19 +47,9 @@ function Get-RoleAssignments {
                     $baseUri = $using:baseUri
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
+                    $azureRoles = $using:script:SessionVariables.Roles
 
                     $subscriptionId = $_
-                    $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
-                    $roleDefinitionsRequestParam = @{
-                        Headers = $authHeader
-                        Uri     = $roleDefinitionsUri
-                        Method  = 'GET'
-                    }
-
-                    Write-Host "Retrieving role definitions for subscription: $subscriptionId"
-
-                    $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                    Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
 
                     Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
@@ -74,6 +65,7 @@ function Get-RoleAssignments {
                             PrincipalType    = $roleAssignment.properties.principalType
                             PrincipalId      = $roleAssignment.properties.principalId
                             Scope            = $roleAssignment.properties.scope
+                            RoleId           = $roleAssignment.properties.roleDefinitionId
                         }
 
                         $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
@@ -83,6 +75,19 @@ function Get-RoleAssignments {
                             Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
                         }
                         $roleAssignmentObject | Add-Member @memberObject
+
+# /////////////////////////////////////////////
+# $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
+# $roleDefinitionsRequestParam = @{
+#     Headers = $authHeader
+#     Uri     = $roleDefinitionsUri
+#     Method  = 'GET'
+# }
+
+# Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
+# $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+# /////////////////////////////////////////////
+
                         $roleAssignmentsList.Add($roleAssignmentObject)
                     }
                 }
@@ -94,7 +99,7 @@ function Get-RoleAssignments {
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
-
+        
         $filteredAssignments = $roleAssignmentsList
 
         if ($CurrentUser) {
