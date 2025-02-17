@@ -12,6 +12,9 @@ function Get-RoleAssignments {
         [string]$ObjectId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [string]$SubscriptionId,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [int]$ThrottleLimit = 1000
     )
 
@@ -31,6 +34,10 @@ function Get-RoleAssignments {
                 Headers = $script:authHeader
                 Uri     = $subscriptionsUri
                 Method  = 'GET'
+            }
+
+            if ($SubscriptionId) {
+                $subscriptionsUri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
             }
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
@@ -175,3 +182,4 @@ function Get-RoleAssignments {
         ```
         This example calls the Get-RoleAssignments function to retrieve role assignments for a specific user with the given ObjectId.
     #>
+}
