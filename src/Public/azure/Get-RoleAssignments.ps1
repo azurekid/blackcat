@@ -59,7 +59,7 @@ function Get-RoleAssignments {
                     # Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
                     # $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
 
-                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
+                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
                     $roleAssignmentsRequestParam = @{
                         Headers = $authHeader
@@ -93,8 +93,8 @@ function Get-RoleAssignments {
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
-
-        $filteredAssignments = $roleAssignmentsList
+        return $roleAssignmentsList
+        # $filteredAssignments = $roleAssignmentsList
 
         if ($CurrentUser) {
             $UserId = (Get-CurrentScope).'User Object Id'
