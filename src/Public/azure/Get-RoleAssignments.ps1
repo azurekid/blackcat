@@ -56,19 +56,19 @@ function Get-RoleAssignments {
                         Method  = 'GET'
                     }
 
-                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
-                    $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    # Write-Host "Retrieving role assignments for subscription: $subscriptionId"
+                    # $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
 
-                    foreach ($roleAssignment in $roleAssignmentsResponse) {
-                        $roleAssignmentObject = [PSCustomObject]@{
-                            PrincipalType    = $roleAssignment.properties.principalType
-                            PrincipalId      = $roleAssignment.properties.principalId
-                            Scope            = $roleAssignment.properties.scope
-                            RoleName         = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                        }
+                    # foreach ($roleAssignment in $roleAssignmentsResponse) {
+                    #     $roleAssignmentObject = [PSCustomObject]@{
+                    #         PrincipalType    = $roleAssignment.properties.principalType
+                    #         PrincipalId      = $roleAssignment.properties.principalId
+                    #         Scope            = $roleAssignment.properties.scope
+                    #         RoleName         = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
+                    #     }
 
-                        $roleAssignmentsList.Add($roleAssignmentObject)
-                    }
+                    #     $roleAssignmentsList.Add($roleAssignmentObject)
+                    # }
                 }
                 catch {
                     Write-Information "$($MyInvocation.MyCommand.Name): Error processing subscription '$_'" -InformationAction Continue
