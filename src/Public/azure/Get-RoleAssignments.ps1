@@ -35,6 +35,7 @@ function Get-RoleAssignments {
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
             $subscriptions = $subscriptionsResponse.subscriptionId
+            Write-Verbose "Subscriptions: $($subscriptions.Count)"
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
