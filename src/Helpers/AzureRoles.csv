@@ -1,4 +1,4 @@
-"Id","Description","Name"
+"id","Description","Name"
 "8311e382-0749-4cb8-b61a-304f252e45ec","acr push","AcrPush"
 "312a565d-c81f-4fd8-895a-4e21e48d571c","Can manage service and the APIs","API Management Service Contributor"
 "7f951dda-4ed3-4680-a7ca-43fe172d538d","acr pull","AcrPull"

@@ -72,7 +72,7 @@ function Get-RoleAssignments {
                         $memberObject = @{
                             MemberType	= 'NoteProperty'
                             Name		= 'RoleName'
-                            Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
+                            Value		= ($script:sessionVariables.AzureRoles | Where-Object { id -match $roleId }).Name
                         }
                         $roleAssignmentObject | Add-Member @memberObject
 
@@ -99,8 +99,8 @@ function Get-RoleAssignments {
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
-        
         $filteredAssignments = $roleAssignmentsList
+        return $roleAssignmentsList
 
         if ($CurrentUser) {
             $UserId = (Get-CurrentScope).'User Object Id'
