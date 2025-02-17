@@ -12,7 +12,7 @@ function Get-RoleAssignments {
         [string]$ObjectId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 1000
+        [int]$ThrottleLimit = 100
     )
 
     begin {
@@ -58,36 +58,43 @@ function Get-RoleAssignments {
                     Write-Host "Retrieving role definitions for subscription: $subscriptionId"
 
                     $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                    Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
-
-                    # Write-Host "Retrieving role assignments for subscription: $subscriptionId"
-                    # $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
-                    # $roleAssignmentsRequestParam = @{
-                    #     Headers = $authHeader
-                    #     Uri     = $roleAssignmentsUri
-                    #     Method  = 'GET'
-                    # }
-                    # $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
-
-                    # foreach ($roleAssignment in $roleAssignmentsResponse) {
-                    #     $roleAssignmentObject = [PSCustomObject]@{
-                    #         PrincipalType    = $roleAssignment.properties.principalType
-                    #         PrincipalId      = $roleAssignment.properties.principalId
-                    #         Scope            = $roleAssignment.properties.scope
-                    #     }
-
-                    #     $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                    #     $memberObject = @{
-                    #         MemberType	= 'NoteProperty'
-                    #         Name		= 'RoleName'
-                    #         Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
-                    #     }
-                    #     $roleAssignmentObject | Add-Member @memberObject
-                    #     $roleAssignmentsList.Add($roleAssignmentObject)
-                    # }
+                    return $roleDefinitionResponse
+                    # Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
                 }
                 catch {
                     Write-Information "$($MyInvocation.MyCommand.Name): Error processing subscription '$_'" -InformationAction Continue
+                }
+
+                try {
+                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
+                    
+                    $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    $roleAssignmentsRequestParam = @{
+                        Headers = $authHeader
+                        Uri     = $roleAssignmentsUri
+                        Method  = 'GET'
+                    }
+                     $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+
+                    foreach ($roleAssignment in $roleAssignmentsResponse) {
+                        $roleAssignmentObject = [PSCustomObject]@{
+                            PrincipalType    = $roleAssignment.properties.principalType
+                            PrincipalId      = $roleAssignment.properties.principalId
+                            Scope            = $roleAssignment.properties.scope
+                        }
+
+                        $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
+                        $memberObject = @{
+                            MemberType	= 'NoteProperty'
+                            Name		= 'RoleName'
+                            Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
+                        }
+                        $roleAssignmentObject | Add-Member @memberObject
+                        $roleAssignmentsList.Add($roleAssignmentObject)
+                    }
+                }
+                catch {
+                    <#Do this if a terminating exception happens#>
                 }
             } -ThrottleLimit $ThrottleLimit
         }
