@@ -42,28 +42,25 @@ function Get-RoleAssignments {
         }
 
         try {
+            if ($CurrentUser) {
+                $ObjectId = (Get-CurrentUser).Id
+            }
+
             $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri = $using:baseUri
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
+                    $ObjectId = $using:ObjectId
                     $azureRoles = $using:script:SessionVariables.AzureRoles
-
+                    $PrincipalType = $using:PrincipalType
                     $subscriptionId = $_
 
                     Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
-                    if ($using:PrincipalType) {
-                        $roleAssignmentsUri += "&\$filter=assignedTo('$($using:PrincipalType)')"
-                    }
 
-                    if ($using:ObjectId) {
-                        $roleAssignmentsUri += "&\$filter=principalId eq '$($using:ObjectId)'"
-                    }
-
-                    if ($using:CurrentUser) {
-                        $UserId = (Get-CurrentScope).'User Object Id'
-                        $roleAssignmentsUri += "&\$filter=principalId eq '$UserId'"
+                    if ($ObjectId) {
+                        $roleAssignmentsUri += '&$filter={0}' -f "PrincipalId eq '$ObjectId'"
                     }
 
                     $roleAssignmentsRequestParam = @{
@@ -71,40 +68,51 @@ function Get-RoleAssignments {
                         Uri     = $roleAssignmentsUri
                         Method  = 'GET'
                     }
-                    $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+
+                    if ($PrincipalType) {
+                        $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value | Where-Object { $_.properties.principalType -eq $PrincipalType }
+                    }
+                    else {
+                        $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    }
 
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
-                            PrincipalType    = $roleAssignment.properties.principalType
-                            PrincipalId      = $roleAssignment.properties.principalId
-                            Scope            = $roleAssignment.properties.scope
-                            RoleId           = $roleAssignment.properties.roleDefinitionId
+                            PrincipalType = $roleAssignment.properties.principalType
+                            PrincipalId   = $roleAssignment.properties.principalId
+                            Scope         = $roleAssignment.properties.scope
+                            RoleId        = $roleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
+                            IsCustom      = $false
                         }
 
                         $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                        $roleName = ($azureRoles | Where-Object {$_.id -match $roleId} ).Name
+                        $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
 
                         if (-not($roleName)) {
-                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
+                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
                             $roleDefinitionsRequestParam = @{
                                 Headers = $authHeader
                                 Uri     = $roleDefinitionsUri
                                 Method  = 'GET'
                             }
 
-                            Write-Output "Retrieving role definitions for subscription: $subscriptionId"
-                            $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                            $roleName = ($roleDefinitionResponse | Where-Object {$_.id -match $roleId} ).Name
+                            Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
+                            $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                            Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
+
+                            $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+                            $roleAssignmentObject.IsCustom = $true
                         }
 
-                        $memberObject = @{
-                            MemberType	= 'NoteProperty'
-                            Name		= 'RoleName'
-                            Value		= ($azureRoles | Where-Object {$_.id -match $roleId} ).Name
+                        if ($roleName) {
+                            $memberObject = @{
+                                MemberType	= 'NoteProperty'
+                                Name       = 'RoleName'
+                                Value      = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+                            }
+                            $roleAssignmentObject | Add-Member @memberObject
+                            $roleAssignmentsList.Add($roleAssignmentObject)
                         }
-                        $roleAssignmentObject | Add-Member @memberObject
-
-                        $roleAssignmentsList.Add($roleAssignmentObject)
                     }
                 }
                 catch {
@@ -120,8 +128,8 @@ function Get-RoleAssignments {
             Write-Verbose "No role assignments found for the specified criteria."
         }
 
-            return $roleAssignmentsList #| Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope
-        }
+        return $roleAssignmentsList #| Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope
+    }
 
     <#
     .SYNOPSIS
@@ -157,19 +165,13 @@ function Get-RoleAssignments {
 
     .EXAMPLE
         ```powershell
-        Get-RoleAssignments -PrincipalType 'User' -ObjectId 'exampleObjectId'
+        Get-RoleAssignments -PrincipalType 'Group'
+        ```
+        This example calls the Get-RoleAssignments function to retrieve role assignments for all groups.
+
+        .EXAMPLE
+        ```powershell
+        Get-RoleAssignments -PrincipalType 'ServicePrincipal' -ObjectId 'exampleObjectId'
         ```
         This example calls the Get-RoleAssignments function to retrieve role assignments for a specific user with the given ObjectId.
-
-    .LINK
-        For more information, see the related documentation or contact support.
-
-    .NOTES
-        File: Get-RoleAssignments.ps1
-        Author: Rogier Dijkman
-        Version: 1.0
-        Requires: PowerShell 7.0 or later
-        Requires: Azure Management API access
-        Requires: Appropriate permissions to read role assignment information
     #>
-}
