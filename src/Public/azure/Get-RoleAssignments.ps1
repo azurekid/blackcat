@@ -49,16 +49,17 @@ function Get-RoleAssignments {
                     $roleAssignmentsList = $using:roleAssignmentsList
 
                     $subscriptionId = $_
-                    # $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
-                    # $roleDefinitionsRequestParam = @{
-                    #     Headers = $authHeader
-                    #     Uri     = $roleDefinitionsUri
-                    #     Method  = 'GET'
-                    # }
+                    $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
+                    $roleDefinitionsRequestParam = @{
+                        Headers = $authHeader
+                        Uri     = $roleDefinitionsUri
+                        Method  = 'GET'
+                    }
 
                     # Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
-                    # $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                    $roleDefinitionResponse += (Invoke-RestMethod @roleDefinitionsRequestParam).value
 
+                    
                     Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
                     $roleAssignmentsRequestParam = @{
@@ -66,13 +67,15 @@ function Get-RoleAssignments {
                         Uri     = $roleAssignmentsUri
                         Method  = 'GET'
                     }
-                    $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    $roleAssignmentsResponse += (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    return $roleAssignmentsResponse
 
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
                             PrincipalType    = $roleAssignment.properties.principalType
                             PrincipalId      = $roleAssignment.properties.principalId
                             Scope            = $roleAssignment.properties.scope
+                            RoleId           = $roleAssignment.properties.roleDefinitionId
                         }
 
                         # $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
@@ -93,8 +96,8 @@ function Get-RoleAssignments {
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
-        return $roleAssignmentsList
-        # $filteredAssignments = $roleAssignmentsList
+        
+        $filteredAssignments = $roleAssignmentsList
 
         if ($CurrentUser) {
             $UserId = (Get-CurrentScope).'User Object Id'
