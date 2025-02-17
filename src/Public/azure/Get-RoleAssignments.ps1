@@ -12,7 +12,7 @@ function Get-RoleAssignments {
         [string]$ObjectId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 100
+        [int]$ThrottleLimit = 1000
     )
 
     begin {
@@ -47,34 +47,25 @@ function Get-RoleAssignments {
                     $authHeader = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
 
-                    $subscriptionId = $_
-                    $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
-                    $roleDefinitionsRequestParam = @{
-                        Headers = $authHeader
-                        Uri     = $roleDefinitionsUri
-                        Method  = 'GET'
-                    }
+                    # $subscriptionId = $_
+                    # $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
+                    # $roleDefinitionsRequestParam = @{
+                    #     Headers = $authHeader
+                    #     Uri     = $roleDefinitionsUri
+                    #     Method  = 'GET'
+                    # }
 
-                    Write-Host "Retrieving role definitions for subscription: $subscriptionId"
+                    # Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
+                    # $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
 
-                    $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                    return $roleDefinitionResponse
-                    # Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
-                }
-                catch {
-                    Write-Information "$($MyInvocation.MyCommand.Name): Error processing subscription '$_'" -InformationAction Continue
-                }
-
-                try {
-                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
-                    
+                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
                     $roleAssignmentsRequestParam = @{
                         Headers = $authHeader
                         Uri     = $roleAssignmentsUri
                         Method  = 'GET'
                     }
-                     $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
 
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
@@ -83,18 +74,18 @@ function Get-RoleAssignments {
                             Scope            = $roleAssignment.properties.scope
                         }
 
-                        $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                        $memberObject = @{
-                            MemberType	= 'NoteProperty'
-                            Name		= 'RoleName'
-                            Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
-                        }
-                        $roleAssignmentObject | Add-Member @memberObject
+                        # $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
+                        # $memberObject = @{
+                        #     MemberType	= 'NoteProperty'
+                        #     Name		= 'RoleName'
+                        #     Value		= ($roleDefinitionResponse | Where-Object { $_.id -match $roleId }).properties.roleName
+                        # }
+                        # $roleAssignmentObject | Add-Member @memberObject
                         $roleAssignmentsList.Add($roleAssignmentObject)
                     }
                 }
                 catch {
-                    <#Do this if a terminating exception happens#>
+                    Write-Information "$($MyInvocation.MyCommand.Name): Error processing subscription '$_'" -InformationAction Continue
                 }
             } -ThrottleLimit $ThrottleLimit
         }
@@ -102,7 +93,7 @@ function Get-RoleAssignments {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
-        $filteredAssignments = $roleDefinitionResponse
+        $filteredAssignments = $roleAssignmentsList
 
         if ($CurrentUser) {
             $UserId = (Get-CurrentScope).'User Object Id'
