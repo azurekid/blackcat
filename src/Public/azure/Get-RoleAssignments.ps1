@@ -72,7 +72,7 @@ function Get-RoleAssignments {
                         $memberObject = @{
                             MemberType	= 'NoteProperty'
                             Name		= 'RoleName'
-                            Value		= ($script:sessionVariables.AzureRoles | Where-Object { id -match $roleId }).Name
+                            Value		= ($azureRoles | Where-Object id -match $roleId ).Name
                         }
                         $roleAssignmentObject | Add-Member @memberObject
 
