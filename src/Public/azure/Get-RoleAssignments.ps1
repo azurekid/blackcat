@@ -53,6 +53,19 @@ function Get-RoleAssignments {
 
                     Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    if ($using:PrincipalType) {
+                        $roleAssignmentsUri += "&\$filter=assignedTo('$($using:PrincipalType)')"
+                    }
+
+                    if ($using:ObjectId) {
+                        $roleAssignmentsUri += "&\$filter=principalId eq '$($using:ObjectId)'"
+                    }
+
+                    if ($using:CurrentUser) {
+                        $UserId = (Get-CurrentScope).'User Object Id'
+                        $roleAssignmentsUri += "&\$filter=principalId eq '$UserId'"
+                    }
+
                     $roleAssignmentsRequestParam = @{
                         Headers = $authHeader
                         Uri     = $roleAssignmentsUri
@@ -79,7 +92,7 @@ function Get-RoleAssignments {
                                 Method  = 'GET'
                             }
 
-                            Write-Verbose "Retrieving role definitions for subscription: $subscriptionId"
+                            Write-Output "Retrieving role definitions for subscription: $subscriptionId"
                             $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
                             $roleName = ($roleDefinitionResponse | Where-Object {$_.id -match $roleId} ).Name
                         }
@@ -102,27 +115,13 @@ function Get-RoleAssignments {
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
-        $filteredAssignments = $roleAssignmentsList
-        return $roleAssignmentsList
 
-        if ($CurrentUser) {
-            $UserId = (Get-CurrentScope).'User Object Id'
-            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalId -eq $UserId }
-        }
-
-        if ($ObjectId) {
-            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalId -eq $ObjectId }
-        }
-
-        if ($PrincipalType) {
-            $filteredAssignments = $filteredAssignments | Where-Object { $_.PrincipalType -eq $PrincipalType }
-        }
-
-        if ($filteredAssignments.Count -eq 0) {
+        if ($roleAssignmentsList.Count -eq 0) {
             Write-Verbose "No role assignments found for the specified criteria."
         }
 
-        return $filteredAssignments | Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope}
+            return $roleAssignmentsList #| Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope
+        }
 
     <#
     .SYNOPSIS
