@@ -57,8 +57,8 @@ function Get-RoleAssignments {
 
                     Write-Host "Retrieving role definitions for subscription: $subscriptionId"
 
-                    $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                    Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
+                    # $roleDefinitionResponse = (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                    # Write-Host "Role Definitions: $($roleDefinitionResponse.Count)"
 
                     # Write-Host "Retrieving role assignments for subscription: $subscriptionId"
                     # $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
