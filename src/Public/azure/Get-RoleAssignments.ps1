@@ -60,16 +60,15 @@ function Get-RoleAssignments {
                     $roleDefinitionResponse += (Invoke-RestMethod @roleDefinitionsRequestParam).value
 
                     
-                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
-                    $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
-                    $roleAssignmentsRequestParam = @{
-                        Headers = $authHeader
-                        Uri     = $roleAssignmentsUri
-                        Method  = 'GET'
-                    }
-                    $roleAssignmentsResponse += (Invoke-RestMethod @roleAssignmentsRequestParam).value
-                    return $roleAssignmentsResponse
-
+                    # Write-Host "Retrieving role assignments for subscription: $subscriptionId"
+                    # $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    # $roleAssignmentsRequestParam = @{
+                    #     Headers = $authHeader
+                    #     Uri     = $roleAssignmentsUri
+                    #     Method  = 'GET'
+                    # }
+                    # $roleAssignmentsResponse += (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                    return $roleDefinitionResponse
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
                             PrincipalType    = $roleAssignment.properties.principalType
