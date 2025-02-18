@@ -96,21 +96,21 @@ function Get-RoleAssignments {
                         $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
                         $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
 
-                        if (-not($roleName)) {
-                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
-                            $roleDefinitionsRequestParam = @{
-                                Headers = $authHeader
-                                Uri     = $roleDefinitionsUri
-                                Method  = 'GET'
-                            }
+                        # if (-not($roleName)) {
+                        #     $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
+                        #     $roleDefinitionsRequestParam = @{
+                        #         Headers = $authHeader
+                        #         Uri     = $roleDefinitionsUri
+                        #         Method  = 'GET'
+                        #     }
 
-                            Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
-                            $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                            Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
+                        #     Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
+                        #     $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                        #     Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
 
-                            $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
-                            $roleAssignmentObject.IsCustom = $true
-                        }
+                        #     $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+                        #     $roleAssignmentObject.IsCustom = $true
+                        # }
 
                         if ($roleName) {
                             $memberObject = @{
