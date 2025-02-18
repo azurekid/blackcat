@@ -21,6 +21,7 @@ function Get-RoleAssignments {
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
     }
@@ -51,7 +52,7 @@ function Get-RoleAssignments {
             if ($CurrentUser) {
                 $ObjectId = (Get-CurrentUser).Id
             }
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving role assignments for $($subscriptions.Count) subscriptions" -Severity 'Information'
+                Write-Verbose -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving role assignments for $($subscriptions.Count) subscriptions" -Severity 'Information'
                 $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri = $using:baseUri
@@ -97,21 +98,21 @@ function Get-RoleAssignments {
                         $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
                         $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
 
-                        # if (-not($roleName)) {
-                        #     $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
-                        #     $roleDefinitionsRequestParam = @{
-                        #         Headers = $authHeader
-                        #         Uri     = $roleDefinitionsUri
-                        #         Method  = 'GET'
-                        #     }
+                        if (-not($roleName)) {
+                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
+                            $roleDefinitionsRequestParam = @{
+                                Headers = $authHeader
+                                Uri     = $roleDefinitionsUri
+                                Method  = 'GET'
+                            }
 
-                        #     Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
-                        #     $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                        #     Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
+                            Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
+                            $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
+                            Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
 
-                        #     $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
-                        #     $roleAssignmentObject.IsCustom = $true
-                        # }
+                            $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+                            $roleAssignmentObject.IsCustom = $true
+                        }
 
                         if ($roleName) {
                             $memberObject = @{
