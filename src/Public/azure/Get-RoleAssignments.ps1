@@ -67,6 +67,8 @@ function Get-RoleAssignments {
 
                     if ($ObjectId) {
                         $roleAssignmentsUri += '&$filter={0}' -f "PrincipalId eq '$ObjectId'"
+                    } else {
+                        $roleAssignmentsUri += '&$filter={0}' -f "atScope()"
                     }
 
                     $roleAssignmentsRequestParam = @{
