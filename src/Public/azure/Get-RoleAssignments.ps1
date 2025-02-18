@@ -27,7 +27,7 @@ function Get-RoleAssignments {
 
     process {
         try {
-            Write-Verbose "Retrieving all subscriptions for the current user context"
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving all subscriptions for the current user context" -Severity 'Information'
             $baseUri = 'https://management.azure.com'
             $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
             $requestParam = @{
@@ -42,7 +42,6 @@ function Get-RoleAssignments {
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
             $subscriptions = $subscriptionsResponse.subscriptionId
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($subscriptions.Count) subscriptions" -Severity 'Information'
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -52,8 +51,8 @@ function Get-RoleAssignments {
             if ($CurrentUser) {
                 $ObjectId = (Get-CurrentUser).Id
             }
-
-            $subscriptions | ForEach-Object -Parallel {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving role assignments for $($subscriptions.Count) subscriptions" -Severity 'Information'
+                $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri = $using:baseUri
                     $authHeader = $using:script:authHeader
@@ -63,7 +62,7 @@ function Get-RoleAssignments {
                     $PrincipalType = $using:PrincipalType
                     $subscriptionId = $_
 
-                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
+                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
 
                     if ($ObjectId) {
@@ -132,10 +131,11 @@ function Get-RoleAssignments {
         }
 
         if ($roleAssignmentsList.Count -eq 0) {
-            Write-Verbose "No role assignments found for the specified criteria."
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "No role assignments found for the specified criteria." -severity 'Warning'
         }
 
-        return $roleAssignmentsList #| Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope
+        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Completed" -Severity 'Information'
+        return $roleAssignmentsList
     }
 
     <#
