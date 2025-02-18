@@ -52,7 +52,7 @@ function Get-RoleAssignments {
             if ($CurrentUser) {
                 $ObjectId = (Get-CurrentUser).Id
             }
-                Write-Verbose -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving role assignments for $($subscriptions.Count) subscriptions" -Severity 'Information'
+                Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
                 $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri = $using:baseUri
