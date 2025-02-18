@@ -84,6 +84,7 @@ function Get-RoleAssignments {
                         $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
                     }
 
+                    Write-Host "Processing $($roleAssignmentsResponse.Count) role assignments for subscription: $subscriptionId"
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
                             PrincipalType = $roleAssignment.properties.principalType
