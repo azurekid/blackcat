@@ -37,7 +37,7 @@ function Get-RoleAssignments {
             }
 
             if ($SubscriptionId) {
-                $subscriptionsUri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
+                $requestParam.subscriptionsUri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
             }
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
