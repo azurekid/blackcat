@@ -15,7 +15,7 @@ function Get-RoleAssignments {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 1000
+        [int]$ThrottleLimit = 10
     )
 
     begin {
