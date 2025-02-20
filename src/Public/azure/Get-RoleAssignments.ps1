@@ -55,13 +55,13 @@ function Get-RoleAssignments {
                 Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
                 $subscriptions | ForEach-Object -Parallel {
                 try {
-                    $baseUri = $using:baseUri
-                    $authHeader = $using:script:authHeader
+                    $baseUri             = $using:baseUri
+                    $authHeader          = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
-                    $ObjectId = $using:ObjectId
-                    $azureRoles = $using:script:SessionVariables.AzureRoles
-                    $PrincipalType = $using:PrincipalType
-                    $subscriptionId = $_
+                    $ObjectId            = $using:ObjectId
+                    $azureRoles     	 = $using:script:SessionVariables.AzureRoles
+                    $PrincipalType       = $using:PrincipalType
+                    $subscriptionId      = $_
 
                     Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
@@ -116,7 +116,7 @@ function Get-RoleAssignments {
 
                         if ($roleName) {
                             $memberObject = @{
-                                MemberType	= 'NoteProperty'
+                                MemberType = 'NoteProperty'
                                 Name       = 'RoleName'
                                 Value      = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
                             }
@@ -158,8 +158,13 @@ function Get-RoleAssignments {
     .PARAMETER ObjectId
         Specifies the ObjectId to filter the role assignments.
 
+    .PARAMETER SubscriptionId
+        Specifies the SubscriptionId to filter the role assignments.
+
     .PARAMETER ThrottleLimit
-        Specifies the maximum number of concurrent operations that can be performed in parallel. Default value is 1000.
+        Specifies the maximum number of concurrent operations that can be performed in parallel. Default value is 10 due to rate limits on the RBAC API.
+        Tested on tenant with 175 subscriptions and 23,000 role assignments, the function completes in 2 minutes.
+        With a ThrottleLimit of 10. with a ThrottleLimit of 1000 the function completes in 8 minute.
 
     .OUTPUTS
         Returns a collection of PSCustomObjects containing the following properties:
@@ -180,7 +185,7 @@ function Get-RoleAssignments {
         ```
         This example calls the Get-RoleAssignments function to retrieve role assignments for all groups.
 
-        .EXAMPLE
+    .EXAMPLE
         ```powershell
         Get-RoleAssignments -PrincipalType 'ServicePrincipal' -ObjectId 'exampleObjectId'
         ```
