@@ -15,19 +15,20 @@ function Get-RoleAssignments {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 1000
+        [int]$ThrottleLimit = 10
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
     }
 
     process {
         try {
-            Write-Verbose "Retrieving all subscriptions for the current user context"
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving all subscriptions for the current user context" -Severity 'Information'
             $baseUri = 'https://management.azure.com'
             $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
             $requestParam = @{
@@ -37,12 +38,11 @@ function Get-RoleAssignments {
             }
 
             if ($SubscriptionId) {
-                $subscriptionsUri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
+                $requestParam.Uri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
             }
 
             $subscriptionsResponse = (Invoke-RestMethod @requestParam).value
             $subscriptions = $subscriptionsResponse.subscriptionId
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($subscriptions.Count) subscriptions" -Severity 'Information'
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -52,22 +52,24 @@ function Get-RoleAssignments {
             if ($CurrentUser) {
                 $ObjectId = (Get-CurrentUser).Id
             }
-
-            $subscriptions | ForEach-Object -Parallel {
+                Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
+                $subscriptions | ForEach-Object -Parallel {
                 try {
-                    $baseUri = $using:baseUri
-                    $authHeader = $using:script:authHeader
+                    $baseUri             = $using:baseUri
+                    $authHeader          = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
-                    $ObjectId = $using:ObjectId
-                    $azureRoles = $using:script:SessionVariables.AzureRoles
-                    $PrincipalType = $using:PrincipalType
-                    $subscriptionId = $_
+                    $ObjectId            = $using:ObjectId
+                    $azureRoles     	 = $using:script:SessionVariables.AzureRoles
+                    $PrincipalType       = $using:PrincipalType
+                    $subscriptionId      = $_
 
-                    Write-Host "Retrieving role assignments for subscription: $subscriptionId"
+                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
 
                     if ($ObjectId) {
                         $roleAssignmentsUri += '&$filter={0}' -f "PrincipalId eq '$ObjectId'"
+                    } else {
+                        $roleAssignmentsUri += '&$filter={0}' -f "atScope()"
                     }
 
                     $roleAssignmentsRequestParam = @{
@@ -83,6 +85,7 @@ function Get-RoleAssignments {
                         $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
                     }
 
+                    Write-Host "Processing $($roleAssignmentsResponse.Count) role assignments for subscription: $subscriptionId"
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
                         $roleAssignmentObject = [PSCustomObject]@{
                             PrincipalType = $roleAssignment.properties.principalType
@@ -113,7 +116,7 @@ function Get-RoleAssignments {
 
                         if ($roleName) {
                             $memberObject = @{
-                                MemberType	= 'NoteProperty'
+                                MemberType = 'NoteProperty'
                                 Name       = 'RoleName'
                                 Value      = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
                             }
@@ -132,10 +135,11 @@ function Get-RoleAssignments {
         }
 
         if ($roleAssignmentsList.Count -eq 0) {
-            Write-Verbose "No role assignments found for the specified criteria."
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "No role assignments found for the specified criteria." -severity 'Warning'
         }
 
-        return $roleAssignmentsList #| Select-Object PrincipalId, PrincipalType, RoleName, Scope | Sort-Object PrincipalId, Scope
+        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Completed" -Severity 'Information'
+        return $roleAssignmentsList
     }
 
     <#
@@ -154,8 +158,13 @@ function Get-RoleAssignments {
     .PARAMETER ObjectId
         Specifies the ObjectId to filter the role assignments.
 
+    .PARAMETER SubscriptionId
+        Specifies the SubscriptionId to filter the role assignments.
+
     .PARAMETER ThrottleLimit
-        Specifies the maximum number of concurrent operations that can be performed in parallel. Default value is 1000.
+        Specifies the maximum number of concurrent operations that can be performed in parallel. Default value is 10 due to rate limits on the RBAC API.
+        Tested on tenant with 175 subscriptions and 23,000 role assignments, the function completes in 2 minutes.
+        With a ThrottleLimit of 10. with a ThrottleLimit of 1000 the function completes in 8 minute.
 
     .OUTPUTS
         Returns a collection of PSCustomObjects containing the following properties:
@@ -176,7 +185,7 @@ function Get-RoleAssignments {
         ```
         This example calls the Get-RoleAssignments function to retrieve role assignments for all groups.
 
-        .EXAMPLE
+    .EXAMPLE
         ```powershell
         Get-RoleAssignments -PrincipalType 'ServicePrincipal' -ObjectId 'exampleObjectId'
         ```
