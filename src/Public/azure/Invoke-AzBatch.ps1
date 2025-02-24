@@ -1,8 +1,21 @@
+using namespace System.Management.Automation
+
+# used for auto-generating the valid values for the ServiceName parameter
+class ResourceProviders : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.providers | Sort-Object -Unique -Descending)
+    }
+}
+
 function Invoke-AzBatch {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [string]$ResourceType
+        [string]$ResourceType,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [ValidateSet( [ResourceProviders] )]
+        [string]$ResourceProvider
     )
 
     begin {
