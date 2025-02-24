@@ -49,12 +49,12 @@ function Get-KeyVaultSecrets {
 
             if ($secretsUri.count -gt 0) {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($secretsUri.count) Key Vaults that contains secrets" -Severity 'Information'
-                
+
                 $secretsUri.id | ForEach-Object -Parallel {
                     $authHeader = $using:script:keyVaultHeader
                     $result     = $using:result
-                    
-                    
+
+
                     $requestParam = @{
                         Headers = $authHeader
                         Uri     = '{0}/?api-version=7.4' -f $_
