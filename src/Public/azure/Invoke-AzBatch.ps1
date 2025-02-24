@@ -11,7 +11,11 @@ function Invoke-AzBatch {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [string]$ResourceType
+        [string]$ResourceType,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [ValidateSet( [ResourceProviders] )]
+        [string]$ResourceProvider
     )
 
     begin {
