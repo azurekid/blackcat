@@ -2,12 +2,15 @@ function Get-AzStorageContainers {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias('resource-id')]
         [array]$id,
 
         [Parameter(Mandatory = $false)]
+        [Alias('public-access')]
         [switch]$PublicAccess,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('throttle-limit')]
         [int]$ThrottleLimit = 10
     )
 

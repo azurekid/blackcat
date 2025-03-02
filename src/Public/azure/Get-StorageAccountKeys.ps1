@@ -3,7 +3,10 @@ function Get-StorageAccountKeys {
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
-        [object]$id,
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
+            "Microsoft.storage/storageAccounts"
+        )][object]$Id,
+        # [object]$id,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('kerb-key', 'kerberos-key')]
