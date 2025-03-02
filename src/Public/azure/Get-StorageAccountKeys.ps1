@@ -2,13 +2,16 @@ function Get-StorageAccountKeys {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias('resource-id')]
         [object]$id,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('kerb-key', 'kerberos-key')]
         [switch]$KerbKey,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$ThrottleLimit = 10000
+        [Alias('throttle-limit')]
+        [int]$ThrottleLimit = 100
     )
 
     begin {
@@ -63,11 +66,11 @@ function Get-StorageAccountKeys {
                     Write-Information "$($MyInvocation.MyCommand.Name): Storage Account '$_' does not exist"  -InformationAction Continue
                 }
             } -ThrottleLimit $ThrottleLimit
-            
+
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
-        }   
+        }
     }
 
     end {

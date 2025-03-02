@@ -2,18 +2,25 @@ function Set-AzFederatedIdentity {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [string]$Id,
+        [Alias('resource-id')]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
+            "Microsoft.ManagedIdentity/userAssignedIdentities"
+        )][string]$Id,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias('federated-identity-name')]
         [string]$Name = 'federatedCredential',
 
         [Parameter(Mandatory = $true)]
+        [Alias('github-organization')]
         [string]$GitHubOrganization,
 
         [Parameter(Mandatory = $true)]
+        [Alias('github-repository')]
         [string]$GitHubRepository,
 
         [Parameter(Mandatory = $false)]
+        [Alias('branch-name')]
         [string]$Branch = 'main'
     )
 
@@ -53,13 +60,13 @@ function Set-AzFederatedIdentity {
 Sets a federated identity credential for a user-assigned managed identity to enable GitHub Actions authentication.
 
 .DESCRIPTION
-The Set-AzFederatedIdentity cmdlet creates or updates a federated identity credential that enables GitHub Actions workflows 
+The Set-AzFederatedIdentity cmdlet creates or updates a federated identity credential that enables GitHub Actions workflows
 to authenticate to Azure using OpenID Connect. This links a specific GitHub repository and branch to a user-assigned managed identity.
 
 .PARAMETER Id
 The resource ID of the user-assigned managed identity in Azure. This should be the full resource ID path.
 
-.PARAMETER Name 
+.PARAMETER Name
 The name of the federated credential to create. Defaults to 'federatedCredential'.
 
 .PARAMETER GitHubOrganization

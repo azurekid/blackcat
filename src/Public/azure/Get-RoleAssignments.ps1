@@ -2,19 +2,25 @@ function Get-RoleAssignments {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('current-user')]
         [switch]$CurrentUser,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [ValidateSet('User', 'Group', 'ServicePrincipal', 'Other')]
+        [Alias('principal-type')]
         [string]$PrincipalType,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('object-id')]
         [string]$ObjectId,
 
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
+        [Alias('subscription-id')]
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('throttle-limit')]
         [int]$ThrottleLimit = 10
     )
 
@@ -135,7 +141,7 @@ function Get-RoleAssignments {
         }
 
         if ($roleAssignmentsList.Count -eq 0) {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "No role assignments found for the specified criteria." -severity 'Warning'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "No role assignments found for the specified criteria." -severity 'Information'
         }
 
         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Completed" -Severity 'Information'

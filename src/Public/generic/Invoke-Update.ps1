@@ -23,7 +23,7 @@ function Invoke-Update {
     process {
         Write-Verbose "Creating helper directory"
         Test-Path -Path $helperPath -ErrorAction SilentlyContinue | New-Item -ItemType Directory -Path $helperPath -Force
-        
+
         try {
             Write-Verbose "Downloading support files"
 

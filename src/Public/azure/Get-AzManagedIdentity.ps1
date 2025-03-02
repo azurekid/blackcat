@@ -2,7 +2,12 @@ function Get-AzManagedIdentity {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "ResourceGroupName"
+        )]
         [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
+        [Alias('identity-name', 'user-assigned-identity')]
         [string]$Name
     )
 

@@ -1,10 +1,17 @@
 function Get-KeyVaultSecrets {
     [cmdletbinding()]
     param (
+
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.KeyVault/vaults",
+            "ResourceGroupName"
+        )]
+        [Alias('vault', 'key-vault-name')]
         [array]$Name,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('throttle-limit')]
         [int]$ThrottleLimit = 1000
     )
 
@@ -33,14 +40,21 @@ function Get-KeyVaultSecrets {
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
                 $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_
-                
+
                 $requestParam = @{
                     Headers = $authHeader
                     Uri     = $uri
                     Method  = 'GET'
                 }
 
-                $apiResponse = Invoke-RestMethod @requestParam
+                    try {
+                        $apiResponse = Invoke-RestMethod @requestParam
+                    }
+                    catch {
+                        if ($_.Exception.Message -match "NotFound") {
+                            Write-Verbose "Key Vault not found: $_"
+                        }
+                    }
 
                 if ($apiResponse.value.Count -gt 0) {
                     [void] $secretsUri.Add($apiResponse.value)

@@ -1,3 +1,6 @@
+# Import the necessary namespace
+using namespace System.Management.Automation
+
 # used for auto-generating the valid values for the AppRoleName parameter
 class appRoleNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
@@ -10,20 +13,23 @@ function Set-AzManagedIdentityPermissions {
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        [Alias('service-principal-id')]
         [string]$servicePrincipalId,
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $false)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        [Alias('resource-id')]
         [string]$resourceId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        [Alias('app-role-id')]
         [string]$appRoleId,
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidateSet( [appRoleNames] )]
+        [Alias('app-role-name')]
         [string]$appRoleName
-
     )
 
     begin {

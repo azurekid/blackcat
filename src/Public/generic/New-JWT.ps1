@@ -4,12 +4,16 @@ function New-JWT {
     (
         [Parameter(Mandatory = $true)]
         [string]$Audience,
+
         [Parameter(Mandatory = $true)]
         [string]$Issuer,
+
         [Parameter(Mandatory = $true)]
         [string]$Subject,
+
         [Parameter(Mandatory = $true)]
         [int]$ExpirationMinutes,
+
         [Parameter(Mandatory = $true)]
         [string]$SigningKey
     )

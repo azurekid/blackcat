@@ -3,22 +3,28 @@ function Get-AzPublicStorageAccounts {
     [Alias("bl cli public storage accounts")]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("storage-account-name")]
         [string]$StorageAccountName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidateSet('blob', 'file', 'queue', 'table', 'dfs', ErrorMessage = "Type must be one of the following: Blob, File, Queue, Table")]
+        [Alias("storage-type")]
         [string]$Type = 'blob',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias("word-list")]
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
+        [Alias("throttle-limit")]
         [int]$ThrottleLimit = 1000,
 
         [Parameter(Mandatory = $false)]
+        [Alias("include-empty")]
         [switch]$IncludeEmpty,
 
         [Parameter(Mandatory = $false)]
+        [Alias("include-metadata")]
         [switch]$IncludeMetadata
     )
 
