@@ -6,7 +6,6 @@ function Get-StorageAccountKeys {
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
             "Microsoft.storage/storageAccounts"
         )][object]$Id,
-        # [object]$id,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('kerb-key', 'kerberos-key')]
