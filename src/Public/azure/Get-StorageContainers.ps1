@@ -1,4 +1,4 @@
-function Get-AzStorageContainers {
+function Get-StorageContainers {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

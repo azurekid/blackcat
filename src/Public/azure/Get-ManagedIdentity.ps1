@@ -1,4 +1,4 @@
-function Get-AzManagedIdentity {
+function Get-BcManagedIdentity {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

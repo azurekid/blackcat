@@ -1,4 +1,4 @@
-function Get-MsServicePrincipalsPermissions {
+function Get-ServicePrincipalsPermissions {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

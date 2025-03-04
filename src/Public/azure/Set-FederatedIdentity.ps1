@@ -1,4 +1,4 @@
-function Set-AzFederatedIdentity {
+function Set-FederatedIdentity {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]

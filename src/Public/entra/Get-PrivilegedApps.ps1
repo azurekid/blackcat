@@ -1,4 +1,4 @@
-function Get-MsPrivilegedApps {
+function Get-PrivilegedApps {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]

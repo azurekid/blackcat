@@ -1,4 +1,4 @@
-function Get-MsFederatedApplications {
+function Get-FederatedApplications {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]

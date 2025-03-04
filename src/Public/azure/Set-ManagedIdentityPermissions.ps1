@@ -8,7 +8,7 @@ class appRoleNames : IValidateSetValuesGenerator {
     }
 }
 
-function Set-AzManagedIdentityPermissions {
+function Set-ManagedIdentityPermissions {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]

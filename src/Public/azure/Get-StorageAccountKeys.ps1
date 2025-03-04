@@ -1,4 +1,4 @@
-function Get-StorageAccountKeys {
+function Get-BcStorageAccountKeys {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]

@@ -1,4 +1,4 @@
-function Get-AzPublicStorageAccounts {
+function Get-PublicStorageAccounts {
     [cmdletbinding()]
     [Alias("bl cli public storage accounts")]
     param (
@@ -113,6 +113,7 @@ function Get-AzPublicStorageAccounts {
                                     $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $true
                                 }
                                 $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
+
                             }
 
                             if ($IncludeMetadata) {
@@ -184,15 +185,6 @@ Retrieves public file containers for the specified storage account, including em
 
 .EXAMPLE
 PS> Get-AzPublicStorageAccounts -WordList "C:\wordlist.txt" -ThrottleLimit 500
-
-Loads permutations from the specified word list and performs DNS resolution with a throttle limit of 500.
-
-.DEPENDENCIES
-- System.Collections.Concurrent.ConcurrentBag
-- System.Collections.Generic.HashSet
-- System.Net.Dns
-- System.Net.Sockets.SocketException
-- Invoke-WebRequest
 
 .NOTES
 Author: Rogier Dijkman

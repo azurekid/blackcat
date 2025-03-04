@@ -1,4 +1,4 @@
-function Get-AzPublicResources {
+function Get-PublicResources {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]

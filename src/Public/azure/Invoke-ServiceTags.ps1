@@ -13,7 +13,7 @@ class RegionNames : IValidateSetValuesGenerator {
     }
 }
 
-function Invoke-AzServiceTags {
+function Invoke-ServiceTags {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
