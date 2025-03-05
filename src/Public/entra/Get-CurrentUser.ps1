@@ -22,9 +22,24 @@ function Get-CurrentUser {
 
             try {
                 Write-Verbose "Invoking Microsoft Graph API"
-                $requestParam.Uri = "$($sessionVariables.graphUri)/me/"
+                $user = Invoke-RestMethod @requestParam
 
-                Invoke-RestMethod @requestParam
+                Write-Verbose "Getting current user's group memberships"
+                $groupUri = "$($sessionVariables.graphUri)/me/memberOf"
+
+                $groupRequestParam = @{
+                    Headers = $script:graphHeader
+                    Uri     = $groupUri
+                    Method  = 'GET'
+                }
+
+                $groups = Invoke-RestMethod @groupRequestParam
+
+                # Add group memberships to the user object
+                $user | Add-Member -MemberType NoteProperty -Name 'Groups' -Value ($groups.value | Select-Object -Property displayName, IsAssignableToRole)
+
+                # Return the user object with group memberships
+                return $user | Select-Object -Property id, displayName, userPrincipalName, jobTitle, Groups
             }
             catch {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Information'
@@ -36,30 +51,31 @@ function Get-CurrentUser {
     }
     <#
 .SYNOPSIS
-Retrieves information about the current authenticated user from Microsoft Graph API.
+Retrieves information about the current authenticated user from Microsoft Graph API, including group memberships.
 
 .DESCRIPTION
 The Get-CurrentUser function queries the Microsoft Graph API to get details about the currently authenticated user.
-It utilizes the existing authentication header and session variables to make the API request.
+It also retrieves the group memberships of the user and includes them in the output.
+It utilizes the existing authentication header and session variables to make the API requests.
 
 .EXAMPLE
 Get-CurrentUser
 
-Returns the current user's information from Microsoft Graph API.
+Returns the current user's information from Microsoft Graph API, including group memberships.
 
 .EXAMPLE
 Get-CurrentUser -Verbose
 
-Returns the current user's information with verbose output showing the API call progress.
+Returns the current user's information with verbose output showing the API call progress, including group memberships.
 
 .NOTES
 This function requires:
 - Valid authentication to Microsoft Graph API
-- Appropriate permissions to access user information
+- Appropriate permissions to access user information and group memberships
 - The BlackCat module to be loaded with proper session variables
 
 .OUTPUTS
-Returns a PSCustomObject containing the current user's information from Microsoft Graph API.
+Returns a PSCustomObject containing the current user's information from Microsoft Graph API, including group memberships.
 The exact properties returned depend on the permissions granted to the authenticated session.
 #>
 }
