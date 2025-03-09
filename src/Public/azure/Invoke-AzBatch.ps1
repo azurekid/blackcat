@@ -1,9 +1,8 @@
 function Invoke-AzBatch {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern('^Microsoft\.[A-Za-z]+(/[A-Za-z]+)+$')]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidatePattern('^Microsoft\.[A-Za-z]+(/[A-Za-z]+)+$|^$')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceTypeCompleterAttribute()]
         [Alias('resource-type')]
         [string]$ResourceType
@@ -21,10 +20,14 @@ function Invoke-AzBatch {
                         httpMethod = 'POST'
                         url        = $($sessionVariables.resourceGraphUri)
                         content    = @{
-                            query = "resources | where type == '$($ResourceType.ToLower())'"
+                            query = "resources"
                         }
                     }
                 )
+            }
+
+            if (![string]::IsNullOrEmpty($ResourceType)) {
+                $payload.requests[0].content.query = "resources | where type == '$($ResourceType.ToLower())'"
             }
 
             $requestParam = @{
@@ -48,23 +51,4 @@ function Invoke-AzBatch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-<#
-.SYNOPSIS
-    Enumerates resources of a specified type using Azure Resource Graph.
-
-.DESCRIPTION
-    The Invoke-AzBatch function queries Azure Resource Graph to enumerate resources of a specified type.
-    It constructs a query based on the provided resource type and sends an API request to retrieve the resources.
-
-.PARAMETER ResourceType
-    The type of resources to enumerate. This parameter is optional and can be provided via pipeline by property name.
-
-.EXAMPLE
-    PS> Invoke-AzBatch -ResourceType "Microsoft.Compute/virtualMachines"
-    Enumerates all virtual machines in the Azure subscription.
-
-.NOTES
-    This function requires appropriate authentication headers to be set in the $script:authHeader variable.
-    The $sessionVariables object must contain the resourceGraphUri and batchUri properties for API requests.
-#>
 }

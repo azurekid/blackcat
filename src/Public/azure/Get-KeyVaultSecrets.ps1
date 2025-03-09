@@ -2,13 +2,17 @@ function Get-KeyVaultSecrets {
     [cmdletbinding()]
     param (
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
             "Microsoft.KeyVault/vaults",
             "ResourceGroupName"
         )]
         [Alias('vault', 'key-vault-name')]
-        [array]$Name,
+        [string[]]$Name,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias('object-type')]
+        [string]$ObjectType = 'secrets',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
@@ -29,17 +33,16 @@ function Get-KeyVaultSecrets {
 
     process {
         try {
-            Write-Verbose "Retrieving Key Vault secrets for $(($Name).count) vaults"
-
             $Name | ForEach-Object -Parallel {
                 $authHeader       = $using:script:keyVaultHeader
+                $objectType       = $using:ObjectType
                 $result           = $using:result
                 $secrets          = $using:secrets
                 $secretsUri       = $using:secretsUri
                 $totalItems       = $using:totalItems
                 $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
-                $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_
+                $uri = 'https://{0}.vault.azure.net/{1}?api-version=7.3' -f $_, $objectType
 
                 $requestParam = @{
                     Headers = $authHeader
@@ -62,12 +65,14 @@ function Get-KeyVaultSecrets {
             } -ThrottleLimit $ThrottleLimit
 
             if ($secretsUri.count -gt 0) {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($secretsUri.count) Key Vaults that contains secrets" -Severity 'Information'
-
                 $secretsUri.id | ForEach-Object -Parallel {
                     $authHeader = $using:script:keyVaultHeader
+                    $objectType = $using:ObjectType
                     $result     = $using:result
 
+                # Skip if already processed
+                    $vault = $_.split('.')[0].Split('https://')[1]
+                    Write-Output "Trying to download $objectType from Key Vault item $($_.Split('/')[4])"
 
                     $requestParam = @{
                         Headers = $authHeader
@@ -94,10 +99,10 @@ function Get-KeyVaultSecrets {
                             Write-Verbose "Error occurred while retrieving secret: $($_.Exception.Message)"
                         }
                     }
-                }
+                } -ThrottleLimit $ThrottleLimit
             }
             else {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No secrets found" -Severity 'Information'
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No $ObjectType found" -Severity 'Information'
             }
         }
         catch {
@@ -107,7 +112,7 @@ function Get-KeyVaultSecrets {
 
     end {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
-        return $result | Sort-Object KeyVaultName, SecretName, Value -Unique
+        return $result | Sort-Object KeyVaultName, SecretName, Value
     }
 <#
 .SYNOPSIS

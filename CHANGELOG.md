@@ -6,4 +6,3 @@ _Bug fixes_
 
 
 _What's new?_
-

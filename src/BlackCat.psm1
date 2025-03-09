@@ -64,7 +64,6 @@ $script:SessionVariables = [ordered]@{
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
 New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Force
 
-
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
 $version = $manifest.ModuleVersion
 
