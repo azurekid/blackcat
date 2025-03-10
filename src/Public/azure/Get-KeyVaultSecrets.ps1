@@ -2,7 +2,7 @@ function Get-KeyVaultSecrets {
     [cmdletbinding()]
     param (
 
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
             "Microsoft.KeyVault/vaults",
             "ResourceGroupName"
@@ -35,6 +35,9 @@ function Get-KeyVaultSecrets {
         try {
             Write-Verbose "Retrieving $ObjectType from Key Vault(s): $($Name -join ', ')"
 
+            if (!$Name) {
+                $Name = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults').Name
+            }
             # First function: Get all secret URIs
             function Get-KeyVaultSecretUris {
                 param($VaultNames, $ObjectType, $ThrottleLimit, $AuthHeader)
