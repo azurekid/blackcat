@@ -85,6 +85,7 @@ $logo = `
 
                  v$version by Rogier Dijkman
 
+
 "@
 
 Write-Host $logo -ForegroundColor Blue

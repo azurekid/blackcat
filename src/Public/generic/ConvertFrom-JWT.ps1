@@ -36,7 +36,7 @@ function ConvertFrom-JWT {
             UPN              = $token.Payload.upn
             FirstName        = $token.Payload.given_name
             LastName         = $token.Payload.family_name
-            "User Object ID" = $token.Payload.oid
+            "ObjectId"       = $token.Payload.oid
             "Auth. Method"   = $token.Payload.amr
             "IP Address"     = $token.Payload.ipaddr
             "Tenant ID"      = $token.Payload.tid
