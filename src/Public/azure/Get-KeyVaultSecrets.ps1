@@ -10,10 +10,6 @@ function Get-KeyVaultSecrets {
         [Alias('vault', 'key-vault-name')]
         [string[]]$Name,
 
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [Alias('object-type')]
-        [string]$ObjectType = 'secrets',
-
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
         [int]$ThrottleLimit = 1000
@@ -24,28 +20,28 @@ function Get-KeyVaultSecrets {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
         $result  = New-Object System.Collections.ArrayList
-        $secrets = New-Object System.Collections.ArrayList
-        $secretsUri = New-Object System.Collections.ArrayList
+        # $secrets = New-Object System.Collections.ArrayList
+        # $secretsUri = New-Object System.Collections.ArrayList
 
-        $totalItems = $Name.Count
-        $currentItemIndex = 0
+        # $totalItems = $Name.Count
+        # $currentItemIndex = 0
     }
 
     process {
         try {
-            Write-Verbose "Retrieving $ObjectType from Key Vault(s): $($Name -join ', ')"
+            Write-Verbose "Retrieving secrets from Key Vault(s): $($Name -join ', ')"
 
             if (!$Name) {
                 $Name = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults').Name
             }
             # First function: Get all secret URIs
             function Get-KeyVaultSecretUris {
-                param($VaultNames, $ObjectType, $ThrottleLimit, $AuthHeader)
+                param($VaultNames, $ThrottleLimit, $AuthHeader)
 
                 $secretUris = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
 
                 $VaultNames | ForEach-Object -Parallel {
-                    $uri = 'https://{0}.vault.azure.net/{1}?api-version=7.3' -f $_, $using:ObjectType
+                    $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_
 
                     $requestParam = @{
                         Headers = $using:AuthHeader
@@ -109,13 +105,13 @@ function Get-KeyVaultSecrets {
             }
 
             # Execute the functions
-            $uris = Get-KeyVaultSecretUris -VaultNames $Name -ObjectType $ObjectType -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader
+            $uris = Get-KeyVaultSecretUris -VaultNames $Name -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader
             if ($uris.Count -gt 0) {
                 $secretValues = @(Get-KeyVaultSecretValues -SecretUris $uris -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader)
                 $result.AddRange($secretValues)
             }
             else {
-                Write-Verbose -Message "No $ObjectType found in Key Vault '$($Name)'"
+                Write-Verbose -Message "No secrets found in Key Vault '$($Name)'"
             }
         }
         catch {
@@ -126,7 +122,7 @@ function Get-KeyVaultSecrets {
     end {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         if (!$result) {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No $ObjectType found" -Severity 'Information'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No secrets found" -Severity 'Information'
         } else {
             return $result | Sort-Object KeyVaultName, SecretName, Value
         }
