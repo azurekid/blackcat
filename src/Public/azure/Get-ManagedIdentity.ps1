@@ -1,4 +1,4 @@
-function Get-BcManagedIdentity {
+function Get-ManagedIdentity {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
