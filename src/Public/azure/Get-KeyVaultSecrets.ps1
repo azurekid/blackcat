@@ -33,63 +33,64 @@ function Get-KeyVaultSecrets {
 
     process {
         try {
-            $Name | ForEach-Object -Parallel {
-                $authHeader       = $using:script:keyVaultHeader
-                $objectType       = $using:ObjectType
-                $result           = $using:result
-                $secrets          = $using:secrets
-                $secretsUri       = $using:secretsUri
-                $totalItems       = $using:totalItems
-                $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
+            Write-Verbose "Retrieving $ObjectType from Key Vault(s): $($Name -join ', ')"
 
-                $uri = 'https://{0}.vault.azure.net/{1}?api-version=7.3' -f $_, $objectType
+            # First function: Get all secret URIs
+            function Get-KeyVaultSecretUris {
+                param($VaultNames, $ObjectType, $ThrottleLimit, $AuthHeader)
 
-                $requestParam = @{
-                    Headers = $authHeader
-                    Uri     = $uri
-                    Method  = 'GET'
-                }
+                $secretUris = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
+
+                $VaultNames | ForEach-Object -Parallel {
+                    $uri = 'https://{0}.vault.azure.net/{1}?api-version=7.3' -f $_, $using:ObjectType
+
+                    $requestParam = @{
+                        Headers = $using:AuthHeader
+                        Uri     = $uri
+                        Method  = 'GET'
+                    }
 
                     try {
                         $apiResponse = Invoke-RestMethod @requestParam
+                        if ($apiResponse.value.Count -gt 0) {
+                            foreach ($value in $apiResponse.value) {
+                                ($using:secretUris).Add($value)
+                            }
+                        }
                     }
                     catch {
                         if ($_.Exception.Message -match "NotFound") {
                             Write-Verbose "Key Vault not found: $_"
                         }
                     }
+                } -ThrottleLimit $ThrottleLimit
 
-                if ($apiResponse.value.Count -gt 0) {
-                    [void] $secretsUri.Add($apiResponse.value)
-                }
-            } -ThrottleLimit $ThrottleLimit
+                return $secretUris
+            }
 
-            if ($secretsUri.count -gt 0) {
-                $secretsUri.id | ForEach-Object -Parallel {
-                    $authHeader = $using:script:keyVaultHeader
-                    $objectType = $using:ObjectType
-                    $result     = $using:result
+            # Second function: Get secret values
+            function Get-KeyVaultSecretValues {
+                param($SecretUris, $ThrottleLimit, $AuthHeader)
 
-                # Skip if already processed
+                $secretValues = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
+
+                $SecretUris.id | ForEach-Object -Parallel {
                     $vault = $_.split('.')[0].Split('https://')[1]
-                    Write-Output "Trying to download $objectType from Key Vault item $($_.Split('/')[4])"
 
                     $requestParam = @{
-                        Headers = $authHeader
+                        Headers = $using:AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $_
                         Method  = 'GET'
                     }
 
                     try {
                         $secretResponse = Invoke-RestMethod @requestParam
-
                         $currentItem = [PSCustomObject]@{
-                            "KeyVaultName" = $_.split('.')[0].Split('https://')[1]
+                            "KeyVaultName" = $vault
                             "SecretName"   = "$($_.Split('/')[4])"
                             "Value"        = $secretResponse.value
                         }
-
-                        [void] $result.Add($currentItem)
+                        ($using:secretValues).Add($currentItem)
                     }
                     catch {
                         if ($_.Exception.Message -match "Forbidden") {
@@ -100,9 +101,18 @@ function Get-KeyVaultSecrets {
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
+
+                return $secretValues
+            }
+
+            # Execute the functions
+            $uris = Get-KeyVaultSecretUris -VaultNames $Name -ObjectType $ObjectType -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader
+            if ($uris.Count -gt 0) {
+                $secretValues = @(Get-KeyVaultSecretValues -SecretUris $uris -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader)
+                $result.AddRange($secretValues)
             }
             else {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No $ObjectType found" -Severity 'Information'
+                Write-Verbose -Message "No $ObjectType found in Key Vault '$($Name)'"
             }
         }
         catch {
@@ -112,7 +122,11 @@ function Get-KeyVaultSecrets {
 
     end {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
-        return $result | Sort-Object KeyVaultName, SecretName, Value
+        if (!$result) {
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No $ObjectType found" -Severity 'Information'
+        } else {
+            return $result | Sort-Object KeyVaultName, SecretName, Value
+        }
     }
 <#
 .SYNOPSIS
