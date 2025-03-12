@@ -20,11 +20,6 @@ function Get-KeyVaultSecrets {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
         $result  = New-Object System.Collections.ArrayList
-        # $secrets = New-Object System.Collections.ArrayList
-        # $secretsUri = New-Object System.Collections.ArrayList
-
-        # $totalItems = $Name.Count
-        # $currentItemIndex = 0
     }
 
     process {
@@ -33,6 +28,7 @@ function Get-KeyVaultSecrets {
 
             if (!$Name) {
                 $Name = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults').Name
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($Name.Count) KeyVaults" -Severity 'Information'
             }
             # First function: Get all secret URIs
             function Get-KeyVaultSecretUris {
