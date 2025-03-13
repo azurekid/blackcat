@@ -58,76 +58,94 @@ function Get-RoleAssignments {
             if ($CurrentUser) {
                 $ObjectId = (Get-CurrentUser).Id
             }
-                Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
-                $subscriptions | ForEach-Object -Parallel {
+
+            if ($ObjectId) {
+                $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
+                Write-Verbose "Retrieving groups for user: $ObjectId"
+
+            }
+            else {
+                $Groups = @()
+            }
+
+            Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
+            $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri             = $using:baseUri
                     $authHeader          = $using:script:authHeader
                     $roleAssignmentsList = $using:roleAssignmentsList
                     $ObjectId            = $using:ObjectId
-                    $azureRoles     	 = $using:script:SessionVariables.AzureRoles
+                    $Groups              = $using:Groups
+                    $azureRoles          = $using:script:SessionVariables.AzureRoles
                     $PrincipalType       = $using:PrincipalType
                     $subscriptionId      = $_
 
                     Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
 
+                    $principalIds = @()
                     if ($ObjectId) {
-                        $roleAssignmentsUri += '&$filter={0}' -f "PrincipalId eq '$ObjectId'"
-                    } else {
-                        $roleAssignmentsUri += '&$filter={0}' -f "atScope()"
+                        $principalIds += $ObjectId
+                    }
+                    if ($Groups.length -gt 0) {
+                        $principalIds += $Groups
                     }
 
-                    $roleAssignmentsRequestParam = @{
-                        Headers = $authHeader
-                        Uri     = $roleAssignmentsUri
-                        Method  = 'GET'
+                    $roleAssignmentsResponse = @()
+                    foreach ($principalId in $principalIds) {
+                        $filterUri = "$roleAssignmentsUri&`$filter=principalId eq '$principalId'"
+
+                        $roleAssignmentsRequestParam = @{
+                            Headers = $authHeader
+                            Uri     = $filterUri
+                            Method  = 'GET'
+                        }
+
+                        $roleAssignmentsResponse += (Invoke-RestMethod @roleAssignmentsRequestParam).value
                     }
 
                     if ($PrincipalType) {
-                        $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value | Where-Object { $_.properties.principalType -eq $PrincipalType }
+                        $roleAssignmentsResponse += @(Invoke-RestMethod @roleAssignmentsRequestParam).value | Where-Object { $_.properties.principalType -eq $PrincipalType }
                     }
                     else {
-                        $roleAssignmentsResponse = (Invoke-RestMethod @roleAssignmentsRequestParam).value
+                        $roleAssignmentsResponse += @(Invoke-RestMethod @roleAssignmentsRequestParam).value
                     }
 
-                    Write-Host "Processing $($roleAssignmentsResponse.Count) role assignments for subscription: $subscriptionId"
                     foreach ($roleAssignment in $roleAssignmentsResponse) {
-                        $roleAssignmentObject = [PSCustomObject]@{
-                            PrincipalType = $roleAssignment.properties.principalType
-                            PrincipalId   = $roleAssignment.properties.principalId
-                            Scope         = $roleAssignment.properties.scope
-                            RoleId        = $roleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
-                            IsCustom      = $false
-                        }
-
-                        $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                        $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
-
-                        if (-not($roleName)) {
-                            $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
-                            $roleDefinitionsRequestParam = @{
-                                Headers = $authHeader
-                                Uri     = $roleDefinitionsUri
-                                Method  = 'GET'
+                        if ($roleAssignment.properties.principalType) {
+                            $roleAssignmentObject = [PSCustomObject]@{
+                                PrincipalType = $roleAssignment.properties.principalType
+                                PrincipalId   = $roleAssignment.properties.principalId
+                                Scope         = $roleAssignment.properties.scope
+                                RoleId        = $roleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
+                                IsCustom      = $false
                             }
 
-                            Write-Verbose "Retrieving role custom role definitions for subscription: $subscriptionId"
-                            $azureRoles += (Invoke-RestMethod @roleDefinitionsRequestParam).value
-                            Write-Verbose "Retrieved $($azureRoles.Count) role definitions for subscription: $subscriptionId"
-
+                            $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
                             $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
-                            $roleAssignmentObject.IsCustom = $true
-                        }
 
-                        if ($roleName) {
-                            $memberObject = @{
-                                MemberType = 'NoteProperty'
-                                Name       = 'RoleName'
-                                Value      = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+                            if (-not($roleName)) {
+                                $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions/$($roleId)?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
+                                $roleDefinitionsRequestParam = @{
+                                    Headers = $authHeader
+                                    Uri     = $roleDefinitionsUri
+                                    Method  = 'GET'
+                                }
+
+                                Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
+                                $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                $roleAssignmentObject.IsCustom = $true
                             }
-                            $roleAssignmentObject | Add-Member @memberObject
-                            $roleAssignmentsList.Add($roleAssignmentObject)
+
+                            if ($roleName) {
+                                $memberObject = @{
+                                    MemberType = 'NoteProperty'
+                                    Name       = 'RoleName'
+                                    Value      = $roleName
+                                }
+                                $roleAssignmentObject | Add-Member @memberObject
+                                $roleAssignmentsList.Add($roleAssignmentObject)
+                            }
                         }
                     }
                 }

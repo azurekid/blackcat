@@ -1,7 +1,15 @@
 function Get-StorageAccountKeys {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.Storage/StorageAccounts",
+            "ResourceGroupName"
+        )]
+        [Alias('vault', 'key-vault-name')]
+        [string[]]$Name,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
             "Microsoft.storage/storageAccounts"
@@ -31,9 +39,15 @@ function Get-StorageAccountKeys {
         try {
             Write-Verbose "Retrieving storage account keys for $(($id).count)"
 
+            if (!$Name) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($Id.Count) Storage Accounts" -Severity 'Information'
+            } else {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' | Where-Object Name -eq $Name).id
+            }
+
             $id | ForEach-Object -Parallel {
                 try {
-                    $baseUri    = $using:SessionVariables.baseUri
                     $authHeader = $using:script:authHeader
                     $result     = $using:result
                     $KerbKey    = $using:KerbKey
