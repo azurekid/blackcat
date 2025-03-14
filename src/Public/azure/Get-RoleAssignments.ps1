@@ -29,6 +29,7 @@ function Get-RoleAssignments {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
+        $userAgents = $sessionVariables.userAgents.agents
         $subscriptions = @()
     }
 
@@ -74,6 +75,7 @@ function Get-RoleAssignments {
                 try {
                     $baseUri             = $using:baseUri
                     $authHeader          = $using:script:authHeader
+                    $userAgents          = $using:userAgents
                     $roleAssignmentsList = $using:roleAssignmentsList
                     $ObjectId            = $using:ObjectId
                     $Groups              = $using:Groups
@@ -94,9 +96,10 @@ function Get-RoleAssignments {
 
                     $roleAssignmentsResponse = @()
                     $roleAssignmentsRequestParam = @{
-                        Headers = $authHeader
-                        Method  = 'GET'
-                        Uri    = $roleAssignmentsUri
+                        Headers   = $authHeader
+                        Method    = 'GET'
+                        Uri       = $roleAssignmentsUri
+                        UserAgent = $($userAgents.value | Get-Random)
                     }
 
                     if ($principalIds) {
@@ -131,6 +134,7 @@ function Get-RoleAssignments {
                                     Headers = $authHeader
                                     Uri     = $roleDefinitionsUri
                                     Method  = 'GET'
+                                    UserAgent = $($userAgents.value | Get-Random)
                                 }
 
                                 Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
@@ -185,7 +189,7 @@ function Get-RoleAssignments {
     .PARAMETER PrincipalType
         Filters results by principal type. Valid options:
         - User
-        - Group  
+        - Group
         - ServicePrincipal
         - Other
 

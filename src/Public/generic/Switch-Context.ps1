@@ -1,4 +1,4 @@
-function Switch-AzureContext {
+function Switch-Context {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
