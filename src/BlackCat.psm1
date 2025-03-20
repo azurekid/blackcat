@@ -39,7 +39,7 @@ foreach ($script in @($privateScripts + $publicScripts)) {
 
 Export-ModuleMember -Function $publicScripts.BaseName
 
-$helperPath = "$PSScriptRoot/Helpers"
+$helperPath = "$PSScriptRoot/Private/Reference"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
     Invoke-UpdateHelpers
 }
@@ -53,12 +53,12 @@ $script:SessionVariables = [ordered]@{
     ExpiresOn        = ''
     apiVersion       = '2023-06-01-preview'
     AccessToken      = ''
-    Roles            = if (Test-Path $PSScriptRoot\Helpers\EntraRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\EntraRoles.csv | ConvertFrom-Csv }
-    AzureRoles       = if (Test-Path $PSScriptRoot\Helpers\AzureRoles.csv) { Get-Content -Path $PSScriptRoot\Helpers\AzureRoles.csv | ConvertFrom-Csv }
-    serviceTags      = if (Test-Path $PSScriptRoot\Helpers\ServiceTags.json) { Get-Content -Path $PSScriptRoot\Helpers\ServiceTags.json | ConvertFrom-Json }
-    appRoleIds       = if (Test-Path $PSScriptRoot\Helpers\appRoleIds.csv) { Get-Content -Path $PSScriptRoot\Helpers\appRoleIds.csv | ConvertFrom-Csv }
-    permutations     = if (Test-Path $PSScriptRoot\Helpers\permutations.txt) { Get-Content -Path $PSScriptRoot\Helpers\permutations.txt }
-    userAgents       = if (Test-Path $PSScriptRoot\Helpers\userAgents.json) { Get-Content -Path $PSScriptRoot\Helpers\userAgents.json | ConvertFrom-Json }
+    Roles            = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv }
+    AzureRoles       = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv }
+    serviceTags      = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json }
+    appRoleIds       = if (Test-Path $helperPath\appRoleIds.csv) { Get-Content -Path $helperPath\appRoleIds.csv | ConvertFrom-Csv }
+    permutations     = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt }
+    userAgents       = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json }
     default          = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM=='
 }
 
