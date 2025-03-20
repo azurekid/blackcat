@@ -1,0 +1,55 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+{
+  "name": "BlackCat",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/azure-powershell:latest",
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      // Set *default* container specific settings.json values on container create.
+      "settings": {
+        "debug.javascript.terminal.activateWithCurrentFile": false,
+        "debug.javascript.autoAttachFilter": "disabled",
+        "debug.javascript.automaticallyTunnelRemoteServer": false,
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
+          },
+          "BlackCat": {
+            "path": "/opt/microsoft/powershell/7/pwsh",
+            "icon": "terminal-powershell"
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "BlackCat"
+      },
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": [
+        "ms-vscode.powershell",
+        "ms-azuretools.vscode-bicep",
+        "GitHub.copilot",
+        "shardulm94.trailing-spaces",
+        "GitHub.vscode-github-actions",
+        "DavidAnson.vscode-markdownlint"
+      ]
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "false",
+      "username": "vscode",
+      "upgradePackages": "true",
+      "nonFreePackages": "false"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "installBicep": "true",
+      "installUsingPython": "true"
+    }
+  },
+  "postCreateCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./src/BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1 && ./.devcontainer/update.sh"
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": []
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}
