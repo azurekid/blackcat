@@ -33,8 +33,9 @@ note: >
 
 ### Using Help
 
-```powershell
-# documentation: Work in progress, but all functions have documentation in the files
+```yaml
+documentation: >
+    Work in progress, but all functions have documentation in the files
     Get-Help Get-RoleAssignments
 ```
 
