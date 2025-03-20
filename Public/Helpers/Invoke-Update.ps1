@@ -2,7 +2,7 @@ function Invoke-Update {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Helpers/'
+        [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/support-files/'
     )
 
     begin {
@@ -14,7 +14,6 @@ function Invoke-Update {
             'userAgents.json',
             'ServiceTags.json',
             'appRoleIds.csv',
-            'wordlist.txt',
             'EntraRoles.csv'
         )
     }
