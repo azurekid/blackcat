@@ -2,7 +2,7 @@ function Invoke-Update {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Private/Reference/'
+        [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/support-files/'
     )
 
     begin {
