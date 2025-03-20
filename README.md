@@ -50,7 +50,7 @@ running_from_codespace:
         2. Once the Codespace is ready, open the terminal.
 ```
 
-![alt text](.github\media\loaded.png)
+![alt text](/.github/media/loaded.png)
 
 ### Installing the Module
 
