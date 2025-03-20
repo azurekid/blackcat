@@ -14,7 +14,6 @@ function Invoke-Update {
             'userAgents.json',
             'ServiceTags.json',
             'appRoleIds.csv',
-            'wordlist.txt',
             'EntraRoles.csv'
         )
     }

@@ -38,11 +38,26 @@ note: >
     Get-Help Get-RoleAssignments
 ```
 
+### Running from Codespaces
+
+```yaml
+running_from_codespace:
+    description: >
+        To run the BlackCat module from a GitHub Codespace, follow these steps:
+
+        1. Click the `Code` button and select `Create codespace on main`.
+
+        2. Once the Codespace is ready, open the terminal.
+```
+
+![alt text](.github\media\loaded.png)
+
 ### Installing the Module
 
 ```powershell
 PS> git clone https://github.com/azurekid/blackcat.git
-PS> import-module ./src/blackcat.psd1
+PS> cd blackcat
+PS> import-module ./blackcat.psd1
 ```
 
 ### Backlog

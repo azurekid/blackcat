@@ -41,7 +41,7 @@ Export-ModuleMember -Function $publicScripts.BaseName
 
 $helperPath = "$PSScriptRoot/Private/Reference"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
-    Invoke-UpdateHelpers
+    Invoke-Update
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
