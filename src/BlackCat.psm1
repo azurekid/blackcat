@@ -68,6 +68,24 @@ New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Forc
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
 $version = $manifest.ModuleVersion
 
+# Check for updates
+try {
+    $latestVersionUrl = "https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/BlackCat.psd1"
+    $latestManifestContent = Invoke-RestMethod -Uri $latestVersionUrl -UseBasicParsing
+    $latestVersionLine = $latestManifestContent -split "`n" | Where-Object { $_ -match 'ModuleVersion' }
+    $latestVersion = ($latestVersionLine -split '=' | Select-Object -Last 1).Trim().Trim("'")
+
+    if ($latestVersion -gt $version) {
+        $updateMessage = "A newer version of the module ($latestVersion) is available."
+    } else {
+        $updateMessage = "             v$version by Rogier Dijkman"
+    }
+}
+catch {
+    Write-Verbose -Message "Failed to check for module updates: $_"
+}
+
+
 # Set the window title
 try {
     $host.UI.RawUI.WindowTitle = "BlackCat $version"
@@ -83,9 +101,8 @@ $logo = `
      |   |   /   ___ __|  (       <   |      | (   |  |
     ____/  _/       _|   \___| _|\_\ \____| \ \__,_| \__|
                                              \____/
-
-                 v$version by Rogier Dijkman
-
+    
+    $updateMessage
 
 "@
 
