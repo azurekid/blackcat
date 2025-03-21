@@ -1,0 +1,48 @@
+# .github/workflows/deploy.yml
+name: Deploy PowerShell Module
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Install PowerShell
+      uses: actions/setup-powershell@v2
+      with:
+        pwsh-version: '7.x'
+
+    - name: Install Required Modules
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+        Install-Module -Name Pester -Force -Scope CurrentUser
+
+    - name: Run PSScriptAnalyzer
+      run: |
+        Invoke-ScriptAnalyzer -Path . -Recurse
+
+    - name: Run Pester Tests
+      run: |
+        Invoke-Pester -Path .\Tests
+
+    - name: Sign PowerShell Module
+      run: |
+        $certPath = "$env:USERPROFILE\signingCert.pfx"
+        $certPassword = "${{ secrets.CERT_PASSWORD }}"
+        [System.IO.File]::WriteAllBytes($certPath, [System.Convert]::FromBase64String("${{ secrets.CERTIFICATE }}"))
+        Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $certPassword -Force -AsPlainText)
+        $cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object { $_.Subject -match "CN=YourCertName" }
+        Set-AuthenticodeSignature -FilePath .\YourModule.psm1 -Certificate $cert
+
+    - name: Publish to PowerShell Gallery
+      run: |
+        $psGalleryApiKey = "${{ secrets.PS_GALLERY_API_KEY }}"
+        Publish-Module -Path .\YourModule -NuGetApiKey $psGalleryApiKey
