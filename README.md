@@ -41,6 +41,8 @@ running_from_codespace:
         1. Click the `Code` button and select `Create codespace on main`.
 
         2. Once the Codespace is ready, open the terminal.
+
+        3. The pwsh terminal already has the BlackCat module activated
 ```
 
 ![alt text](/.github/media/loaded.png)
