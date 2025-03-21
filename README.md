@@ -31,14 +31,6 @@ note: >
     detecting security risks within the defined scope.
 ```
 
-### Using Help
-
-```yaml
-documentation: >
-    Work in progress, but all functions have documentation in the files
-    Get-Help Get-RoleAssignments
-```
-
 ### Running from Codespaces
 
 ```yaml
@@ -61,14 +53,27 @@ PS> cd blackcat
 PS> import-module ./blackcat.psd1
 ```
 
+### Using Help
+
+```yaml
+documentation: >
+    Work in progress, but all functions have documentation in the files
+    Get-Help Get-RoleAssignments
+```
+
 ### Backlog
 
 ```yaml
 description: >
     The backlog contains a list of planned features, enhancements, and bug fixes for the project.
     You can track the progress and upcoming tasks by visiting the project's backlog page.
+
+    ⬇️
 ```
-[Project Backlog](https://github.com/azurekid/blackcat/projects)
+
+> [Project Backlog](https://github.com/users/azurekid/projects/3/views/1)
+
+![image](https://github.com/user-attachments/assets/173b93ac-bdac-4b71-84db-07fffd4ff149)
 
 ### Feedback & Contributions
 
