@@ -1,0 +1,54 @@
+
+name: Publish Module
+on:
+  workflow_dispatch:
+
+jobs:
+  sign_scripts:
+    name: Sign and publish PowerShell scripts as pipeline artifacts
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Sign and Publish Module
+        shell: pwsh
+        env:
+          SIGNING_CERTIFICATE:  ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          PS_GALLERY_KEY: ${{ secrets.PS_GALLERY_KEY }}
+        run: |
+          Write-Host "Loading code signing certificate"
+
+          $SecurePassword = ConvertTo-SecureString -String $env:SIGNING_PASSWORD -Force -AsPlainText
+
+          $certificatePath = Join-Path -Path $PSScriptRoot -ChildPath "CodeSigningCertificate.pfx"
+          Set-Content -Value $([System.Convert]::FromBase64String($env:SIGNING_CERTIFICATE)) -Path $certificatePath -AsByteStream
+          $codeSigningCert = Import-PfxCertificate -FilePath $certificatePath -Password $SecurePassword -CertStoreLocation Cert:\LocalMachine\Root
+
+          Write-Host "Removing git directory from checked out repository"
+          Get-ChildItem -Path "." -Filter ".git*" -Force | ForEach-Object {Remove-Item -Path $_.FullName -Recurse -Force}
+
+          Write-Host "Getting scripts to sign"
+          $scripts = Get-ChildItem -Path . -Filter "*.ps*" -Recurse -ErrorAction Stop
+
+          $arguments = @{
+              Certificate = $codeSigningCert
+              TimestampServer = "http://timestamp.digicert.com"
+          }
+
+          foreach ($script in $scripts) {
+              try {
+                    # sign script
+                    Set-AuthenticodeSignature @arguments -FilePath $script.FullName -ErrorAction Stop
+              }
+              catch {
+                  Write-Error $_
+              }
+          }
+
+          # publish module
+          Write-Host "Publishing module to PowerShell Gallery"
+
+          Copy-Item .\src\ -Recurse -Destination .\AzWorkspaceManager\ -Force
+          Publish-Module -Path .\AzWorkspaceManager\ -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
