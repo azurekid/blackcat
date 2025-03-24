@@ -37,7 +37,7 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          Invoke-ScriptAnalyzer -Path .\src -Settings PSGallery -Recurse -ReportSummary -Severity Error
+          Invoke-ScriptAnalyzer -Path .\ -Settings PSGallery -Recurse -ReportSummary -Severity Error
 
       - name: Run Tests using Windows PowerShell
         if: runner.os == 'Windows'
