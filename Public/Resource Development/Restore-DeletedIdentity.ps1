@@ -18,7 +18,6 @@ function Restore-DeletedIdentity {
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
-        Write-Verbose "Parameters received: ObjectId=$ObjectId, Name=$Name, Type=$Type, Restore=$Restore"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
 
         $directoryPath = "directory/deleteditems"
