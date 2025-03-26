@@ -10,9 +10,6 @@ function Get-KeyVaultSecrets {
         [string[]]$Name,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [bool]$DisableLogging,
-
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
         [int]$ThrottleLimit = 1000
     )
@@ -26,14 +23,6 @@ function Get-KeyVaultSecrets {
 
     process {
         try {
-            Write-Verbose "Retrieving secrets from Key Vault(s): $($Name -join ', ')"
-
-            if (!$Name) {
-                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($vaults.Count) KeyVaults" -Severity 'Information'
-            } else {
-                $vaults = Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' -filter "| where name in ('$(($Name -join "','"))')"
-            }
             # First function: Get all secret URIs
             function Get-KeyVaultSecretUris {
                 param($VaultNames, $ThrottleLimit, $AuthHeader)
@@ -101,14 +90,18 @@ function Get-KeyVaultSecrets {
                     }
                 } -ThrottleLimit $ThrottleLimit
 
-                if ($DisableLogging) {
-                    $vaults.id | ForEach-Object {
-                        Set-DiagnosticsLogging -ResourceId $_ -Enable $true
-                    }
-                }
-
                 return $secretValues
             }
+
+            Write-Verbose "Retrieving secrets from Key Vault(s): $($Name -join ', ')"
+
+            if (!$Name) {
+                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($vaults.Count) KeyVaults" -Severity 'Information'
+            } else {
+                $vaults = Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' -filter "| where name in ('$(($Name -join "','"))')"
+            }
+
 
             # Execute the functions
             $requestParam = @{
@@ -117,13 +110,8 @@ function Get-KeyVaultSecrets {
                 AuthHeader    = $script:keyVaultHeader
             }
 
-            if ($DisableLogging) {
-                $vaults.id | ForEach-Object {
-                    Set-DiagnosticsLogging -ResourceId $_
-                }
-            }
-
             $uris = Get-KeyVaultSecretUris @requestParam
+
             if ($uris.Count -gt 0) {
 
                 $requestParam = @{
