@@ -33,28 +33,28 @@ function Add-StorageAccountSasToken {
         $uri = "https://management.azure.com$($resourceId)/listServiceSas?api-version=2016-05-01"
 
         $body = @{
-            canonicalizedResource   = "/blob/$($resourceId.split('/')[-5])/$($Name)"
-            signedResource          = "c" # Options: b (blob), c (container), f (file), s (share)
-            signedServices          = "bftq" # Blob, File, Table, Queue
-            signedPermission        = "racwdl" # Read, Write, Delete, List, Add, Create, Update, Process
-            signedProtocol          = "https"
-            signedResourceTypes     = "s" # Service, Container, Object
-            signedExpiry            = (Get-Date).AddDays($TokenValidityDays).ToString("yyyy-MM-ddTHH:mm:ssZ")
-            }
-
-            Write-Output ($body | ConvertTo-Json)
-
-            $requestParam = @{
-                Headers = $authHeader
-                Uri     = $uri
-                Method  = 'POST'
-                Body    = ($body | ConvertTo-Json)
-            }
-            $apiResponse = Invoke-RestMethod @requestParam
-
-            Write-Output "SAS token added successfully: $($apiResponse.serviceSasToken)"
+            canonicalizedResource = "/blob/$($resourceId.split('/')[-5])/$($Name)"
+            signedResource        = "c" # Options: b (blob), c (container), f (file), s (share)
+            signedServices        = "bftq" # Blob, File, Table, Queue
+            signedPermission      = "racwdl" # Read, Write, Delete, List, Add, Create, Update, Process
+            signedProtocol        = "https"
+            signedResourceTypes   = "s" # Service, Container, Object
+            signedExpiry          = (Get-Date).AddDays($TokenValidityDays).ToString("yyyy-MM-ddTHH:mm:ssZ")
         }
-        <#
+
+        Write-Output ($body | ConvertTo-Json)
+
+        $requestParam = @{
+            Headers = $authHeader
+            Uri     = $uri
+            Method  = 'POST'
+            Body    = ($body | ConvertTo-Json)
+        }
+        $apiResponse = Invoke-RestMethod @requestParam
+
+        Write-Output "SAS token added successfully: $($apiResponse.serviceSasToken)"
+    }
+    <#
     .SYNOPSIS
         This function adds a SAS token to a specified storage account using the REST API.
 
@@ -85,4 +85,4 @@ function Add-StorageAccountSasToken {
     .NOTES
     Author: Rogier Dijkman
     #>
-    }
+}

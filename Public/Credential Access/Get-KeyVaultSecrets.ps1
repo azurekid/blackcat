@@ -1,14 +1,16 @@
 function Get-KeyVaultSecrets {
     [cmdletbinding()]
     param (
-
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
             "Microsoft.KeyVault/vaults",
             "ResourceGroupName"
         )]
-        [Alias('vault', 'key-vault-name')]
+        [Alias('vault', 'key-vault-name', 'KeyVaultName')]
         [string[]]$Name,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [bool]$DisableLogging,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
@@ -27,8 +29,10 @@ function Get-KeyVaultSecrets {
             Write-Verbose "Retrieving secrets from Key Vault(s): $($Name -join ', ')"
 
             if (!$Name) {
-                $Name = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults').Name
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($Name.Count) KeyVaults" -Severity 'Information'
+                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($vaults.Count) KeyVaults" -Severity 'Information'
+            } else {
+                $vaults = Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' -filter "| where name in ('$(($Name -join "','"))')"
             }
             # First function: Get all secret URIs
             function Get-KeyVaultSecretUris {
@@ -97,17 +101,43 @@ function Get-KeyVaultSecrets {
                     }
                 } -ThrottleLimit $ThrottleLimit
 
+                if ($DisableLogging) {
+                    $vaults.id | ForEach-Object {
+                        Set-DiagnosticsLogging -ResourceId $_ -Enable $true
+                    }
+                }
+
                 return $secretValues
             }
 
             # Execute the functions
-            $uris = Get-KeyVaultSecretUris -VaultNames $Name -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader
+            $requestParam = @{
+                VaultNames    = $vaults.name
+                ThrottleLimit = $ThrottleLimit
+                AuthHeader    = $script:keyVaultHeader
+            }
+
+            if ($DisableLogging) {
+                $vaults.id | ForEach-Object {
+                    Set-DiagnosticsLogging -ResourceId $_
+                }
+            }
+
+            $uris = Get-KeyVaultSecretUris @requestParam
             if ($uris.Count -gt 0) {
-                $secretValues = @(Get-KeyVaultSecretValues -SecretUris $uris -ThrottleLimit $ThrottleLimit -AuthHeader $script:keyVaultHeader)
+
+                $requestParam = @{
+                    AuthHeader = $script:keyVaultHeader
+                    ThrottleLimit = $ThrottleLimit
+                    SecretUris = $uris
+                }
+
+                $secretValues = @(Get-KeyVaultSecretValues @requestParam)
                 $result.AddRange($secretValues)
             }
+
             else {
-                Write-Verbose -Message "No secrets found in Key Vault '$($Name)'"
+                Write-Verbose -Message "No secrets found in Key Vault '$($vaults.name)'"
             }
         }
         catch {
