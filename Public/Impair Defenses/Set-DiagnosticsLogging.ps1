@@ -5,13 +5,10 @@ function Set-DiagnosticsLogging {
         [string]$ResourceId,
 
         [Parameter(Mandatory = $false)]
-        [string]$ResourceGroupName,
-
-        [Parameter(Mandatory = $false)]
         [array]$SavedSettings,
 
         [Parameter(Mandatory = $false)]
-        [switch]$Enable
+        [bool]$Enable
     )
 
     begin {
@@ -44,9 +41,8 @@ function Set-DiagnosticsLogging {
                 # Save the current settings to a variable
                 $savedSettings = $currentSettings.value
                 Write-Verbose "Saved current diagnostics settings"
-            
+                
                 # Disable diagnostics logging by removing the settings
-                Write-Verbose "Disabling diagnostics logging for resource: $ResourceId"
                 foreach ($setting in $savedSettings) {
                     $uri = '{0}{1}/providers/microsoft.insights/diagnosticSettings/{3}?api-version={2}' -f $baseUri, $ResourceId, $apiVersion, $setting.name
                     
@@ -58,29 +54,6 @@ function Set-DiagnosticsLogging {
 
                     Invoke-RestMethod @requestParam
                 }
-
-                Write-Verbose "Diagnostics logging disabled for resource: $ResourceId"
-                return $savedSettings
-            }
-            else {
-                # Re-enable diagnostics logging using the saved settings
-                Write-Verbose "Re-enabling diagnostics logging for resource: $ResourceId"
-                foreach ($setting in $SavedSettings | Where-Object { $null -ne $_.id }) {
-                    $uri = '{0}{1}/providers/microsoft.insights/diagnosticSettings/{3}?api-version={2}' -f $baseUri, $ResourceId, $apiVersion, $setting.name
-                    
-                    $body = @{ properties = $setting.properties } | ConvertTo-Json -Depth 10 -Compress
-                    $requestParam = @{
-                        Headers     = $script:authHeader
-                        Uri         = $uri
-                        Method      = 'PUT'
-                        ContentType = 'application/json'
-                        Body        = $body
-                    }
-                    
-                    Invoke-RestMethod @requestParam
-                }
-
-                Write-Verbose "Diagnostics logging re-enabled for resource: $ResourceId"
             }
         }
         catch {
