@@ -5,7 +5,10 @@ function Invoke-AzBatch {
         [ValidatePattern('^Microsoft\.[A-Za-z]+(/[A-Za-z]+)+$|^$')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceTypeCompleterAttribute()]
         [Alias('resource-type')]
-        [string]$ResourceType
+        [string]$ResourceType,
+
+        [Parameter(Mandatory = $false)]
+        [string]$filter
     )
 
     begin {
@@ -28,6 +31,11 @@ function Invoke-AzBatch {
 
             if (![string]::IsNullOrEmpty($ResourceType)) {
                 $payload.requests[0].content.query = "resources | where type == '$($ResourceType.ToLower())'"
+            }
+
+            if (![string]::IsNullOrEmpty($filter)) {
+                $payload.requests[0].content.query += "$filter"
+                Write-Output "Filtering resources with: $($payload.requests[0].content.query)"
             }
 
             $requestParam = @{

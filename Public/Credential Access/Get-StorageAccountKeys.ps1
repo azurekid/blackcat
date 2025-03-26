@@ -6,7 +6,7 @@ function Get-StorageAccountKeys {
             "Microsoft.Storage/StorageAccounts",
             "ResourceGroupName"
         )]
-        [Alias('vault', 'key-vault-name')]
+        [Alias('storageAccount', 'storage-account-name', 'storageAccountName')]
         [string[]]$Name,
 
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
