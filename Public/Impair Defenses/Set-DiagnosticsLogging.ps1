@@ -8,7 +8,7 @@ function Set-DiagnosticsLogging {
         [array]$SavedSettings,
 
         [Parameter(Mandatory = $false)]
-        [bool]$Enable
+        [bool]$Disable
     )
 
     begin {
@@ -24,7 +24,7 @@ function Set-DiagnosticsLogging {
             $resourceType = ($ResourceId -split '/')[($ResourceId -split '/').IndexOf('providers') + 1]
             Write-Verbose "Determined resource type: $resourceType"
 
-            if (-not $Enable) {
+            if (-not $Disable) {
 
                 # Get the current diagnostic settings
                 Write-Verbose "Fetching current diagnostics settings for resource: $ResourceId"
@@ -64,4 +64,36 @@ function Set-DiagnosticsLogging {
     end {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
     }
+<#
+.SYNOPSIS
+Configures or disables diagnostics logging for a specified Azure resource.
+
+.DESCRIPTION
+The Set-DiagnosticsLogging function allows you to enable or disable diagnostics logging for a specified Azure resource. 
+If diagnostics logging is being disabled, the current settings are saved before being removed.
+
+.PARAMETER ResourceId
+The Resource ID of the Azure resource for which diagnostics logging is being configured. This parameter is mandatory.
+
+.PARAMETER SavedSettings
+An optional parameter to store the current diagnostics settings before disabling them. This parameter is used when disabling diagnostics logging.
+
+.PARAMETER Disable
+A boolean flag indicating whether to enable or disable diagnostics logging. If set to $true, diagnostics logging will be disabled.
+
+.EXAMPLE
+Set-DiagnosticsLogging -ResourceId "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProvider}/{resourceType}/{resourceName}" -Enable $false
+
+Disables diagnostics logging for the specified Azure resource and saves the current settings.
+
+.EXAMPLE
+Set-DiagnosticsLogging -ResourceId "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProvider}/{resourceType}/{resourceName}" -Enable $true
+
+Enables diagnostics logging for the specified Azure resource.
+
+.NOTES
+- This function uses Azure REST API to manage diagnostics settings.
+- Ensure that the $script:authHeader variable is properly configured with the required authentication header before using this function.
+
+#>
 }
