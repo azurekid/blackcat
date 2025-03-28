@@ -1,4 +1,4 @@
-name: BlackCat - Read Identities
+name: BlackCat - Fetch Access Tokens
 on: [workflow_dispatch]
 
 permissions:
