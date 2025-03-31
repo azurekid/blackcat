@@ -40,6 +40,7 @@ function Get-StorageAccountKeys {
             Write-Verbose "Retrieving storage account keys for $(($id).count)"
 
             if (!$($Name) -and !$Id) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
             } elseif ($($Name)) {
                 $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
             } else {
