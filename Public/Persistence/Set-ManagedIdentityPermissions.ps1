@@ -41,7 +41,9 @@ function Set-ManagedIdentityPermissions {
 
         try {
 
-            $appRoleId = (Get-MsAppRolePermissions -appRoleName $appRoleName).appRoleId
+            if (-not $appRoleId) {
+                $appRoleId = (Get-AppRolePermissions -appRoleName $appRoleName).appRoleId
+            }
 
             Write-Verbose "Get Service Principals App Role Assignments"
             $uri = "$($sessionVariables.graphUri)/servicePrincipals/$servicePrincipalId/appRoleAssignments"
@@ -73,7 +75,7 @@ function Set-ManagedIdentityPermissions {
 Assigns an Azure Managed Identity to a specified application role.
 
 .DESCRIPTION
-The Set-AzManagedIdentityPermissions function assigns an Azure Managed Identity (service principal) to a specified application role.
+The Set-ManagedIdentityPermissions function assigns an Azure Managed Identity (service principal) to a specified application role.
 It uses the Microsoft Graph API to perform the assignment.
 
 .PARAMETER servicePrincipalId
@@ -86,15 +88,18 @@ This parameter is mandatory and must match the GUID pattern.
 
 .PARAMETER appRoleId
 The unique identifier (GUID) of the application role to be assigned.
-This parameter is mandatory and must match the GUID pattern.
+This parameter is optional and must match the GUID pattern if provided.
+
+.PARAMETER appRoleName
+The name of the application role to be assigned.
+This parameter is mandatory and must match one of the valid application role names.
 
 .EXAMPLE
-Set-AzManagedIdentityPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" -resourceId "87654321-4321-4321-4321-abcdef123456" -appRoleName "User.Read"
+Set-ManagedIdentityPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" -resourceId "87654321-4321-4321-4321-abcdef123456" -appRoleName "User.Read.All"
 
 This example assigns the service principal with ID "12345678-1234-1234-1234-1234567890ab" to the application role named 'User.Read' for the resource with ID "87654321-4321-4321-4321-abcdef123456".
 
 .NOTES
 This function requires the Microsoft Graph API and appropriate permissions to assign roles to service principals.
-
 #>
 }
