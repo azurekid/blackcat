@@ -72,25 +72,27 @@ function New-AuthHeader {
 
     <#
     .SYNOPSIS
-        Creates an authentication header for Azure REST API calls.
+        Generates an authentication header for Azure REST API interactions.
 
     .DESCRIPTION
-        Creates an authentication header using the current Azure context for different Azure endpoints
-        including Microsoft Graph, Key Vault, and Azure Management API.
+        This function creates an authentication header based on the current Azure context. 
+        It supports various Azure endpoints, including Microsoft Graph, Key Vault, Azure Management API, 
+        ,Log Analytics and several others.
 
     .PARAMETER EndpointType
-        The type of endpoint to authenticate against. Valid values are 'MSGraph', 'KeyVault', 'Azure', 'LogAnalytics'.
+        Specifies the type of Azure endpoint to authenticate against. 
+        Acceptable values are: 'MSGraph', 'KeyVault', 'Azure', 'LogAnalytics', 'Other'.
 
     .EXAMPLE
         Create-AuthHeader -EndpointType 'MSGraph'
-        Creates an authentication header for Microsoft Graph API calls.
+        Generates an authentication header for accessing Microsoft Graph API.
 
     .EXAMPLE
         Create-AuthHeader -EndpointType 'KeyVault'
-        Creates an authentication header for Key Vault API calls.
+        Generates an authentication header for accessing Key Vault API.
 
     .NOTES
         Author: Rogier Dijkman
-        Requires: Az.Accounts module
+        Prerequisite: Az.Accounts module
     #>
 }
