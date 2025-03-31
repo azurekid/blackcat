@@ -47,8 +47,6 @@ function Restore-DeletedIdentity {
         if ($deletedObject.id -and $Restore) {
             Write-Verbose "Attempting to restore $Type with ID: $($deletedObject.id)"
             $restoreUri = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
-            Write-Host $restoreUri
-            pause
 
             $restoreParam = @{
                 Headers     = $script:graphHeader
