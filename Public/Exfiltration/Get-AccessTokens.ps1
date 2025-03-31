@@ -33,7 +33,7 @@ function Get-AccessTokens {
                         Roles    = $tokenContent.Roles
                         Scope    = $tokenContent.Scope
                         Tenant   = $tokenContent.'Tenant ID'
-                        Token    = $accessToken
+                        Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
                     }
                     $tokens += $tokenObject
                 }
@@ -58,8 +58,7 @@ function Get-AccessTokens {
             } else {
                 Write-Verbose "Exporting tokens to file $OutputFile"
             $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
-            }
-            
+            }    
         }
         catch {
             Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
@@ -75,7 +74,7 @@ function Get-AccessTokens {
     This function exports access tokens for specified resource types to a JSON file.
 
 .DESCRIPTION
-    The Export-AccessToken function requests access tokens for the specified resource types and exports them to a JSON file. It handles errors and logs messages accordingly.
+    The Get-AccessTokens function requests access tokens for the specified resource types and exports them to a JSON file. It handles errors and logs messages accordingly.
 
 .PARAMETER ResourceTypeNames
     The ResourceTypeNames parameter is an optional array of strings that specifies the resource types for which to request access tokens. Default values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
@@ -84,12 +83,12 @@ function Get-AccessTokens {
     The OutputFile parameter is an optional string that specifies the path to the file where the tokens will be exported. The default value is "AccessTokens.json".
 
 .EXAMPLE
-    Export-AccessToken -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
-    This example calls the Export-AccessToken function with specified resource types and output file.
+    Get-AccessTokens -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
+    This example calls the Get-AccessTokens function with specified resource types and output file.
 
 .EXAMPLE
-    Export-AccessToken -OutputFile "AccessTokens.json"
-    This example calls the Export-AccessToken function with the default resource types and a specified output file.
+    Get-AccessTokens -OutputFile "AccessTokens.json"
+    This example calls the Get-AccessTokens function with the default resource types and a specified output file.
 
 .EXAMPLE
     $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json

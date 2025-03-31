@@ -25,6 +25,7 @@ function Set-FederatedIdentity {
     )
 
     begin {
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 

@@ -41,6 +41,7 @@ Export-ModuleMember -Function $publicScripts.BaseName
 
 $helperPath = "$PSScriptRoot/Private/Reference"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
+    Write-Verbose -Message "Fetching latest helper files"
     Invoke-Update
 }
 
@@ -70,7 +71,7 @@ $version = $manifest.ModuleVersion
 
 # Check for updates
 try {
-    $latestVersionUrl = "https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/BlackCat.psd1"
+    $latestVersionUrl = "https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/BlackCat.psd1"
     $latestManifestContent = Invoke-RestMethod -Uri $latestVersionUrl -UseBasicParsing
     $latestVersionLine = $latestManifestContent -split "`n" | Where-Object { $_ -match 'ModuleVersion' }
     $latestVersion = ($latestVersionLine -split '=' | Select-Object -Last 1).Trim().Trim("'")

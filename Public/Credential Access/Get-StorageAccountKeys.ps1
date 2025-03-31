@@ -33,30 +33,23 @@ function Get-StorageAccountKeys {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
         $result = New-Object System.Collections.ArrayList
-        $secrets = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-
-        $totalItems = $id.Count
-        $currentItemIndex = 0
     }
 
     process {
         try {
             Write-Verbose "Retrieving storage account keys for $(($id).count)"
 
-            if (!$Name) {
-                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($Id.Count) Storage Accounts" -Severity 'Information'
+            if (!$($Name) -and !$Id) {
+            } elseif ($($Name)) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
             } else {
-                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' | Where-Object Name -eq $Name).id
+                $id = $Id
             }
 
             $id | ForEach-Object -Parallel {
                 try {
-                    $authHeader = $using:script:authHeader
                     $result     = $using:result
                     $KerbKey    = $using:KerbKey
-                    $totalItems = $using:totalItems
-                    $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:currentItemIndex)
 
                     $uri = 'https://management.azure.com{0}/listKeys?api-version=2024-01-01' -f $_
                     if ($KerbKey) {
@@ -64,7 +57,7 @@ function Get-StorageAccountKeys {
                     }
 
                     $requestParam = @{
-                        Headers = $authHeader
+                        Headers = $using:script:authHeader
                         Uri     = $uri
                         Method  = 'POST'
                     }
@@ -77,22 +70,16 @@ function Get-StorageAccountKeys {
                     }
 
                     [void] $result.Add($currentItem)
-
-                    $percentComplete = [math]::Round(($currentItemIndex / $totalItems) * 100)
-                    Write-Progress -Activity "Retrieving Storage Account Keys" -Status "$percentComplete% Complete" -PercentComplete $percentComplete
-
                 }
                 catch {
                     Write-Information "$($MyInvocation.MyCommand.Name): Storage Account '$_' does not exist"  -InformationAction Continue
                 }
             } -ThrottleLimit $ThrottleLimit
-
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-
     end {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result

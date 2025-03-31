@@ -21,7 +21,6 @@ function Get-ManagedIdentity {
     }
 
     process {
-
         try {
 
             Write-Verbose "Get Managed Identity"
