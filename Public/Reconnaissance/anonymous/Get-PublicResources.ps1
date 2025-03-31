@@ -10,7 +10,7 @@ function Get-PublicResources {
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [int]$ThrottleLimit = 1000
+        [int]$ThrottleLimit = 100
     )
 
     begin {

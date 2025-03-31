@@ -27,7 +27,6 @@ function Add-StorageAccountSasToken {
     }
 
     process {
-        # try {
         Write-Verbose "Adding SAS token to storage account"
         $resourceId = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageAccounts' | Where-Object { $_.Name -eq $Name }).id
         $uri = "https://management.azure.com$($resourceId)/listServiceSas?api-version=2016-05-01"
@@ -42,8 +41,6 @@ function Add-StorageAccountSasToken {
             signedExpiry          = (Get-Date).AddDays($TokenValidityDays).ToString("yyyy-MM-ddTHH:mm:ssZ")
         }
 
-        Write-Output ($body | ConvertTo-Json)
-
         $requestParam = @{
             Headers = $authHeader
             Uri     = $uri
@@ -52,7 +49,9 @@ function Add-StorageAccountSasToken {
         }
         $apiResponse = Invoke-RestMethod @requestParam
 
-        Write-Output "SAS token added successfully: $($apiResponse.serviceSasToken)"
+        Read-SasToken -SasToken $($apiResponse.serviceSasToken)
+
+        Write-Host "SAS token added successfully with value: `n$($apiResponse.serviceSasToken)" -ForegroundColor Green
     }
     <#
     .SYNOPSIS

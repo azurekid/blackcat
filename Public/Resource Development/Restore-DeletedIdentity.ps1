@@ -34,6 +34,7 @@ function Restore-DeletedIdentity {
     process {
         Write-Verbose "Querying deleted $Type items from Microsoft Graph"
         $deletedObject = Invoke-MsGraph -relativeUrl "$directoryPath/$($typeMap[$Type])" |
+        
         Where-Object {
             $_.deletedDateTime -gt (Get-Date).AddDays(-30) -and
                 (!$ObjectId -or $_.Id -eq $ObjectId) -and
@@ -45,55 +46,57 @@ function Restore-DeletedIdentity {
 
         if ($deletedObject.id -and $Restore) {
             Write-Verbose "Attempting to restore $Type with ID: $($deletedObject.id)"
-            $restoreUri = "$($SessionVariables.graphUri)$directoryPath/$($deletedObject.id)/restore"
+            $restoreUri = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
+            Write-Host $restoreUri
+            pause
+
             $restoreParam = @{
-                Headers = @{
-                    'Authorization' = $script:graphHeader.Authorization
-                    'Content-Type'  = 'application/json'
-                }
-                Uri     = $restoreUri
-                Method  = 'POST'
+                Headers     = $script:graphHeader
+                Uri         = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
+                Method      = 'POST'
                 Body    = '{}'
-            }
+                'ContentType'  = 'application/json'
+            }    
+            
             Write-Verbose "Sending restore request for $Type"
             $restoredObject = Invoke-RestMethod @restoreParam
 
-            # Handle service principal restoration only for Application type
-            if ($Type -eq 'Application' -and $restoredObject) {
-                Write-Verbose "Application restored successfully. Looking for associated service principal"
-                $spn = Invoke-MsGraph -relativeUrl "$directoryPath/microsoft.graph.servicePrincipal" |
-                Where-Object {
-                    $_.appId -eq $deletedObject.appId
-                }
+        }
+        
+        # Handle service principal restoration only for Application type
+        if ($Type -eq 'Application' -and $restoredObject) {
+            Write-Verbose "Application restored successfully. Looking for associated service principal"
+            $spn = Invoke-MsGraph -relativeUrl "$directoryPath/microsoft.graph.servicePrincipal" |
+            Where-Object {
+                $_.appId -eq $deletedObject.appId
+            }
 
-                if ($spn) {
-                    foreach ($sp in $spn) {
-                        Write-Verbose "Found associated service principal with ID: $($sp.id)"
-                        $restoreUri = "$($SessionVariables.graphUri)$directoryPath/$($sp.id)/restore"
-                        $restoreParam = @{
-                            Headers = @{
-                                'Authorization' = $script:graphHeader.Authorization
-                                'Content-Type'  = 'application/json'
-                            }
-                            Uri     = $restoreUri
-                            Method  = 'POST'
-                            Body    = '{}'
-                        }
+            if ($spn) {
+                foreach ($sp in $spn) {
+                    Write-Verbose "Found associated service principal with ID: $($sp.id)"
+                    $restoreUri = "$($sessionVariables.graphUri)/$directoryPath/$($sp.id)/restore"
+                    
+                    $restoreParam = @{
+                        Headers     = $script:graphHeader
+                        Uri     = $restoreUri
+                        Method  = 'POST'
+                        Body    = '{}'
+                        'ContentType' = 'application/json'
+                    } 
 
-                        Write-Verbose "Sending restore request for service principal"
-                        $null = Invoke-RestMethod @restoreParam
-                        Write-Verbose "Service principal restore completed"
-                    }
+                    Write-Verbose "Sending restore request for service principal"
+                    $null = Invoke-RestMethod @restoreParam
+                    Write-Verbose "Service principal restore completed"
                 }
-                else {
-                    Write-Verbose "No associated service principal found"
-                }
+            }
+            else {
+                Write-Verbose "No associated service principal found"
             }
         }
 
         return $deletedObject | Select-Object DisplayName, Id, appId, deletedDateTime
     }
-<#
+    <#
 .SYNOPSIS
     Retrieves and optionally restores deleted identities from Microsoft Graph.
 
