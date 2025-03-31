@@ -2,7 +2,7 @@ function New-AuthHeader {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [ValidateSet('MSGraph', 'KeyVault', 'Azure', 'LogAnalytics', 'Other')]
+        [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub', 'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase', 'ServiceBus', 'Storage', 'Synapse', 'Other')]
         [string]$EndpointType,
 
         
