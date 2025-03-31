@@ -41,6 +41,7 @@ Export-ModuleMember -Function $publicScripts.BaseName
 
 $helperPath = "$PSScriptRoot/Private/Reference"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
+    Write-Verbose -Message "Fetching latest helper files"
     Invoke-Update
 }
 
