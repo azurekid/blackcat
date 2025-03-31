@@ -1,4 +1,4 @@
-function Set-AzureApplication {
+function Add-AzureApplication {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
@@ -80,4 +80,35 @@ function Set-AzureApplication {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
+<#
+.SYNOPSIS
+Creates an Azure AD Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
+
+.DESCRIPTION
+The Add-AzureApplication function automates the creation of an Azure AD Application and its corresponding Service Principal. 
+It also assigns the Global Administrator role to the Service Principal. This function uses Microsoft Graph API to perform the operations.
+
+.PARAMETER DisplayName
+Specifies the display name of the Azure AD Application. Defaults to 'MS-PIM' if not provided.
+
+.PARAMETER SignInAudience
+Specifies the sign-in audience for the Azure AD Application. 
+Valid values are 'SingleTenant' and 'MultiTenant'. Defaults to 'SingleTenant'.
+
+.EXAMPLE
+Add-AzureApplication -DisplayName "MyApp" -SignInAudience "MultiTenant"
+
+This example creates an Azure AD Application named "MyApp" with a sign-in audience of "MultiTenant", 
+creates its Service Principal, and assigns the Global Administrator role to the Service Principal.
+
+.NOTES
+- This function requires an authenticated session with Microsoft Graph API.
+- Ensure that the necessary permissions are granted to the account executing this function.
+
+.OUTPUTS
+A hashtable containing the created Azure AD Application and Service Principal objects.
+
+.LINK
+https://learn.microsoft.com/en-us/graph/overview
+#>
 }

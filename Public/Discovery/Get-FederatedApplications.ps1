@@ -7,6 +7,7 @@ function Get-FederatedApplications {
     )
 
     begin {
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
     }
 
@@ -25,7 +26,7 @@ function Get-FederatedApplications {
     Retrieves federated identity credentials for a specified Microsoft Entra application.
 
     .DESCRIPTION
-    The Get-MsFederatedApplications function retrieves all federated identity credentials associated with a Microsoft Entra application identified by its application ID (GUID).
+    The Get-FederatedApplications function retrieves all federated identity credentials associated with a Microsoft Entra application identified by its application ID (GUID).
 
     .PARAMETER Id
     The application ID (GUID) of the Microsoft Entra application. This parameter is mandatory and must match the pattern of a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).

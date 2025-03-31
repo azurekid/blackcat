@@ -95,13 +95,13 @@ function Get-KeyVaultSecrets {
 
             Write-Verbose "Retrieving secrets from Key Vault(s): $($Name -join ', ')"
 
-            if (!$Name) {
-                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "processing $($vaults.Count) KeyVaults" -Severity 'Information'
+            if ($Name) {
+                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' | Where-Object Name -in $Name)
+                Write-Verbose "Processing specified Key Vault(s): $($Name -join ', ')"
             } else {
-                $vaults = Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' -filter "| where name in ('$(($Name -join "','"))')"
+                $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
+                Write-Verbose "Processing all available Key Vaults"
             }
-
 
             # Execute the functions
             $requestParam = @{
