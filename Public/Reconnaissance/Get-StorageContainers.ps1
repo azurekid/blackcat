@@ -27,8 +27,6 @@ function Get-StorageContainers {
 
         $result = New-Object System.Collections.ArrayList
         $totalItems = $id.Count
-        $currentItemIndex = 0
-        $sync = [PSCustomObject]@{ CurrentItemIndex = 0 }
     }
 
     process {
@@ -36,11 +34,10 @@ function Get-StorageContainers {
             Write-Verbose "Building payload for API request"
 
             $id | ForEach-Object -Parallel {
-                $authHeader       = $using:script:authHeader
-                $result           = $using:result
-                $totalItems       = $using:totalItems
-                $batchUri         = $using:sessionVariables.batchUri
-                $currentItemIndex = [System.Threading.Interlocked]::Increment([ref]$using:sync.CurrentItemIndex)
+                $authHeader = $using:script:authHeader
+                $result = $using:result
+                $totalItems = $using:totalItems
+                $batchUri = $using:sessionVariables.batchUri
 
                 $payload = @{
                     requests = @(
@@ -50,7 +47,7 @@ function Get-StorageContainers {
                             requestHeaderDetails = @{
                                 commandName = "Microsoft_Azure_Storage.StorageClient.ListContainers"
                             }
-                            url                  = "https://management.azure.com$($_)/blobServices/default/containers?api-version=2023-05-01"
+                            url = "https://management.azure.com$($_)/blobServices/default/containers?api-version=2023-05-01"
                         }
                     )
                 }
@@ -76,8 +73,6 @@ function Get-StorageContainers {
                 [void]$result.Add($apiResponse)
 
                 # Update progress bar
-                $percentComplete = [math]::Round(($currentItemIndex / $totalItems) * 100)
-                Write-Progress -Activity "Processing containers" -Status "$currentItemIndex of $totalItems completed" -PercentComplete $percentComplete
             } -ThrottleLimit $ThrottleLimit
         }
         catch {
@@ -90,7 +85,7 @@ function Get-StorageContainers {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result
     }
-<#
+    <#
 .SYNOPSIS
     Retrieves Azure Storage Containers information.
 
