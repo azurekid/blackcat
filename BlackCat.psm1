@@ -1,11 +1,5 @@
 #region load module variables
 Write-Verbose -Message "Creating modules variables"
-try {
-    Update-AzConfig -DisplayBreakingChangeWarning $false
-}
-catch {
-    Write-Error -Message "Failed to update AzConfig: $_"
-}
 
 #region Handle Module Removal
 $OnRemoveScript = {
@@ -21,6 +15,14 @@ Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEv
 $ModuleName = $ExecutionContext.SessionState.Module
 Write-Verbose -Message "Loading module $ModuleName"
 #endregion discover module name
+
+if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+    Write-Verbose -Message "Az.Accounts module not found. Installing the latest version..."
+    Install-Module -Name Az.Accounts -Force -Scope CurrentUser
+} else {
+    Write-Verbose -Message "Az.Accounts module found. Updating to the latest version..."
+    Update-Module -Name Az.Accounts -Force
+}
 
 # Import private and public scripts and expose the public ones
 $privateScripts = @(Get-ChildItem -Path "$PSScriptRoot\Private" -Recurse -Filter "*.ps1" | Sort-Object Name )
@@ -86,6 +88,12 @@ catch {
     Write-Verbose -Message "Failed to check for module updates: $_"
 }
 
+#Disable Messages and WAM
+Write-Verbose -Message "Disabling LoginExperienceV2..."
+Update-AzConfig -LoginExperienceV2 Off
+
+Write-Verbose -Message "Disabling Login by WAM..."
+Update-AzConfig -EnableLoginByWam $false
 
 # Set the window title
 try {
