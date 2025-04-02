@@ -95,6 +95,9 @@ Update-AzConfig -LoginExperienceV2 Off
 Write-Verbose -Message "Disabling Login by WAM..."
 Update-AzConfig -EnableLoginByWam $false
 
+Write-Verbose -Message "Disabling BreakingChangeWarning..."
+Update-AzConfig -DisplayBreakingChangeWarning $false -AppliesTo Az.Accounts
+
 # Set the window title
 try {
     $host.UI.RawUI.WindowTitle = "BlackCat $version"
