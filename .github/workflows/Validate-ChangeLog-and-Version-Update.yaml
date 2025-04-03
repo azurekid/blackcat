@@ -1,0 +1,32 @@
+name: Validate ChangeLog and Version Update
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Validate ChangeLog update
+      run: |
+        if ! git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "ChangeLog"; then
+          echo "Error: ChangeLog was not updated."
+          exit 1
+        fi
+        echo "ChangeLog update validated."
+
+    - name: Validate version update in BlackCat.psm1
+      run: |
+        
+        if ! git diff ${{ github.event.before }} ${{ github.sha }} -- BlackCat.psm1 | grep -qE '^\+.*Version'; then
+          echo "Error: Version number in BlackCat.psm1 was not updated."
+          exit 1
+        fi
+        echo "Version update in BlackCat.psm1 validated."
