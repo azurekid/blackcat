@@ -19,7 +19,7 @@ jobs:
   - name: Validate ModuleVersion update in BlackCat.psd1
     run: |
     # Check if any file in Private or Public folder was changed
-    if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE '^Private/|^Public/'; then
+      if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE '^Private/|^Public/'; then
       # Extract the old and new ModuleVersion values
       OLD_VERSION=$(git show ${{ github.event.before }}:BlackCat.psd1 | grep 'ModuleVersion' | awk -F"'" '{print $2}')
       NEW_VERSION=$(grep 'ModuleVersion' BlackCat.psd1 | awk -F"'" '{print $2}')
