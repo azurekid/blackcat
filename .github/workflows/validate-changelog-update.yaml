@@ -1,7 +1,10 @@
 name: Validate changelog update
 
 on:
-  workflow_call:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   validate:
