@@ -7,31 +7,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  permissions:
-    contents: read
+  validate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-  runs-on: ubuntu-latest
-
-  steps:
-  - name: Checkout code
-    uses: actions/checkout@v3
-
-  - name: Validate ModuleVersion update in BlackCat.psd1
-    run: |
-      # Check if any file in Private or Public folder was changed
-      if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE '^Private/|^Public/'; then
-      
-      # Extract the old and new ModuleVersion values
-      OLD_VERSION=$(git show ${{ github.event.before }}:BlackCat.psd1 | grep 'ModuleVersion' | awk -F"'" '{print $2}')
-      NEW_VERSION=$(grep 'ModuleVersion' BlackCat.psd1 | awk -F"'" '{print $2}')
-      
-      # Compare the versions
-      if [ "$NEW_VERSION" = "$OLD_VERSION" ]; then
-      echo "Error: ModuleVersion in BlackCat.psd1 was not updated."
-      exit 1
-      fi
-      
-      echo "ModuleVersion in BlackCat.psd1 validated."
-    else
-      echo "No changes detected in Private or Public folders. Skipping ModuleVersion validation."
-    fi
+    - name: Validate ModuleVersion update in BlackCat.psd1
+      run: |
+        # Check if any file in Private or Public folder was changed
+        if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE '^Private/|^Public/'; then
+        
+          # Extract the old and new ModuleVersion values
+          OLD_VERSION=$(git show ${{ github.event.before }}:BlackCat.psd1 | grep 'ModuleVersion' | awk -F"'" '{print $2}')
+          NEW_VERSION=$(grep 'ModuleVersion' BlackCat.psd1 | awk -F"'" '{print $2}')
+          
+          # Compare the versions
+          if [ "$NEW_VERSION" = "$OLD_VERSION" ]; then
+            echo "Error: ModuleVersion in BlackCat.psd1 was not updated."
+            exit 1
+          fi
+          
+          echo "ModuleVersion in BlackCat.psd1 validated."
+        else
+          echo "No changes detected in Private or Public folders. Skipping ModuleVersion validation."
+        fi
+    
