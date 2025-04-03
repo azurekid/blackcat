@@ -1,6 +1,11 @@
 name: Validate version number update
 
 on:
+  workflow_run:
+    workflows: ["Orchestrator Workflow"]
+    types:
+      - completed
+  
   pull_request:
     branches:
       - main

@@ -19,3 +19,6 @@ jobs:
 
     - name: Run some initial steps
       run: echo "This is the orchestrator workflow"
+    permissions:
+        contents: read
+        id-token: write
