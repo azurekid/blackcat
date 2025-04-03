@@ -1,0 +1,26 @@
+name: Validate changelog update
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Validate CHANGELOG.md update
+      run: |
+        # Check if CHANGELOG.md was updated
+        if ! git diff --name-only origin/main HEAD | grep -q '^CHANGELOG.md$'; then
+          echo "Error: CHANGELOG.md was not updated."
+          exit 1
+        fi
+        
+        echo "CHANGELOG.md was updated."
