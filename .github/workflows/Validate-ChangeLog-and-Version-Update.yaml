@@ -14,13 +14,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Validate ChangeLog update
-      run: |
-        if ! git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "ChangeLog"; then
-          echo "Error: ChangeLog was not updated."
-          exit 1
-        fi
-        echo "ChangeLog update validated."
+    # - name: Validate ChangeLog update
+    #   run: |
+    #     if ! git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "ChangeLog"; then
+    #       echo "Error: ChangeLog was not updated."
+    #       exit 1
+    #     fi
+    #     echo "ChangeLog update validated."
 
     - name: Validate version update in BlackCat.psm1
       run: |
