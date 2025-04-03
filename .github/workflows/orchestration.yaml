@@ -1,0 +1,19 @@
+name: Validate pull request
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+    # Main orchestration job
+    orchestrate:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+    # Call a reusable workflow (must be in .github/workflows directory)
+    call-workflow:
+        uses: ./.github/workflows/pull_request_validation/validate-version-update.yml
+        
