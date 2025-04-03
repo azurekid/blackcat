@@ -1,24 +1,69 @@
-# .github/workflows/orchestrator.yml
-name: Orchestrator Workflow
+name: Workflow Orchestrator
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      workflows:
+        description: 'Comma-separated list of workflows to run (leave empty for all)'
+        required: false
+        default: ''
 
 jobs:
-  orchestrate:
+  orchestrator:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Run some initial steps
-      run: echo "This is the orchestrator workflow"
-    permissions:
-        contents: read
-        id-token: write
+      - name: Trigger PR workflows
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get workflows to run (all or specified)
+            const workflowsInput = '${{ github.event.inputs.workflows }}';
+            const specificWorkflows = workflowsInput ? workflowsInput.split(',').map(w => w.trim()) : [];
+            
+            // Find all workflow files in the pullrequest directory
+            const prWorkflowDir = './.github/workflows/pullrequest';
+            if (!fs.existsSync(prWorkflowDir)) {
+              console.log('No pullrequest workflow directory found');
+              return;
+            }
+            
+            const files = fs.readdirSync(prWorkflowDir);
+            const workflowFiles = files.filter(file => 
+              file.endsWith('.yml') || file.endsWith('.yaml')
+            );
+            
+            console.log(`Found ${workflowFiles.length} workflow files in pullrequest directory`);
+            
+            // Trigger each workflow
+            for (const workflow of workflowFiles) {
+              const workflowName = path.parse(workflow).name;
+              
+              // Skip if specific workflows were requested and this one isn't included
+              if (specificWorkflows.length > 0 && !specificWorkflows.includes(workflowName)) {
+                console.log(`Skipping workflow: ${workflowName}`);
+                continue;
+              }
+              
+              const workflowPath = `pullrequest/${workflow}`;
+              console.log(`Dispatching workflow: ${workflowName} (${workflowPath})`);
+              
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflowPath,
+                ref: context.ref,
+              }).catch(error => {
+                console.error(`Error triggering ${workflowName}: ${error.message}`);
+              });
+            }
