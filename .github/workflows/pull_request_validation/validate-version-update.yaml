@@ -1,4 +1,4 @@
-name: Validate ChangeLog and Version Update
+name: Validate version number update
 
 on:
   pull_request:
@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
           
-          echo "ModuleVersion in BlackCat.psd1 validated."
+          echo "ModuleVersion in BlackCat.psd1 validated. New version: $NEW_VERSION"
         else
           echo "No changes detected in Private or Public folders. Skipping ModuleVersion validation."
         fi
