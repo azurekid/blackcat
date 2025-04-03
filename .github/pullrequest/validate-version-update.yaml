@@ -15,7 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Validate ModuleVersion update in BlackCat.psd1
+    - name: Validate ModuleVersion updated
       run: |
         # Fetch the main branch for comparison
         git fetch origin main --depth=1

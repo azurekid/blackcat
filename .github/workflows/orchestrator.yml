@@ -1,0 +1,21 @@
+# .github/workflows/orchestrator.yml
+name: Orchestrator Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Run some initial steps
+      run: echo "This is the orchestrator workflow"
