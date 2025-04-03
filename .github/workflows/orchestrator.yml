@@ -22,7 +22,7 @@ jobs:
       - name: Trigger PR workflows
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const path = require('path');
