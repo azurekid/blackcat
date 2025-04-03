@@ -22,7 +22,7 @@ jobs:
       - name: Trigger PR workflows
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const path = require('path');
@@ -55,7 +55,7 @@ jobs:
                 continue;
               }
               
-              const workflowPath = `pullrequest/${workflow}`;
+              const workflowPath = `.github/workflows/pullrequest/${workflow}`;
               console.log(`Dispatching workflow: ${workflowName} (${workflowPath})`);
               
               await github.rest.actions.createWorkflowDispatch({
