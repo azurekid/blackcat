@@ -14,19 +14,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # - name: Validate ChangeLog update
-    #   run: |
-    #     if ! git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "ChangeLog"; then
-    #       echo "Error: ChangeLog was not updated."
-    #       exit 1
-    #     fi
-    #     echo "ChangeLog update validated."
-
-    - name: Validate version update in BlackCat.psm1
+    - name: Validate ModuleVersion update in BlackCat.psd1
       run: |
-        
-        if ! git diff ${{ github.event.before }} ${{ github.sha }} -- BlackCat.psm1 | grep -qE '^\+.*Version'; then
-          echo "Error: Version number in BlackCat.psm1 was not updated."
-          exit 1
+        # Check if any file in Private or Public folder was changed
+        if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE '^Private/|^Public/'; then
+          # Extract the old and new ModuleVersion values
+          OLD_VERSION=$(git show ${{ github.event.before }}:BlackCat.psd1 | grep 'ModuleVersion' | awk -F"'" '{print $2}')
+          NEW_VERSION=$(grep 'ModuleVersion' BlackCat.psd1 | awk -F"'" '{print $2}')
+          
+          # Compare the versions
+          if [ "$NEW_VERSION" = "$OLD_VERSION" ]; then
+            echo "Error: ModuleVersion in BlackCat.psd1 was not updated."
+            exit 1
+          fi
+          
+          echo "ModuleVersion in BlackCat.psd1 validated."
+        else
+          echo "No changes detected in Private or Public folders. Skipping ModuleVersion validation."
         fi
-        echo "Version update in BlackCat.psm1 validated."
