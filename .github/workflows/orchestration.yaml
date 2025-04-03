@@ -19,8 +19,7 @@ jobs:
 
     # Call a reusable workflow (must be in .github/workflows directory)
     call-workflow:
-        uses: ./.github/workflows/validate-version-update.yml
+        uses: ./.github/workflows/validate-version-update.yml@main
         permissions:
           contents: read
           pull-requests: read
-        
