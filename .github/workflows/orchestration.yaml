@@ -5,6 +5,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
     # Main orchestration job
     orchestrate:
@@ -15,5 +19,8 @@ jobs:
 
     # Call a reusable workflow (must be in .github/workflows directory)
     call-workflow:
-        uses: ./.github/workflows/pull_request_validation/validate-version-update.yml
+        uses: ./.github/workflows/validate-version-update.yml
+        permissions:
+          contents: read
+          pull-requests: read
         
