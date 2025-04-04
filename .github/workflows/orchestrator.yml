@@ -17,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Pull Request Workflows
-        uses: actions/script@v6
+        uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const github = require('@actions/github');
-            cost owner = github.context.repo.owner;
-            const repo = github.context.repo.repo;
-            const ref = github.context.ref;
-            const workflow_id '.github/workflows/pullrequest/validate-version-update.yml';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ref = context.ref;
+            const workflow_id = '.github/workflows/pullrequest/validate-version-update.yml';
 
             await github.rest.actions.createWorkflowDispatch({
               owner,
