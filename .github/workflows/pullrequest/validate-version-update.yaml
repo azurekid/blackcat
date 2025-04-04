@@ -12,9 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
-    permissions:
-      contents: read
+  run-pull-request-job:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
