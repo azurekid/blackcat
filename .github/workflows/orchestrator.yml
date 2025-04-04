@@ -24,7 +24,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const ref = context.ref;
-            const workflow_id = 'pullrequest/validate-version-update.yml';
+            const workflow_id = 'pullrequest/validate-version-update.yaml';
 
             await github.rest.actions.createWorkflowDispatch({
               owner,
