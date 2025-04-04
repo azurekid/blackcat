@@ -16,10 +16,16 @@ jobs:
   trigger-workflows:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
       - name: Trigger Pull Request Workflows
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
+          
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
