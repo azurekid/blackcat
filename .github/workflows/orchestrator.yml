@@ -13,57 +13,24 @@ on:
         default: ''
 
 jobs:
-  orchestrator:
+  trigger-workflows:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Trigger PR workflows
-        uses: actions/github-script@v6
+      - name: Trigger Pull Request Workflows
+        uses: actions/script@v6
         with:
-          github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const path = require('path');
-            
-            // Get workflows to run (all or specified)
-            const workflowsInput = '${{ github.event.inputs.workflows }}';
-            const specificWorkflows = workflowsInput ? workflowsInput.split(',').map(w => w.trim()) : [];
-            
-            // Find all workflow files in the pullrequest directory
-            const prWorkflowDir = './.github/workflows/pullrequest';
-            if (!fs.existsSync(prWorkflowDir)) {
-              console.log('No pullrequest workflow directory found');
-              return;
-            }
-            
-            const files = fs.readdirSync(prWorkflowDir);
-            const workflowFiles = files.filter(file => 
-              file.endsWith('.yml') || file.endsWith('.yaml')
-            );
-            
-            console.log(`Found ${workflowFiles.length} workflow files in pullrequest directory`);
-            
-            // Trigger each workflow
-            for (const workflow of workflowFiles) {
-              const workflowName = path.parse(workflow).name;
-              
-              // Skip if specific workflows were requested and this one isn't included
-              if (specificWorkflows.length > 0 && !specificWorkflows.includes(workflowName)) {
-                console.log(`Skipping workflow: ${workflowName}`);
-                continue;
-              }
-              
-              const workflowPath = `.github/workflows/pullrequest/${workflow}`;
-              console.log(`Dispatching workflow: ${workflowName} (${workflowPath})`);
-              
-              await github.rest.actions.createWorkflowDispatch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: workflowPath,
-                ref: context.ref,
-              }).catch(error => {
-                console.error(`Error triggering ${workflowName}: ${error.message}`);
-              });
-            }
+            const github = require('@actions/github');
+            cost owner = github.context.repo.owner;
+            const repo = github.context.repo.repo;
+            const ref = github.context.ref;
+            const workflow_id '.github/workflows/pullrequest/validate-version-update.yml';
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: workflow_id,
+              ref,
+            });
+
+            console.log(`Triggered workflow: ${workflow_id} on ref: ${ref}`);
