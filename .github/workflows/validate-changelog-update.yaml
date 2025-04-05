@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**.md'  # Ignore workflow run for markdown changes
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 jobs:
@@ -11,9 +14,13 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    # Skip this check if PR has the 'no-changelog-needed' label
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog-needed') }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for checking changes
 
     - name: Validate CHANGELOG.md update
       run: |
