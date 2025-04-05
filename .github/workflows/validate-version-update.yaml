@@ -1,21 +1,21 @@
 name: Validate version number update
 
 on:
-  workflow_run:
-    workflows: ["Orchestrator Workflow"]
-    types:
-      - completed
-  
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  run-pull-request-job:
+  validate:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Validate ModuleVersion updated
+    - name: Validate ModuleVersion update in BlackCat.psd1
       run: |
         # Fetch the main branch for comparison
         git fetch origin main --depth=1

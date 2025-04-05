@@ -1,14 +1,9 @@
 name: Validate changelog update
 
 on:
-  workflow_run:
-    workflows: ["Orchestrator Workflow"]
-    types:
-      - completed:
   pull_request:
     branches:
       - main
-  
   workflow_dispatch:
 
 jobs:
