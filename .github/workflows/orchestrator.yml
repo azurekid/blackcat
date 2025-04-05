@@ -14,5 +14,5 @@ on:
 
 jobs:
   call-workflow:
-    uses: ./.github/workflows/pester.yml
+    uses: pester.yml
     
