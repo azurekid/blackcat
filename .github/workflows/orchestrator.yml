@@ -13,40 +13,6 @@ on:
         default: ''
 
 jobs:
-  trigger-workflows:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write    # Needed to trigger workflows
-      contents: read    # Needed to checkout the repository
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-
-      - name: Trigger Pull Request Workflows
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            // Use the appropriate ref depending on the event type
-            let ref = '';
-            if (context.eventName === 'pull_request') {
-              ref = context.payload.pull_request.head.ref;
-            } else {
-              ref = context.ref.replace('refs/heads/', '');
-            }
-            
-            const workflow_id = '/validate-version-update.yaml';
-
-                await github.rest.actions.createWorkflowDispatch({
-                  owner,
-                  repo,
-                  workflow_id: workflow_id,
-                  ref: ref,
-                });
-
-                console.log(`Triggered workflow: ${workflow_id} on ref: ${ref}`);
+  call-workflow:
+    uses: ./.github/workflows/pester.yml@main
+    
