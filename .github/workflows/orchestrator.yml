@@ -40,7 +40,7 @@ jobs:
               ref = context.ref.replace('refs/heads/', '');
             }
             
-            const workflow_id = 'pullrequest\/validate-version-update.yaml';
+            const workflow_id = '/validate-version-update.yaml';
 
                 await github.rest.actions.createWorkflowDispatch({
                   owner,
