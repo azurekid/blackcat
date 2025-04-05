@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.10.2'
+    ModuleVersion     = '0.10.3'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()

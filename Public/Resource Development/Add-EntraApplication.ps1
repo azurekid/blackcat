@@ -1,4 +1,4 @@
-function Add-AzureApplication {
+function Add-EntraApplication {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
@@ -82,23 +82,23 @@ function Add-AzureApplication {
     }
 <#
 .SYNOPSIS
-Creates an Azure AD Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
+Creates an Entra ID Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .DESCRIPTION
-The Add-AzureApplication function automates the creation of an Azure AD Application and its corresponding Service Principal. 
+The Add-EntraApplication function automates the creation of an Entra ID Application and its corresponding Service Principal. 
 It also assigns the Global Administrator role to the Service Principal. This function uses Microsoft Graph API to perform the operations.
 
 .PARAMETER DisplayName
-Specifies the display name of the Azure AD Application. Defaults to 'MS-PIM' if not provided.
+Specifies the display name of the Entra ID Application. Defaults to 'MS-PIM' if not provided.
 
 .PARAMETER SignInAudience
 Specifies the sign-in audience for the Azure AD Application. 
 Valid values are 'SingleTenant' and 'MultiTenant'. Defaults to 'SingleTenant'.
 
 .EXAMPLE
-Add-AzureApplication -DisplayName "MyApp" -SignInAudience "MultiTenant"
+Add-EntraApplication -DisplayName "MyApp" -SignInAudience "MultiTenant"
 
-This example creates an Azure AD Application named "MyApp" with a sign-in audience of "MultiTenant", 
+This example creates an Entra ID Application named "MyApp" with a sign-in audience of "MultiTenant", 
 creates its Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .NOTES
@@ -106,7 +106,7 @@ creates its Service Principal, and assigns the Global Administrator role to the 
 - Ensure that the necessary permissions are granted to the account executing this function.
 
 .OUTPUTS
-A hashtable containing the created Azure AD Application and Service Principal objects.
+A hashtable containing the created Entra ID Application and Service Principal objects.
 
 .LINK
 https://learn.microsoft.com/en-us/graph/overview
