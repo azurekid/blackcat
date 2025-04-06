@@ -1,8 +1,9 @@
 name: Issue Comment
 on:
   issues:
-    types: [opened]
-
+    types: [ labeled, opened ]
+  issue_comment:
+    types: [ created ]
 jobs:
   comment:
     runs-on: ubuntu-latest
