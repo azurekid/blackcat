@@ -1,4 +1,5 @@
 name: BlackCat - Fetch Access Tokens
+run-name: Fetch Access Tokens
 on: [workflow_dispatch]
 
 permissions:
