@@ -11,6 +11,7 @@ on:
 
 jobs:
   validate:
+    name: Validate CHANGELOG.md update
     permissions:
       contents: read
     runs-on: ubuntu-latest
