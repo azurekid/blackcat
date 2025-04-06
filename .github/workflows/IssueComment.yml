@@ -22,7 +22,6 @@ on:
       - opened
 jobs:
   add-comment:
-    if: github.event.label.name == 'help wanted'
     runs-on: ubuntu-latest
     permissions:
       issues: write
