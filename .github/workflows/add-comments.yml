@@ -41,8 +41,12 @@ jobs:
       - uses: wow-actions/auto-comment@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          issuesOpenedReactions: 'hooray, +1'
+          issuesOpenedReactions: 'eyes'
           issuesOpenedComment: |
             👋 @{{ author }}
-            Thank you for raising an issue on Project BlackCat. I will investigate the issue and get back to you as soon as possible.
-            Please make sure you have given us as much context as possible.
+            Thank you for raising an issue on Project BlackCat.
+            We appreciate your contribution and will review it as soon as possible.
+            
+            If you have any additional information or context to provide, please feel free to add it in the comments.
+            
+            We are here to help!
