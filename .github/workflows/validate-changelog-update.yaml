@@ -5,9 +5,6 @@ on:
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'  # Ignore workflow run for markdown changes
-    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 jobs:
