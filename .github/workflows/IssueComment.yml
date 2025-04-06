@@ -1,24 +1,13 @@
-name: Issue Comment
-on:
-  issues:
-    types:
-      - opened
-permissions:
-  issues: write
-
+name: Auto Comment
+on: [issues]
 jobs:
-
-  comment:
+  run:
     runs-on: ubuntu-latest
     steps:
-      - name: Add initial comment
-        uses: actions/github-script@v6
+      - uses: wow-actions/auto-comment@v1
         with:
-          github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Thank you for submitting an Issue to the Project BlackCat repo! You should expect an initial response to your Issue within 48 hours.'
-            })
+          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB_TOKEN }}
+          issuesOpened: |
+            👋 @{{ author }}
+            Thank you for submitting an Issue to the Project BlackCat repo! You can expect an initial response to you issue as soon as possible.
+            Please make sure you have given us as much context as possible.
