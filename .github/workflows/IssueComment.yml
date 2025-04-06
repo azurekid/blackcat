@@ -1,5 +1,4 @@
 name: Issue Comment
-run-name: Add initial comment to new issues
 on:
   issues:
     types: [opened]
