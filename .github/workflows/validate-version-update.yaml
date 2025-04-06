@@ -1,4 +1,5 @@
 name: Validate version number update
+run-name: Validate ModuleVersion update in BlackCat.psd1
 
 on:
   pull_request:
@@ -8,7 +9,6 @@ on:
 
 jobs:
   validate:
-    name: Validate ModuleVersion update in BlackCat.psd1
     permissions:
       contents: read
     runs-on: ubuntu-latest
