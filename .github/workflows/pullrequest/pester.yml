@@ -1,6 +1,11 @@
 name: Run Pester Tests
 
 on:
+  workflow_run:
+    workflows: ["Orchestrator Workflow"]
+    types:
+      - completed:
+  
   workflow_dispatch:
 
   pull_request:
