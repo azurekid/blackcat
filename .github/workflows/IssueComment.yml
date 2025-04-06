@@ -1,7 +1,7 @@
 name: Issue Comment
 on:
   issues:
-    types: [opened]
+    types: []
 
 jobs:
   comment:
@@ -11,7 +11,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
-           script: |
+          script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
