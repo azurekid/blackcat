@@ -1,9 +1,13 @@
 name: Issue Comment
 on:
   issues:
-    types: [opened]
+    types:
+      - opened
+permissions:
+  issues: write
 
 jobs:
+
   comment:
     runs-on: ubuntu-latest
     steps:
