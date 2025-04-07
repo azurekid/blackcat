@@ -1,4 +1,7 @@
 name: Auto Comment
+description: Automatically comment on issues when they are opened
+run-name: Auto Comment on Issues
+# comment: | https://github.com/marketplace/actions/auto-comment
 on: [issues]
 jobs:
   run:
