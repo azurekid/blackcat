@@ -14,6 +14,8 @@ jobs:
       - name: Sign and Publish Module
         shell: pwsh
         env:
+          # SIGNING_CERTIFICATE:  ${{ secrets.SIGNING_CERTIFICATE }}
+          # SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           PS_GALLERY_KEY: ${{ secrets.PS_GALLERY_KEY }}
         run: |
           Write-Host "Publishing module to PowerShell Gallery"
@@ -21,7 +23,8 @@ jobs:
           # Exclude specific folders during publishing
           $excludePaths = @('.git', '.devcontainer', 'invokes', 'support-files')
           $tempPath = Join-Path -Path $env:TEMP -ChildPath "BlackCatTemp"
-          Copy-Item . -Recurse -Destination $tempPath -Force
+          Copy-Item .\ -Recurse -Destination $tempPath -Force
+          ls $tempPath
 
           foreach ($path in $excludePaths) {
           Remove-Item -Path (Join-Path -Path $tempPath -ChildPath $path) -Recurse -Force -ErrorAction SilentlyContinue
