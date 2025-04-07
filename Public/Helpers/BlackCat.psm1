@@ -19,6 +19,9 @@ Write-Verbose -Message "Loading module $ModuleName"
 if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
     Write-Verbose -Message "Az.Accounts module not found. Installing the latest version..."
     Install-Module -Name Az.Accounts -Force -Scope CurrentUser
+} else {
+    Write-Verbose -Message "Az.Accounts module found. Updating to the latest version..."
+    Update-Module -Name Az.Accounts -Force
 }
 
 # Import private and public scripts and expose the public ones
@@ -41,7 +44,7 @@ Export-ModuleMember -Function $publicScripts.BaseName
 $helperPath = "$PSScriptRoot/Private/Reference"
 if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
     Write-Verbose -Message "Fetching latest helper files"
-    Invoke-Update -supportFiles
+    Invoke-Update
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
