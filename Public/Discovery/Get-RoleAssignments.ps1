@@ -24,6 +24,10 @@ function Get-RoleAssignments {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('skip-custom')]
+        [switch]$SkipCustom,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
         [int]$ThrottleLimit = 10
     )
@@ -68,7 +72,6 @@ function Get-RoleAssignments {
             if ($ObjectId) {
                 Write-Verbose "Retrieving groups for user: $ObjectId"
                 $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
-
             }
             else {
                 $Groups = @()
@@ -86,6 +89,7 @@ function Get-RoleAssignments {
                     $azureRoles          = $using:script:SessionVariables.AzureRoles
                     $PrincipalType       = $using:PrincipalType
                     $IsCustom            = $using:IsCustom
+                    $SkipCustom          = $using:SkipCustom
                     $subscriptionId      = $_
 
                     Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
@@ -142,8 +146,11 @@ function Get-RoleAssignments {
                                     UserAgent = $($userAgents.value | Get-Random)
                                 }
 
-                                Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
-                                $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                if (-not $SkipCustom) {
+                                    Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
+                                    $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                }
+
                                 $roleAssignmentObject.IsCustom = $true
                             }
 
