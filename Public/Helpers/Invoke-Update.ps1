@@ -15,6 +15,7 @@ function Invoke-Update {
             'ServiceTags.json',
             'appRoleIds.csv',
             'EntraRoles.csv'
+            'AzureRoles.csv'
         )
     }
 
