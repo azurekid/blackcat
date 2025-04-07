@@ -19,9 +19,6 @@ Write-Verbose -Message "Loading module $ModuleName"
 if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
     Write-Verbose -Message "Az.Accounts module not found. Installing the latest version..."
     Install-Module -Name Az.Accounts -Force -Scope CurrentUser
-} else {
-    Write-Verbose -Message "Az.Accounts module found. Updating to the latest version..."
-    Update-Module -Name Az.Accounts -Force
 }
 
 # Import private and public scripts and expose the public ones
@@ -96,7 +93,8 @@ Write-Verbose -Message "Disabling Login by WAM..."
 Update-AzConfig -EnableLoginByWam $false
 
 Write-Verbose -Message "Disabling BreakingChangeWarning..."
-Update-AzConfig -DisplayBreakingChangeWarning $false -AppliesTo Az.Accounts
+Update-AzConfig -DisplayBreakingChangeWarning $false
+Clear-Host
 
 # Set the window title
 try {
