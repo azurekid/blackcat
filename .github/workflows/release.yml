@@ -1,4 +1,3 @@
-
 name: Publish Module
 on:
   workflow_dispatch:
@@ -14,8 +13,6 @@ jobs:
       - name: Sign and Publish Module
         shell: pwsh
         env:
-          # SIGNING_CERTIFICATE:  ${{ secrets.SIGNING_CERTIFICATE }}
-          # SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           PS_GALLERY_KEY: ${{ secrets.PS_GALLERY_KEY }}
         run: |
           Write-Host "Publishing module to PowerShell Gallery"
@@ -24,11 +21,22 @@ jobs:
           $excludePaths = @('.git', '.devcontainer', 'invokes', 'support-files')
           $tempPath = Join-Path -Path $env:TEMP -ChildPath "BlackCatTemp"
           Copy-Item .\ -Recurse -Destination $tempPath -Force
-          ls $tempPath
+          Write-Host "Contents of $tempPath after copy:"
+          Get-ChildItem -Path $tempPath -Recurse
 
           foreach ($path in $excludePaths) {
-          Remove-Item -Path (Join-Path -Path $tempPath -ChildPath $path) -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path (Join-Path -Path $tempPath -ChildPath $path) -Recurse -Force -ErrorAction SilentlyContinue
           }
 
-          Publish-Module -Path $tempPath -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
+          Write-Host "Contents of $tempPath after exclusion:"
+          Get-ChildItem -Path $tempPath -Recurse
+
+          # Verify module validity
+          if (Test-Path -Path (Join-Path -Path $tempPath -ChildPath 'ModuleManifest.psd1')) {
+            Publish-Module -Path $tempPath -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
+          } else {
+            Write-Error "No valid module found in the specified path."
+            exit 1
+          }
+
           Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
