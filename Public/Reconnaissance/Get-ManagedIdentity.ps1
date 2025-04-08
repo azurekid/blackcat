@@ -16,6 +16,8 @@ function Get-ManagedIdentity {
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }

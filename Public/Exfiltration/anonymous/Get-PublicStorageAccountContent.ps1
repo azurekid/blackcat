@@ -1,4 +1,4 @@
-function Get-PublicStorageAccountFiles {
+function Get-PublicStorageAccountContent {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
@@ -38,8 +38,9 @@ function Get-PublicStorageAccountFiles {
 
             # Extract service endpoint and container name from the URI
             if ($Uri -match '^(https?://[^/]+)/([^/?]+)') {
-                $serviceEndpoint = $matches[1] + "/"
-                $containerName   = $matches[2]
+                $matchResults = $matches
+                $serviceEndpoint = $matchResults[1] + "/"
+                $containerName   = $matchResults[2]
             }
             else {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Invalid URI format. Expected format: https://storage.blob.core.windows.net/container" -ErrorAction Error
@@ -50,16 +51,16 @@ function Get-PublicStorageAccountFiles {
             $isNotCurrentVersion = '<Blob><Name>([^<]+)</Name><VersionId>([^<]+)</VersionId>(?!<IsCurrentVersion>true</IsCurrentVersion>)'
 
             # Match the pattern in the file content
-            $matches = [regex]::Matches($fileContent, $isCurrentVersion)
+            $fileMatches = [regex]::Matches($fileContent, $isCurrentVersion)
 
             if ($ArchivedVersions) {
-                $matches = [regex]::Matches($fileContent, $isNotCurrentVersion)
+                $fileMatches = [regex]::Matches($fileContent, $isNotCurrentVersion)
             }
 
-             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($matches.Count) files to download" -Severity 'Information'
+             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($fileMatches.Count) files to download" -Severity 'Information'
 
             # Download each file based on the current version status
-            $matches | ForEach-Object -Parallel{
+            $fileMatches | ForEach-Object -Parallel{
                 $fileName         = $_.Groups[1].Value
                 $versionId        = $_.Groups[2].Value
                 $isCurrentVersion = $_.Groups[3].Value -eq 'true'
@@ -114,7 +115,7 @@ function Get-PublicStorageAccountFiles {
         Downloads files from a public Azure Blob Storage account.
 
     .DESCRIPTION
-        The Get-PublicStorageAccountFiles function downloads files from a specified public Azure Blob Storage account URI. 
+        The Get-PublicStorageAccountContent function downloads files from a specified public Azure Blob Storage account URI.
         It can also download archived versions of the files if the ArchivedVersions switch is specified.
 
     .PARAMETER Uri
@@ -128,19 +129,19 @@ function Get-PublicStorageAccountFiles {
 
     .EXAMPLE
         ```powershell
-        Get-PublicStorageAccountFiles -Uri "https://mystorageaccount.blob.core.windows.net/mycontainer" -DownloadDirectory "C:\Downloads"
+        Get-PublicStorageAccountContent -Uri "https://mystorageaccount.blob.core.windows.net/mycontainer" -DownloadDirectory "C:\Downloads"
         ```
         This example downloads the current versions of the files from the specified Azure Blob Storage account to the C:\Downloads directory.
 
     .EXAMPLE
         ```powershell
-        Get-PublicStorageAccountFiles -Uri "https://mystorageaccount.blob.core.windows.net/mycontainer" -DownloadDirectory "C:\Downloads" -ArchivedVersions
+        Get-PublicStorageAccountContent -Uri "https://mystorageaccount.blob.core.windows.net/mycontainer" -DownloadDirectory "C:\Downloads" -ArchivedVersions
         ```
         This example downloads both the archived versions of the files from the specified Azure Blob Storage account to the C:\Downloads directory.
 
     .EXAMPLE
         ```powershell
-        Get-PublicStorageAccounts -storageAccountName 'mystorage' | Get-PublicStorageAccountFiles -DownloadDirectory "C:\Downloads"
+        Get-PublicStorageAccounts -storageAccountName 'mystorage' | Get-PublicStorageAccountContent -DownloadDirectory "C:\Downloads"
         ```
         This example retrieves public file containers for the specified storage account and downloads the files to the C:\Downloads directory.
 

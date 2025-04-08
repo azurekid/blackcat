@@ -1,5 +1,6 @@
 function Get-AccessTokens {
     [cmdletbinding()]
+    [OutputType([string])] # Declares that the function can return a string
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [array]$ResourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch"),
@@ -51,14 +52,14 @@ function Get-AccessTokens {
                         ttl    = 3600
                     }
                 }
-                
+
                 $response = Invoke-RestMethod @requestParam
                 return "https://us.onetimesecret.com/secret/$($response.secret_key)"
 
             } else {
                 Write-Verbose "Exporting tokens to file $OutputFile"
-            $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
-            }    
+                $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
+            }
         }
         catch {
             Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
@@ -84,11 +85,11 @@ function Get-AccessTokens {
 
 .EXAMPLE
     Get-AccessTokens -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
-    This example calls the Get-AccessTokens function with specified resource types and output file.
+    This example calls the Get-AccessToken function with specified resource types and output file.
 
 .EXAMPLE
     Get-AccessTokens -OutputFile "AccessTokens.json"
-    This example calls the Get-AccessTokens function with the default resource types and a specified output file.
+    This example calls the Get-AccessToken function with the default resource types and a specified output file.
 
 .EXAMPLE
     $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json

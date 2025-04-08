@@ -1,5 +1,6 @@
-function Get-RoleAssignments {
+function Get-RoleAssignment {
     [cmdletbinding()]
+    [OutputType([System.Collections.Concurrent.ConcurrentBag[PSCustomObject]])]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('current-user')]
@@ -191,8 +192,8 @@ function Get-RoleAssignments {
         Retrieves role assignments across Azure subscriptions for the authenticated context.
 
     .DESCRIPTION
-        Get-RoleAssignments queries Azure RBAC (Role Based Access Control) assignments across all accessible 
-        subscriptions or a specified subscription. It supports filtering by principal type, object ID, and 
+        Get-RoleAssignments queries Azure RBAC (Role Based Access Control) assignments across all accessible
+        subscriptions or a specified subscription. It supports filtering by principal type, object ID, and
         can isolate assignments for the current user.
 
         The function utilizes parallel processing to optimize performance when querying multiple subscriptions,

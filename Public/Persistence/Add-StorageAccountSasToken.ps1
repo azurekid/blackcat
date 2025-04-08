@@ -15,13 +15,12 @@ function Add-StorageAccountSasToken {
         [string[]]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
-        [string]$SasToken = "sp=racwdl&st=$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')&se=$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -Date (Get-Date).AddYears(1))&sv=2020-08-04&sr=c&sig=exampleSignature",
-
-        [Parameter(Mandatory = $false)]
         [int]$TokenValidityDays = 365
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
@@ -51,7 +50,7 @@ function Add-StorageAccountSasToken {
 
         Read-SasToken -SasToken $($apiResponse.serviceSasToken)
 
-        Write-Host "SAS token added successfully with value: `n$($apiResponse.serviceSasToken)" -ForegroundColor Green
+        Write-Output "SAS token added successfully with value: `n$($apiResponse.serviceSasToken)"
     }
     <#
     .SYNOPSIS

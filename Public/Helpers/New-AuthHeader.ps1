@@ -1,11 +1,11 @@
 function New-AuthHeader {
-    [cmdletbinding()]
+    [cmdletbinding(SupportsShouldProcess = $true)]
+    [OutputType([System.Collections.Hashtable])]
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub', 'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase', 'ServiceBus', 'Storage', 'Synapse', 'Other')]
         [string]$EndpointType,
 
-        
         [Parameter(Mandatory = $false)]
         [ValidatePattern('^(https?)://[^\s/$.?#].[^\s]*$')]
         [string]$endpointUri
@@ -21,7 +21,7 @@ function New-AuthHeader {
 
             # Use the provided endpoint URI
             $endpoints = @{
-            Other = $endpointUri
+                Other = $endpointUri
             }
         } else {
             # Use predefined endpoints for other types
@@ -48,25 +48,27 @@ function New-AuthHeader {
     }
 
     process {
-        try {
-            # Get the access token for the specified endpoint
-            $context = Get-AzContext
-            if (-not $context) {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No Azure context found. Please run Connect-AzAccount first." -Severity 'Error'
+        if ($PSCmdlet.ShouldProcess("EndpointType: $EndpointType", "Generate authentication header")) {
+            try {
+                # Get the access token for the specified endpoint
+                $context = Get-AzContext
+                if (-not $context) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No Azure context found. Please run Connect-AzAccount first." -Severity 'Error'
+                }
+
+                $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
+
+                # Create and return the authentication header
+                $authHeader = @{
+                    'Authorization' = "Bearer $($token.Token)"
+                    'Content-Type'  = 'application/json'
+                }
+
+                return $authHeader
             }
-
-            $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
-
-            # Create and return the authentication header
-            $authHeader = @{
-                'Authorization' = "Bearer $($token.Token)"
-                'Content-Type'  = 'application/json'
+            catch {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
             }
-
-            return $authHeader
-        }
-        catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
 
@@ -75,12 +77,12 @@ function New-AuthHeader {
         Generates an authentication header for Azure REST API interactions.
 
     .DESCRIPTION
-        This function creates an authentication header based on the current Azure context. 
-        It supports various Azure endpoints, including Microsoft Graph, Key Vault, Azure Management API, 
-        ,Log Analytics and several others.
+        This function creates an authentication header based on the current Azure context.
+        It supports various Azure endpoints, including Microsoft Graph, Key Vault, Azure Management API,
+        Log Analytics, and several others.
 
     .PARAMETER EndpointType
-        Specifies the type of Azure endpoint to authenticate against. 
+        Specifies the type of Azure endpoint to authenticate against.
         Acceptable values are: 'MSGraph', 'KeyVault', 'Azure', 'LogAnalytics', 'Other'.
 
     .EXAMPLE
