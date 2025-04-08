@@ -24,6 +24,7 @@ function Invoke-MsGraph {
             try {
                 if ($NoBatch) {
                     $uri = "$($sessionVariables.graphUri)/$relativeUrl"
+                    Write-Verbose "Invoking Microsoft Graph API: $uri"
                     $requestParam = @{
                         Headers = $script:graphHeader
                         Uri     = $uri
@@ -52,6 +53,10 @@ function Invoke-MsGraph {
                 }
 
                 $initialResponse = (Invoke-RestMethod @requestParam)
+
+                if ($NoBatch) {
+                    return $initialResponse
+                }
 
                 # Check for throttling headers
                 if ($initialResponse.Headers."Retry-After") {

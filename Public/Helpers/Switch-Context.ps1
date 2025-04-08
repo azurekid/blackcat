@@ -1,7 +1,7 @@
 function Switch-Context {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ArgumentCompleter({
                 param($Command, $Parameter, $WordToComplete, $CommandAst, $FakeBoundParams)
 

@@ -34,7 +34,7 @@ function Get-PublicStorageAccountList {
 
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $userAgent = $sessionVariables.userAgent
+        $userAgent = ($sessionVariables.userAgents.agents | Get-Random).value
         $result = New-Object System.Collections.ArrayList
     }
 
