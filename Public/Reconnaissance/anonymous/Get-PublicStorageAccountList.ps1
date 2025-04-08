@@ -34,7 +34,7 @@ function Get-PublicStorageAccountList {
 
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $userAgents = $sessionVariables.userAgents.agents
+        $userAgent = $sessionVariables.userAgent
         $result = New-Object System.Collections.ArrayList
     }
 
@@ -88,17 +88,17 @@ function Get-PublicStorageAccountList {
                     $result          = $using:result
                     $includeEmpty    = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
-                    $userAgents      = $using:userAgents
+                    $userAgent       = $using:userAgent
 
                     $permutations | ForEach-Object -Parallel {
                         $dns             = $using:dns
                         $result          = $using:result
                         $includeEmpty    = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
-                        $userAgents      = $using:userAgents
+                        $userAgent       = $using:userAgent
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
-                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
                             if ($includeEmpty -or $response.Content -match '<Blob>') {
@@ -119,7 +119,7 @@ function Get-PublicStorageAccountList {
 
                             if ($IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
-                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
                                 $metaResponse.Headers.GetEnumerator() | Where-Object { $_.Key -like 'x-ms-meta-*' } | ForEach-Object {

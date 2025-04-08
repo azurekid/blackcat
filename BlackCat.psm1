@@ -53,6 +53,7 @@ $script:SessionVariables = [ordered]@{
     ExpiresOn        = ''
     apiVersion       = '2023-06-01-preview'
     AccessToken      = ''
+    UserAgent        = ''
     Roles            = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv }
     AzureRoles       = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv }
     serviceTags      = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json }

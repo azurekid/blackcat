@@ -38,8 +38,8 @@ function Get-RoleAssignment {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
-        $userAgents = $sessionVariables.userAgents.agents
         $subscriptions = @()
+        $randomUserAgent = $sessionVariables.userAgent
     }
 
     process {
@@ -83,7 +83,7 @@ function Get-RoleAssignment {
                 try {
                     $baseUri             = $using:baseUri
                     $authHeader          = $using:script:authHeader
-                    $userAgents          = $using:userAgents
+                    $userAgent           = $using:randomUserAgent
                     $roleAssignmentsList = $using:roleAssignmentsList
                     $ObjectId            = $using:ObjectId
                     $Groups              = $using:Groups
@@ -109,7 +109,7 @@ function Get-RoleAssignment {
                         Headers   = $authHeader
                         Method    = 'GET'
                         Uri       = $roleAssignmentsUri
-                        UserAgent = $($userAgents.value | Get-Random)
+                        UserAgent = $userAgent
                     }
 
                     if ($principalIds) {
@@ -144,7 +144,7 @@ function Get-RoleAssignment {
                                     Headers = $authHeader
                                     Uri     = $roleDefinitionsUri
                                     Method  = 'GET'
-                                    UserAgent = $($userAgents.value | Get-Random)
+                                    UserAgent = $userAgent
                                 }
 
                                 if (-not $SkipCustom) {
