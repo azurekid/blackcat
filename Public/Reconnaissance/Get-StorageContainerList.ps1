@@ -36,6 +36,10 @@ function Get-StorageContainerList {
         try {
             Write-Verbose "Building payload for API request"
 
+            if (-not $id) {
+                $id = (Invoke-AzBatch -resourceType 'Microsoft.Storage/storageAccounts').id
+            }
+
             $id | ForEach-Object -Parallel {
                 $authHeader = $using:script:authHeader
                 $result = $using:result
@@ -88,4 +92,56 @@ function Get-StorageContainerList {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result
     }
+<#
+.SYNOPSIS
+Retrieves a list of storage containers from Azure Storage Accounts.
+
+.DESCRIPTION
+The `Get-StorageContainerList` function retrieves a list of storage containers from Azure Storage Accounts.
+It supports filtering by resource group and public access level. The function uses Azure REST API to fetch
+the container details and supports parallel processing for improved performance.
+
+.PARAMETER Id
+Specifies the resource ID of the storage account(s). If not provided, the function will retrieve all storage
+accounts in the current Azure context.
+
+.PARAMETER ResourceGroupName
+Specifies the name(s) of the resource group(s) to filter the storage accounts. This parameter is optional.
+
+.PARAMETER PublicAccess
+A switch parameter that, when specified, filters the containers to include only those with public access enabled.
+
+.PARAMETER ThrottleLimit
+Specifies the maximum number of parallel threads to use for processing. The default value is 10.
+
+.INPUTS
+None directly. Accepts pipeline input for the `Id` parameter.
+
+.OUTPUTS
+System.Collections.Generic.List[PSObject]
+Returns a list of storage containers as PSObject instances.
+
+.EXAMPLE
+# Example 1: Retrieve all storage containers in the current Azure context
+Get-StorageContainerList
+
+.EXAMPLE
+# Example 2: Retrieve storage containers from a specific resource group
+Get-StorageContainerList -ResourceGroupName "MyResourceGroup"
+
+.EXAMPLE
+# Example 3: Retrieve storage containers with public access enabled
+Get-StorageContainerList -PublicAccess
+
+.EXAMPLE
+# Example 4: Retrieve storage containers with a custom throttle limit
+Get-StorageContainerList -ThrottleLimit 5
+
+.NOTES
+- This function requires the Azure PowerShell module to be installed and authenticated.
+- The function uses Azure REST API to fetch container details and requires appropriate permissions.
+
+.LINK
+https://learn.microsoft.com/en-us/powershell/azure/
+#>
 }
