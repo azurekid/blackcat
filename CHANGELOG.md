@@ -3,6 +3,18 @@
 ![logo](/.github/media/cateye.png?raw=true)
 # CHANGELOG
 
+## v0.10.5 [2025-04-11]
+
+_Improvements_
+
+- Simplified the `Update-AzConfig`.
+- Added PSGallery deployment
+- Enhanced the installation instructions in `README.md` by adding a section for installing from PSGallery.… in README
+
+_Bug fixes_
+
+- Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`. 
+
 ## v0.10.4 [2025-04-10]
 
 _Bug fixes_

@@ -47,7 +47,13 @@ running_from_codespace:
 
 ![alt text](/.github/media/loaded.png)
 
-### Installing the Module
+### Installing from PSGallery
+
+```powershell
+PS> Install-Module BlackCat && Import-Module BlackCat
+```
+
+### Installing the Module locally
 
 ```powershell
 PS> git clone https://github.com/azurekid/blackcat.git
