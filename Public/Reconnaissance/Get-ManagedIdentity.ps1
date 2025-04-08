@@ -26,19 +26,11 @@ function Get-ManagedIdentity {
         try {
 
             Write-Verbose "Get Managed Identity"
-            $uri = "$($SessionVariables.baseUri)/providers/Microsoft.ManagedIdentity/userAssignedIdentities?api-version=2023-01-31"
 
-            $requestParam = @{
-                Headers = $script:authHeader
-                Uri     = $uri
-                Method  = 'GET'
-            }
-            $apiResponse = (Invoke-RestMethod @requestParam).value
-
-            if ($name) {
-                return $apiResponse | Where-Object { $_.name -eq $Name }
+            if ($Name) {
+                return (Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities' -Name $($Name))
             } else {
-                return $apiResponse
+                return (Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities')
             }
         }
         catch {
