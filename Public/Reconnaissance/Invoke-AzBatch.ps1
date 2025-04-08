@@ -16,6 +16,8 @@ function Invoke-AzBatch {
     )
 
     begin {
+
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 
@@ -53,8 +55,10 @@ function Invoke-AzBatch {
                 Method      = 'POST'
                 ContentType = 'application/json'
                 Body        = $payload | ConvertTo-Json -Depth 10
+                UserAgent   = $($sessionVariables.userAgent)
             }
 
+            Write-Verbose "Making API request using User-Agent: $($sessionVariables.userAgent)"
             $apiResponse = (Invoke-RestMethod @requestParam).responses.content.data
 
             if (!($apiResponse)) {

@@ -42,6 +42,7 @@ function Set-ManagedIdentityPermission {
                     Uri     = $uri
                     Method  = 'POST'
                     ContentType = 'application/json'
+                    UserAgent = $($sessionVariables.userAgent)
                     Body    = @{
                         principalId = $servicePrincipalId
                         resourceId  = $resourceId

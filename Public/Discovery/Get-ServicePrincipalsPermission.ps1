@@ -21,6 +21,7 @@ function Get-ServicePrincipalsPermission {
                 Headers = $script:graphHeader
                 Uri     = $uri
                 Method  = 'GET'
+                UserAgent = $($sessionVariables.userAgent)
             }
 
             return (Invoke-RestMethod @requestParam).value

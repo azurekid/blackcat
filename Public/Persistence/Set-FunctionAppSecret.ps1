@@ -47,6 +47,7 @@ function Set-FunctionAppSecret {
                     Method      = 'PUT'
                     Body        = $body | ConvertTo-Json -Depth 10
                     ContentType = 'application/json'
+                    UserAgent   = $sessionVariables.userAgent
                 }
 
                 $apiResponse = Invoke-RestMethod @requestParam

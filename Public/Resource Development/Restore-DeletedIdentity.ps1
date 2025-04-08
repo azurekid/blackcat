@@ -51,6 +51,7 @@ function Restore-DeletedIdentity {
             $restoreParam = @{
                 Headers     = $script:graphHeader
                 Uri         = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
+                UserAgent   = $($sessionVariables.userAgent)
                 Method      = 'POST'
                 Body    = '{}'
                 'ContentType'  = 'application/json'
@@ -78,6 +79,7 @@ function Restore-DeletedIdentity {
                         Headers     = $script:graphHeader
                         Uri     = $restoreUri
                         Method  = 'POST'
+                        UserAgent   = $($sessionVariables.userAgent)
                         Body    = '{}'
                         'ContentType' = 'application/json'
                     }

@@ -58,6 +58,7 @@ function Set-AzNetworkSecurityGroupRule {
                     Headers = $authHeader
                     Uri     = $nsgUrl
                     Method  = 'GET'
+                    UserAgent = $using:sessionVariables.userAgent
                 }
 
                 $nsg = Invoke-RestMethod @requestParam
@@ -88,6 +89,7 @@ function Set-AzNetworkSecurityGroupRule {
                         Headers     = $authHeader
                         Body        = ($nsg | ConvertTo-Json -Depth 10)
                         ContentType = "application/json"
+                        UserAgent   = $using:sessionVariables.userAgent
                     }
                     Invoke-RestMethod @requestParam
                     Write-Verbose "Updated NSG successfully."
