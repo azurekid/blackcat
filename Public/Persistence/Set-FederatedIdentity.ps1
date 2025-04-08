@@ -49,6 +49,7 @@ function Set-FederatedIdentity {
                     Method      = 'PUT'
                     ContentType = 'application/json'
                     Body        = $body
+                    UserAgent   = $($sessionVariables.userAgent)
                 }
 
                 (Invoke-RestMethod @requestParam)

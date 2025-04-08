@@ -18,7 +18,7 @@ function Invoke-BlackCat {
 
     try {
         # Select a random user agent
-        $randomUserAgent = $SessionVariables.userAgents.agents | Get-Random
+        $randomUserAgent = ($sessionVariables.userAgents.agents | Get-Random).value
 
         if ($azProfile.Contexts.Count -ne 0) {
             if ([string]::IsNullOrEmpty($SessionVariables.AccessToken)) {

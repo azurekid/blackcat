@@ -45,6 +45,7 @@ function Add-StorageAccountSasToken {
             Uri     = $uri
             Method  = 'POST'
             Body    = ($body | ConvertTo-Json)
+            UserAgent = $sessionVariables.userAgent
         }
         $apiResponse = Invoke-RestMethod @requestParam
 

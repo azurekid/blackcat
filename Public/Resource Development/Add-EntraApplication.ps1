@@ -26,6 +26,7 @@ function Add-EntraApplication {
                 Method  = 'POST'
                 Body    = $applicationBody
                 ContentType = 'application/json'
+                UserAgent = $($sessionVariables.userAgent)
             }
             $appRegistration = Invoke-RestMethod @requestParam
 
@@ -43,6 +44,7 @@ function Add-EntraApplication {
                     Method  = 'POST'
                     Body    = $spBody
                     ContentType = 'application/json'
+                    UserAgent = $($sessionVariables.userAgent)
                 }
 
                 $servicePrincipal = Invoke-RestMethod @spRequest
@@ -61,6 +63,7 @@ function Add-EntraApplication {
                     Method  = 'POST'
                     Body    = $roleBody
                     ContentType = 'application/json'
+                    UserAgent = $($sessionVariables.userAgent)
                 }
 
                 Invoke-RestMethod @roleRequest

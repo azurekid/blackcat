@@ -36,6 +36,7 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = $uri
                         Method  = 'GET'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
@@ -69,6 +70,7 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $_
                         Method  = 'GET'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {

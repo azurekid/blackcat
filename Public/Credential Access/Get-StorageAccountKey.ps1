@@ -63,6 +63,7 @@ function Get-StorageAccountKey {
                         Headers = $using:script:authHeader
                         Uri     = $uri
                         Method  = 'POST'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     $apiResponse = Invoke-RestMethod @requestParam

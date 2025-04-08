@@ -29,6 +29,7 @@ function Invoke-MsGraph {
                         Headers = $script:graphHeader
                         Uri     = $uri
                         Method  = 'GET'
+                        UserAgent = $($sessionVariables.userAgent)
                     }
                 }
                 else {
@@ -49,6 +50,7 @@ function Invoke-MsGraph {
                         Method      = 'POST'
                         ContentType = 'application/json'
                         Body        = $payload | ConvertTo-Json -Depth 10
+                        UserAgent   = $($sessionVariables.userAgent)
                     }
                 }
 
