@@ -2,7 +2,15 @@ function Get-StorageContainerList {
     [cmdletbinding()]
     [OutputType([System.Collections.Generic.List[PSObject]])]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.Storage/StorageAccounts",
+            "ResourceGroupName"
+        )]
+        [Alias('storageAccount', 'storage-account-name', 'storageAccountName')]
+        [string[]]$Name,
+
+    [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
             "Microsoft.storage/storageAccounts"
@@ -36,15 +44,20 @@ function Get-StorageContainerList {
         try {
             Write-Verbose "Building payload for API request"
 
-            if (-not $id) {
-                $id = (Invoke-AzBatch -resourceType 'Microsoft.Storage/storageAccounts').id
+            if (!$($Name) -and !$Id) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
+            } elseif ($($Name)) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
+            } else {
+                $id = $Id
             }
+
 
             $id | ForEach-Object -Parallel {
                 $authHeader = $using:script:authHeader
-                $result = $using:result
+                $result     = $using:result
                 $totalItems = $using:totalItems
-                $batchUri = $using:sessionVariables.batchUri
+                $batchUri   = $using:sessionVariables.batchUri
 
                 $payload = @{
                     requests = @(
@@ -126,15 +139,11 @@ Returns a list of storage containers as PSObject instances.
 Get-StorageContainerList
 
 .EXAMPLE
-# Example 2: Retrieve storage containers from a specific resource group
-Get-StorageContainerList -ResourceGroupName "MyResourceGroup"
-
-.EXAMPLE
-# Example 3: Retrieve storage containers with public access enabled
+# Example 2: Retrieve storage containers with public access enabled
 Get-StorageContainerList -PublicAccess
 
 .EXAMPLE
-# Example 4: Retrieve storage containers with a custom throttle limit
+# Example 3: Retrieve storage containers with a custom throttle limit
 Get-StorageContainerList -ThrottleLimit 5
 
 .NOTES
