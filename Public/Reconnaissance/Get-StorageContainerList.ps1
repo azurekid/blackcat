@@ -1,5 +1,6 @@
-function Get-StorageContainers {
+function Get-StorageContainerList {
     [cmdletbinding()]
+    [OutputType([System.Collections.Generic.List[PSObject]])]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
@@ -22,10 +23,12 @@ function Get-StorageContainers {
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function: $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
-        $result = New-Object System.Collections.ArrayList
+        $result = [System.Collections.Generic.List[PSObject]]::new()
         $totalItems = $id.Count
     }
 
@@ -85,61 +88,4 @@ function Get-StorageContainers {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result
     }
-    <#
-.SYNOPSIS
-    Retrieves Azure Storage Containers information.
-
-.DESCRIPTION
-    This function retrieves information about Azure Storage Containers. It can optionally filter for containers 
-    with public access enabled. The function uses parallel processing for improved performance when handling multiple storage accounts.
-
-.PARAMETER id
-    Array of Azure resource IDs for storage accounts.
-
-.PARAMETER PublicAccess
-    Switch parameter to filter for containers with public access enabled.
-
-.PARAMETER ThrottleLimit
-    Maximum number of concurrent operations. Default is 1000.
-
-.EXAMPLE
-    PS> $storageIds = (Get-AzStorageAccount).Id
-    PS> Get-AzStorageContainers -id $storageIds
-    Returns all containers from the specified storage accounts.
-
-.EXAMPLE
-    PS> Get-AzStorageContainers -id $storageIds -PublicAccess
-    Returns only containers that have public access enabled.
-
-.EXAMPLE
-    PS> Get-AzStorageContainers -id $storageIds -ThrottleLimit 50
-    Returns containers with a maximum of 50 concurrent operations.
-
-.INPUTS
-    System.Array
-    You can pipe storage account resource IDs to this function.
-
-.OUTPUTS
-    System.Collections.ArrayList
-    Returns an ArrayList containing container information.
-
-.NOTES
-    Dependencies:
-    - Az.Accounts module
-    - Az.Storage module
-    - Active Azure connection (Connect-AzAccount)
-    - Appropriate RBAC permissions on the storage accounts
-    - BlackCat module (for Invoke-BlackCat function)
-
-    File: Get-AzStorageContainers.ps1
-
-.LINK
-    https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction
-
-.COMPONENT
-    BlackCat
-
-.FUNCTIONALITY
-    Azure Storage Container Management
-#>
 }

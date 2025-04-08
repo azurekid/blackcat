@@ -1,4 +1,4 @@
-function Get-FederatedApplications {
+function Get-FederatedApplication {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -26,21 +26,21 @@ function Get-FederatedApplications {
     Retrieves federated identity credentials for a specified Microsoft Entra application.
 
     .DESCRIPTION
-    The Get-FederatedApplications function retrieves all federated identity credentials associated with a Microsoft Entra application identified by its application ID (GUID).
+    The Get-FederatedApplication function retrieves all federated identity credentials associated with a Microsoft Entra application identified by its application ID (GUID).
 
     .PARAMETER Id
     The application ID (GUID) of the Microsoft Entra application. This parameter is mandatory and must match the pattern of a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
 
     .EXAMPLE
-    Get-MsFederatedApplications -Id "12345678-1234-1234-1234-123456789012"
+    Get-FederatedApplication -Id "12345678-1234-1234-1234-123456789012"
     Retrieves all federated identity credentials for the specified application.
 
     .EXAMPLE
-    Invoke-MsGraph -relativeUrl "applications" | Get-MsFederatedApplications
+    Invoke-MsGraph -relativeUrl "applications" | Get-FederatedApplication
     Retrieves all federated identity credentials for all application.
 
     .EXAMPLE
-    Get-AzAdApplication -All $true | Get-MsFederatedApplications
+    Get-AzAdApplication -All $true | Get-FederatedApplication
     Retrieves all federated identity credentials for all applications.
 
     .LINK

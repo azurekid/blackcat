@@ -1,5 +1,5 @@
 function Set-AzNetworkSecurityGroupRule {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
@@ -33,6 +33,8 @@ function Set-AzNetworkSecurityGroupRule {
     )
 
     begin {
+        [void] $ResourceGroupName # Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
@@ -52,7 +54,6 @@ function Set-AzNetworkSecurityGroupRule {
                 $authHeader = $using:script:authHeader
                 $nsgUrl = '{0}{1}?api-version={2}' -f $using:baseUri, $_, '2021-02-01'
 
-                Write-Output "Getting NSG from URI: $nsgUrl"
                 $requestParam = @{
                     Headers = $authHeader
                     Uri     = $nsgUrl
@@ -62,7 +63,8 @@ function Set-AzNetworkSecurityGroupRule {
                 $nsg = Invoke-RestMethod @requestParam
 
                 $ruleName = "remote-management"
-                if ($nsg.properties.securityRules -notcontains $ruleName) {
+                if ($nsg.properties.securityRules.name -notcontains $ruleName) {
+                    Write-Output $nsg.properties.securityRules
                     Write-Verbose "Adding rule '$ruleName' to NSG for ports $($using:Ports -join ', ') and source IP $using:SourceIp"
                     $newRule = @{
                         name       = $ruleName
@@ -79,7 +81,7 @@ function Set-AzNetworkSecurityGroupRule {
                         }
                     }
                     $nsg.properties.securityRules += $newRule
-                
+
                     $requestParam = @{
                         Uri         = $nsgUrl
                         Method      = "Put"
@@ -91,7 +93,7 @@ function Set-AzNetworkSecurityGroupRule {
                     Write-Verbose "Updated NSG successfully."
                 }
                 else {
-                    Write-Verbose "Rule '$ruleName' already exists. Skipping..."
+                    Write-Output "    Set-AzNetworkSecurityGroupRule: Rule '$ruleName' already exists in NSG."
                 }
             }
             catch {
@@ -108,8 +110,8 @@ function Set-AzNetworkSecurityGroupRule {
 Configures or updates a rule in an Azure Network Security Group (NSG).
 
 .DESCRIPTION
-The `Set-AzNetworkSecurityGroupRule` function allows you to configure or update a security rule in an Azure Network Security Group (NSG). 
-It supports specifying the NSG by name, resource group, or resource ID. The function ensures that a rule named "remote-management" 
+The `Set-AzNetworkSecurityGroupRule` function allows you to configure or update a security rule in an Azure Network Security Group (NSG).
+It supports specifying the NSG by name, resource group, or resource ID. The function ensures that a rule named "remote-management"
 is added to the NSG with the specified ports and source IP address.
 
 .PARAMETER Name
@@ -133,7 +135,7 @@ Specifies the source IP address or range to allow in the security rule. Defaults
 .EXAMPLE
 Set-AzNetworkSecurityGroupRule -Name "MyNSG" -ResourceGroupName "MyResourceGroup" -Ports 22, 443 -SourceIp "192.168.1.0/24"
 
-Adds or updates a rule named "remote-management" in the NSG named "MyNSG" within the resource group "MyResourceGroup". 
+Adds or updates a rule named "remote-management" in the NSG named "MyNSG" within the resource group "MyResourceGroup".
 The rule allows traffic on ports 22 and 443 from the source IP range "192.168.1.0/24".
 
 .EXAMPLE
