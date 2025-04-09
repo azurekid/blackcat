@@ -28,7 +28,7 @@ jobs:
           Copy-Item .\BlackCat.psm1 -Destination $tempPath -Force
 
           # Publish the module to the PowerShell Gallery
-          Publish-Module -Path "$tempPath" -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose`
+          Publish-Module -Path "$tempPath" -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
 
           # Remove the module from the local system
           Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
