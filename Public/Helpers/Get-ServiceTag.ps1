@@ -1,3 +1,18 @@
+using namespace System.Management.Automation
+
+# used for auto-generating the valid values for the ServiceName parameter
+class ServiceNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.serviceTags.properties.systemService | Sort-Object -Unique -Descending)
+    }
+}
+
+class RegionNames : IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        return ($script:SessionVariables.serviceTags.properties.region | Sort-Object -Unique -Descending)
+    }
+}
+
 function Get-ServiceTag {
     [cmdletbinding()]
     [OutputType([PSCustomObject], [string])]
