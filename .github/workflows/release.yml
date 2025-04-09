@@ -17,7 +17,7 @@ jobs:
         run: |
           Write-Host "Publishing module to PowerShell Gallery"
 
-          $tempPath = New-Item -Path .\src\ -ItemType Directory -Force
+          $tempPath = New-Item -Path .\src\BlackCat\ -ItemType Directory -Force
 
           # publish module
           Write-Host "Publishing module to PowerShell Gallery"
