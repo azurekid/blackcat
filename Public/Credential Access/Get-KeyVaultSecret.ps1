@@ -1,4 +1,4 @@
-function Get-KeyVaultSecrets {
+function Get-KeyVaultSecret {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
@@ -8,6 +8,10 @@ function Get-KeyVaultSecrets {
         )]
         [Alias('vault', 'key-vault-name', 'KeyVaultName')]
         [string[]]$Name,
+
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
+        [Alias('rg', 'resource-group')]
+        [string[]]$ResourceGroupName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
@@ -36,6 +40,7 @@ function Get-KeyVaultSecrets {
                         Headers = $using:AuthHeader
                         Uri     = $uri
                         Method  = 'GET'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
@@ -57,7 +62,7 @@ function Get-KeyVaultSecrets {
             }
 
             # Second function: Get secret values
-            function Get-KeyVaultSecretValues {
+            function Get-KeyVaultSecretValue {
                 param($SecretUris, $ThrottleLimit, $AuthHeader)
 
                 $secretValues = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
@@ -69,6 +74,7 @@ function Get-KeyVaultSecrets {
                         Headers = $using:AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $_
                         Method  = 'GET'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
@@ -120,7 +126,7 @@ function Get-KeyVaultSecrets {
                     SecretUris = $uris
                 }
 
-                $secretValues = @(Get-KeyVaultSecretValues @requestParam)
+                $secretValues = @(Get-KeyVaultSecretValue @requestParam)
                 $result.AddRange($secretValues)
             }
 
@@ -146,7 +152,7 @@ function Get-KeyVaultSecrets {
 Retrieves secrets from specified Azure Key Vaults.
 
 .DESCRIPTION
-The Get-KeyVaultSecrets function retrieves secrets from the specified Azure Key Vaults. It supports parallel processing to handle multiple vaults and secrets efficiently.
+The Get-KeyVaultSecret function retrieves secrets from the specified Azure Key Vaults. It supports parallel processing to handle multiple vaults and secrets efficiently.
 
 .PARAMETER Name
 An array of Key Vault names from which to retrieve secrets. This parameter is mandatory and accepts pipeline input by property name.
@@ -155,12 +161,12 @@ An array of Key Vault names from which to retrieve secrets. This parameter is ma
 An optional parameter that specifies the maximum number of concurrent threads to use for parallel processing. The default value is 1000.
 
 .EXAMPLE
-PS C:\> Get-KeyVaultSecrets -Name "MyKeyVault1", "MyKeyVault2"
+PS C:\> Get-KeyVaultSecret -Name "MyKeyVault1", "MyKeyVault2"
 
 This command retrieves secrets from the specified Key Vaults "MyKeyVault1" and "MyKeyVault2".
 
 .EXAMPLE
-PS C:\> "MyKeyVault1", "MyKeyVault2" | Get-KeyVaultSecrets
+PS C:\> "MyKeyVault1", "MyKeyVault2" | Get-KeyVaultSecret
 
 This command retrieves secrets from the specified Key Vaults "MyKeyVault1" and "MyKeyVault2" using pipeline input.
 

@@ -34,13 +34,13 @@ function Restore-DeletedIdentity {
     process {
         Write-Verbose "Querying deleted $Type items from Microsoft Graph"
         $deletedObject = Invoke-MsGraph -relativeUrl "$directoryPath/$($typeMap[$Type])" |
-        
+
         Where-Object {
             $_.deletedDateTime -gt (Get-Date).AddDays(-30) -and
                 (!$ObjectId -or $_.Id -eq $ObjectId) -and
                 (!$Name -or $_.DisplayName -like "*$Name*")
         } |
-        Select-Object DisplayName, Id, appId, deletedDateTime 
+        Select-Object DisplayName, Id, appId, deletedDateTime
 
         Write-Verbose "Found $($deletedObject.Count) deleted items matching criteria"
 
@@ -51,16 +51,17 @@ function Restore-DeletedIdentity {
             $restoreParam = @{
                 Headers     = $script:graphHeader
                 Uri         = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
+                UserAgent   = $($sessionVariables.userAgent)
                 Method      = 'POST'
                 Body    = '{}'
                 'ContentType'  = 'application/json'
-            }    
-            
+            }
+
             Write-Verbose "Sending restore request for $Type"
             $restoredObject = Invoke-RestMethod @restoreParam
 
         }
-        
+
         # Handle service principal restoration only for Application type
         if ($Type -eq 'Application' -and $restoredObject) {
             Write-Verbose "Application restored successfully. Looking for associated service principal"
@@ -73,14 +74,15 @@ function Restore-DeletedIdentity {
                 foreach ($sp in $spn) {
                     Write-Verbose "Found associated service principal with ID: $($sp.id)"
                     $restoreUri = "$($sessionVariables.graphUri)/$directoryPath/$($sp.id)/restore"
-                    
+
                     $restoreParam = @{
                         Headers     = $script:graphHeader
                         Uri     = $restoreUri
                         Method  = 'POST'
+                        UserAgent   = $($sessionVariables.userAgent)
                         Body    = '{}'
                         'ContentType' = 'application/json'
-                    } 
+                    }
 
                     Write-Verbose "Sending restore request for service principal"
                     $null = Invoke-RestMethod @restoreParam
@@ -99,8 +101,8 @@ function Restore-DeletedIdentity {
     Retrieves and optionally restores deleted identities from Microsoft Graph.
 
 .DESCRIPTION
-    The Restore-DeletedIdentity function allows you to search for and restore deleted identities (Applications, Groups, Users, or Administrative Units) 
-    from Microsoft Graph. It can retrieve items deleted within the last 30 days and optionally restore them. For Applications, it also handles the 
+    The Restore-DeletedIdentity function allows you to search for and restore deleted identities (Applications, Groups, Users, or Administrative Units)
+    from Microsoft Graph. It can retrieve items deleted within the last 30 days and optionally restore them. For Applications, it also handles the
     restoration of associated service principals.
 
 .PARAMETER ObjectId

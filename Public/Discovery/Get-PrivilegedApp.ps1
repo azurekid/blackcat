@@ -1,4 +1,4 @@
-function Get-PrivilegedApps {
+function Get-PrivilegedApp {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
@@ -84,7 +84,7 @@ function Get-PrivilegedApps {
     Retrieves Microsoft Entra ID (Azure AD) applications with privileged permissions.
 
 .DESCRIPTION
-    The Get-MsPrivilegedApps function identifies and returns Enterprise Applications that have been granted high-risk
+    The Get-PrivilegedApp function identifies and returns Enterprise Applications that have been granted high-risk
     permissions in Microsoft Entra ID. It specifically looks for applications with permissions such as Directory.ReadWrite.All,
     PrivilegedAccess.ReadWrite.AzureAD, and other sensitive permissions that could pose security risks.
 
@@ -102,19 +102,19 @@ function Get-PrivilegedApps {
     - KeyCredentials: (Optional) If present, contains certificate credentials information
 
 .EXAMPLE
-    Get-MsPrivilegedApps
+    Get-PrivilegedApp
     Returns all applications with high-risk permissions using default throttle limit.
 
 .EXAMPLE
-    Get-MsPrivilegedApps -ThrottleLimit 500
+    Get-PrivilegedApp -ThrottleLimit 500
     Returns all applications with high-risk permissions using a custom throttle limit of 500.
 
 .EXAMPLE
-    Get-MsPrivilegedApps -Verbose
+    Get-PrivilegedApp -Verbose
     Returns all applications with high-risk permissions with detailed progress information.
 
 .NOTES
-    File: Get-MsPrivilegedApps.ps1
+    File: Get-PrivilegedApp.ps1
     Author: Script Author
     Version: 1.0
     Requires: PowerShell 7.0 or later

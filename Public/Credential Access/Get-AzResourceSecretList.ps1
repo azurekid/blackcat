@@ -1,4 +1,4 @@
-function Get-AzResourceSecrets {
+function Get-AzResourceSecretList {
     [cmdletbinding()]
     param ()
 
@@ -55,7 +55,7 @@ function Get-AzResourceSecrets {
                     }
                     'microsoft.web/sites' {
                         $uri = "$($baseUri)$($resource.id)/functions/admin/token?api-version=2024-04-01"
-                        write-host $uri
+
                         # $resourceIds = (Invoke-RestMethod -Uri $uri -Headers $script:authHeader -Method Get).value.id
                         # foreach ($resourceId in $resourceIds) {
                             # $functionUri = "$($baseUri)$($resourceId)/listKeys?api-version=2022-03-01"
@@ -131,7 +131,7 @@ function Get-AzResourceSecrets {
         Retrieves secrets from various Azure resources in the current context.
 
     .DESCRIPTION
-        The Get-AzResourceSecrets function collects secrets from different Azure resources including:
+        The Get-AzResourceSecretList function collects secrets from different Azure resources including:
         - Key Vault secrets
         - Storage Account keys
         - Function App keys
@@ -148,7 +148,7 @@ function Get-AzResourceSecrets {
 
     .EXAMPLE
         ```powershell
-        Get-AzResourceSecrets
+        Get-AzResourceSecretList
         ```
         Returns a hashtable of secrets organized by resource type.
 

@@ -1,5 +1,5 @@
 function Set-FederatedIdentity {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
@@ -30,30 +30,33 @@ function Set-FederatedIdentity {
     }
 
     process {
-        try {
-            $baseUri = 'https://management.azure.com'
-            $uri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $baseUri, $Id, $Name
+        if ($PSCmdlet.ShouldProcess("Federated Identity Credential for $GitHubOrganization/$GitHubRepository on branch $Branch")) {
+            try {
+                $baseUri = 'https://management.azure.com'
+                $uri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $baseUri, $Id, $Name
 
-            $body = @{
-                properties = @{
-                    issuer    = "https://token.actions.githubusercontent.com"
-                    subject   = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
-                    audiences = @("api://AzureADTokenExchange")
+                $body = @{
+                    properties = @{
+                        issuer    = "https://token.actions.githubusercontent.com"
+                        subject   = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
+                        audiences = @("api://AzureADTokenExchange")
+                    }
+                } | ConvertTo-Json
+
+                $requestParam = @{
+                    Headers     = $script:authHeader
+                    Uri         = $uri
+                    Method      = 'PUT'
+                    ContentType = 'application/json'
+                    Body        = $body
+                    UserAgent   = $($sessionVariables.userAgent)
                 }
-            } | ConvertTo-Json
 
-            $requestParam = @{
-                Headers     = $script:authHeader
-                Uri         = $uri
-                Method      = 'PUT'
-                ContentType = 'application/json'
-                Body        = $body
+                (Invoke-RestMethod @requestParam)
             }
-
-            (Invoke-RestMethod @requestParam)
-        }
-        catch {
-            Write-Message $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            catch {
+                Write-Message $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+            }
         }
     }
 <#

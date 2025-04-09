@@ -1,4 +1,4 @@
-function Get-PublicResources {
+function Get-PublicResourceList {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
@@ -65,7 +65,7 @@ function Get-PublicResources {
                     $validDnsNames = $using:validDnsNames
                     if ([System.Net.Dns]::GetHostEntry($_)) {
                         $validDnsNames.Add($_)
-                        Write-Host "Get-AzPublicResources: '$_' is valid" -ForegroundColor Green
+                        Write-Output "Get-AzPublicResources: '$_' is valid"
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
@@ -83,7 +83,7 @@ function Get-PublicResources {
         Retrieves Azure public resources based on the provided name and type.
 
     .DESCRIPTION
-        The Get-AzPublicResources function retrieves Azure public resources by generating DNS names based on the provided name and type, and then performing DNS resolution to check their validity. It supports parallel processing for efficient DNS resolution.
+        The Get-PublicResourceList function retrieves Azure public resources by generating DNS names based on the provided name and type, and then performing DNS resolution to check their validity. It supports parallel processing for efficient DNS resolution.
 
     .PARAMETER Name
         The base name to use for generating DNS names. This parameter is mandatory and must match the pattern '^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$'.
@@ -105,11 +105,11 @@ function Get-PublicResources {
         - System.Net.Dns
 
     .EXAMPLE
-        Get-AzPublicResources -Name "example" -Type "blob"
+        Get-PublicResourceList -Name "example" -Type "blob"
         Retrieves Azure public resources for the name "example" with the type "blob".
 
     .EXAMPLE
-        Get-AzPublicResources -Name "example" -WordList "wordlist.txt"
+        Get-PublicResourceList -Name "example" -WordList "wordlist.txt"
         Retrieves Azure public resources for the name "example" using permutations from the specified word list.
 
     .LINK

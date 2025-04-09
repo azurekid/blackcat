@@ -17,6 +17,9 @@ function Invoke-BlackCat {
     $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
 
     try {
+        # Select a random user agent
+        $randomUserAgent = ($sessionVariables.userAgents.agents | Get-Random).value
+
         if ($azProfile.Contexts.Count -ne 0) {
             if ([string]::IsNullOrEmpty($SessionVariables.AccessToken)) {
                 try {
@@ -49,6 +52,8 @@ function Invoke-BlackCat {
 
             # Set the subscription from AzContext
             $SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($SessionVariables.subscriptionId)"
+            $SessionVariables.UserAgent = $randomUserAgent
+
             $script:authHeader = @{
                 'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($SessionVariables.AccessToken)))
             }

@@ -23,11 +23,13 @@ function Invoke-MsGraph {
         do {
             try {
                 if ($NoBatch) {
-                    $uri = "$($sessionVariables.graphUri)/$relativeUrl"
+                    $uri = "$($sessionVariables.graphUri)/$relativeUrl" -replace 'applications/\(', 'applications('
+                    Write-Verbose "Invoking Microsoft Graph API: $uri"
                     $requestParam = @{
                         Headers = $script:graphHeader
                         Uri     = $uri
                         Method  = 'GET'
+                        UserAgent = $($sessionVariables.userAgent)
                     }
                 }
                 else {
@@ -48,10 +50,15 @@ function Invoke-MsGraph {
                         Method      = 'POST'
                         ContentType = 'application/json'
                         Body        = $payload | ConvertTo-Json -Depth 10
+                        UserAgent   = $($sessionVariables.userAgent)
                     }
                 }
 
                 $initialResponse = (Invoke-RestMethod @requestParam)
+
+                if ($NoBatch) {
+                    return $initialResponse
+                }
 
                 # Check for throttling headers
                 if ($initialResponse.Headers."Retry-After") {

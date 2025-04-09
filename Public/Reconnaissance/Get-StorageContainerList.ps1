@@ -1,7 +1,16 @@
-function Get-StorageContainers {
+function Get-StorageContainerList {
     [cmdletbinding()]
+    [OutputType([System.Collections.Generic.List[PSObject]])]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.Storage/StorageAccounts",
+            "ResourceGroupName"
+        )]
+        [Alias('storageAccount', 'storage-account-name', 'storageAccountName')]
+        [string[]]$Name,
+
+    [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
             "Microsoft.storage/storageAccounts"
@@ -22,10 +31,12 @@ function Get-StorageContainers {
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function: $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
-        $result = New-Object System.Collections.ArrayList
+        $result = [System.Collections.Generic.List[PSObject]]::new()
         $totalItems = $id.Count
     }
 
@@ -33,11 +44,20 @@ function Get-StorageContainers {
         try {
             Write-Verbose "Building payload for API request"
 
+            if (!$($Name) -and !$Id) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
+            } elseif ($($Name)) {
+                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
+            } else {
+                $id = $Id
+            }
+
+
             $id | ForEach-Object -Parallel {
                 $authHeader = $using:script:authHeader
-                $result = $using:result
+                $result     = $using:result
                 $totalItems = $using:totalItems
-                $batchUri = $using:sessionVariables.batchUri
+                $batchUri   = $using:sessionVariables.batchUri
 
                 $payload = @{
                     requests = @(
@@ -85,61 +105,52 @@ function Get-StorageContainers {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result
     }
-    <#
+<#
 .SYNOPSIS
-    Retrieves Azure Storage Containers information.
+Retrieves a list of storage containers from Azure Storage Accounts.
 
 .DESCRIPTION
-    This function retrieves information about Azure Storage Containers. It can optionally filter for containers 
-    with public access enabled. The function uses parallel processing for improved performance when handling multiple storage accounts.
+The `Get-StorageContainerList` function retrieves a list of storage containers from Azure Storage Accounts.
+It supports filtering by resource group and public access level. The function uses Azure REST API to fetch
+the container details and supports parallel processing for improved performance.
 
-.PARAMETER id
-    Array of Azure resource IDs for storage accounts.
+.PARAMETER Id
+Specifies the resource ID of the storage account(s). If not provided, the function will retrieve all storage
+accounts in the current Azure context.
+
+.PARAMETER ResourceGroupName
+Specifies the name(s) of the resource group(s) to filter the storage accounts. This parameter is optional.
 
 .PARAMETER PublicAccess
-    Switch parameter to filter for containers with public access enabled.
+A switch parameter that, when specified, filters the containers to include only those with public access enabled.
 
 .PARAMETER ThrottleLimit
-    Maximum number of concurrent operations. Default is 1000.
-
-.EXAMPLE
-    PS> $storageIds = (Get-AzStorageAccount).Id
-    PS> Get-AzStorageContainers -id $storageIds
-    Returns all containers from the specified storage accounts.
-
-.EXAMPLE
-    PS> Get-AzStorageContainers -id $storageIds -PublicAccess
-    Returns only containers that have public access enabled.
-
-.EXAMPLE
-    PS> Get-AzStorageContainers -id $storageIds -ThrottleLimit 50
-    Returns containers with a maximum of 50 concurrent operations.
+Specifies the maximum number of parallel threads to use for processing. The default value is 10.
 
 .INPUTS
-    System.Array
-    You can pipe storage account resource IDs to this function.
+None directly. Accepts pipeline input for the `Id` parameter.
 
 .OUTPUTS
-    System.Collections.ArrayList
-    Returns an ArrayList containing container information.
+System.Collections.Generic.List[PSObject]
+Returns a list of storage containers as PSObject instances.
+
+.EXAMPLE
+# Example 1: Retrieve all storage containers in the current Azure context
+Get-StorageContainerList
+
+.EXAMPLE
+# Example 2: Retrieve storage containers with public access enabled
+Get-StorageContainerList -PublicAccess
+
+.EXAMPLE
+# Example 3: Retrieve storage containers with a custom throttle limit
+Get-StorageContainerList -ThrottleLimit 5
 
 .NOTES
-    Dependencies:
-    - Az.Accounts module
-    - Az.Storage module
-    - Active Azure connection (Connect-AzAccount)
-    - Appropriate RBAC permissions on the storage accounts
-    - BlackCat module (for Invoke-BlackCat function)
-
-    File: Get-AzStorageContainers.ps1
+- This function requires the Azure PowerShell module to be installed and authenticated.
+- The function uses Azure REST API to fetch container details and requires appropriate permissions.
 
 .LINK
-    https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction
-
-.COMPONENT
-    BlackCat
-
-.FUNCTIONALITY
-    Azure Storage Container Management
+https://learn.microsoft.com/en-us/powershell/azure/
 #>
 }

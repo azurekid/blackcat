@@ -1,4 +1,4 @@
-function Get-StorageAccountKeys {
+function Get-StorageAccountKey {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
@@ -29,6 +29,8 @@ function Get-StorageAccountKeys {
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
@@ -61,6 +63,7 @@ function Get-StorageAccountKeys {
                         Headers = $using:script:authHeader
                         Uri     = $uri
                         Method  = 'POST'
+                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     $apiResponse = Invoke-RestMethod @requestParam
@@ -85,4 +88,61 @@ function Get-StorageAccountKeys {
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
         return $result
     }
+<#
+.SYNOPSIS
+Retrieves the storage account keys for specified Azure Storage Accounts.
+
+.DESCRIPTION
+The `Get-StorageAccountKey` function retrieves the access keys for Azure Storage Accounts.
+It supports retrieving keys by storage account name, resource group name, or resource ID.
+The function also supports retrieving Kerberos keys if specified.
+
+.PARAMETER Name
+Specifies the name(s) of the storage account(s) to retrieve keys for.
+This parameter accepts an array of strings and supports pipeline input.
+
+.PARAMETER ResourceGroupName
+Specifies the name(s) of the resource group(s) containing the storage account(s).
+This parameter accepts an array of strings.
+
+.PARAMETER Id
+Specifies the resource ID(s) of the storage account(s).
+This parameter accepts an object and supports pipeline input by property name.
+
+.PARAMETER KerbKey
+Indicates whether to retrieve Kerberos keys for the storage account(s).
+This is a switch parameter.
+
+.PARAMETER ThrottleLimit
+Specifies the maximum number of concurrent operations to run when retrieving keys.
+The default value is 100.
+
+.INPUTS
+- [string[]] Name
+- [string[]] ResourceGroupName
+- [object] Id
+
+.OUTPUTS
+- [PSCustomObject] A custom object containing the storage account name and its keys.
+
+.EXAMPLE
+Get-StorageAccountKey -Name "mystorageaccount" -ResourceGroupName "myresourcegroup"
+
+Retrieves the keys for the storage account named "mystorageaccount" in the resource group "myresourcegroup".
+
+.EXAMPLE
+Get-StorageAccountKey -Id "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{storageAccountName}"
+
+Retrieves the keys for the storage account specified by its resource ID.
+
+.EXAMPLE
+Get-StorageAccountKey -KerbKey
+
+Retrieves the Kerberos keys for all storage accounts in the current subscription.
+
+.NOTES
+- This function uses Azure REST API to retrieve storage account keys.
+- Ensure that you have the necessary permissions to access the storage accounts.
+
+#>
 }
