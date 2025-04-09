@@ -4,6 +4,30 @@
 
 # CHANGELOG
 
+## v0.12.0 [2025-04-09]
+
+This version includes several significant changes to the BlackCat module, primarily focusing on enhancing the module's functionality and cleaning up outdated references. The most important changes include specifying the functions and files to export, removing outdated role definitions, and cleaning up unused references.
+
+_Improvements_
+
+#### Enhancements to module functionality:
+
+- `BlackCat.psd1`: Updated FunctionsToExport to list specific functions instead of using wildcards, improving performance and clarity.
+- `BlackCat.psd1`: Updated FileList to include specific files, ensuring all necessary scripts are packaged with the module.
+
+#### Cleanup of outdated references:
+
+`Private/Reference/AppRoleIds.csv`: Removed outdated role definitions to maintain current and relevant role information.
+`Private/Reference/AzureRoles.csv`: Removed outdated role definitions to maintain current and relevant role information.
+`Private/Reference/EntraRoles.csv`: Removed outdated role definitions to maintain current and relevant role information.
+`Private/Reference/permutations.txt`: Removed unused permutations, cleaning up the file for better maintainability.
+`Private/Reference/userAgents.json`: Removed outdated user agent strings to keep the file up-to-date with current user agents.
+`Private/Reference/ServiceTags.json`: Removed outdated servicetags, latest version in installed when module is imported.
+
+_What's New_
+
+- Added aliasses to the function parameters for a more native cli / linux user experience.
+
 ## v0.11.0 [2025-04-09]
 
 _Improvements_
