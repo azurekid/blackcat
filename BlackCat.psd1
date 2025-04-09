@@ -30,7 +30,42 @@
     Description       = 'Helper module to validate Azure Security'
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = '*'
+    FunctionsToExport = @(
+        'Add-EntraApplication',
+        'Add-StorageAccountSasToken',
+        'ConvertFrom-JWT',
+        'Get-AccessTokens',
+        'Get-AppRolePermission',
+        'Get-AzResourceSecretList',
+        'Get-CurrentUser',
+        'Get-EntraInformation',
+        'Get-FederatedAppCredential',
+        'Get-KeyVaultSecret',
+        'Get-ManagedIdentity',
+        'Get-PrivilegedApp',
+        'Get-PublicResourceList',
+        'Get-PublicStorageAccountContent',
+        'Get-PublicStorageAccountList',
+        'Get-RoleAssignment',
+        'Get-ServicePrincipalsPermission',
+        'Get-ServiceTag',
+        'Get-StorageAccountKey',
+        'Get-StorageContainerList',
+        'Invoke-AzBatch',
+        'Invoke-MsGraph',
+        'Invoke-Update',
+        'New-AuthHeader',
+        'New-JWT',
+        'Read-SASToken',
+        'Restore-DeletedIdentity',
+        'Set-AzNetworkSecurityGroupRule',
+        'Set-Context',
+        'Set-FederatedIdentity',
+        'Set-FunctionAppSecret',
+        'Set-ManagedIdentityPermission',
+        'Switch-Context',
+        'Update-ServiceTag'
+    )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     CmdletsToExport   = '*'
@@ -42,7 +77,48 @@
     AliasesToExport   = '*'
 
     # List of all files packaged with this module
-    FileList = @()
+    FileList = @(
+        'Private\Invoke-BlackCat.ps1',
+        'Private\Get-AccessToken.ps1',
+        'Private\CidrAddresses.ps1',
+        'Private\Invoke-SplitJWT.ps1',
+        'Private\Write-Message.ps1',
+        'Private\Test-DnsName.ps1',
+        'Private\Get-AllPages.ps1',
+        'Public\Credentials\Get-KeyVaultSecret.ps1',
+        'Public\Credentials\Get-StorageAccountKey.ps1',
+        'Public\Discovery\Get-AppRolePermission.ps1',
+        'Public\Discovery\Get-FederatedAppCredential.ps1',
+        'Public\Discovery\Get-PrivilegedApp.ps1',
+        'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
+        'Public\Exfiltration\Get-AccessTokens.ps1',
+        'Public\Exfiltration\Get-PublicStorageAccountContent.ps1',
+        'Public\Helpers\ConvertFrom-JWT.ps1',
+        'Public\Helpers\Get-ServiceTag.ps1',
+        'Public\Helpers\Invoke-Update.ps1',
+        'Public\Helpers\New-AuthHeader.ps1',
+        'Public\Helpers\New-JWT.ps1',
+        'Public\Helpers\Read-SASToken.ps1',
+        'Public\Helpers\Switch-Context.ps1',
+        'Public\Helpers\Update-ServiceTag.ps1',
+        'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
+        'Public\Persistence\Add-StorageAccountSasToken.ps1',
+        'Public\Persistence\Set-FederatedIdentity.ps1',
+        'Public\Persistence\Set-ManagedIdentityPermission.ps1',
+        'Public\Persistence\Set-FunctionAppSecret.ps1',
+        'Public\Reconnaissance\Get-CurrentUser.ps1',
+        'Public\Reconnaissance\Get-EntraInformation.ps1',
+        'Public\Reconnaissance\Get-ManagedIdentity.ps1',
+        'Public\Reconnaissance\Get-StorageContainerList.ps1',
+        'Public\Reconnaissance\Invoke-AzBatch.ps1',
+        'Public\Reconnaissance\Invoke-MsGraph.ps1',
+        'Public\Reconnaissance\anonymous\Get-PublicResourceList.ps1',
+        'Public\Reconnaissance\anonymous\Get-PublicStorageAccountList.ps1',
+        'Public\Resource Development\Add-EntraApplication.ps1',
+        'Public\Resource Development\Restore-DeletedIdentity.ps1',
+        'BlackCat.psd1'
+        'BlackCat.psm1'
+    )
 
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
     PrivateData       = @{
