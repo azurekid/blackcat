@@ -1,4 +1,4 @@
-function Get-ServicePrincipalsPermissions {
+function Get-ServicePrincipalsPermission {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -21,6 +21,7 @@ function Get-ServicePrincipalsPermissions {
                 Headers = $script:graphHeader
                 Uri     = $uri
                 Method  = 'GET'
+                UserAgent = $($sessionVariables.userAgent)
             }
 
             return (Invoke-RestMethod @requestParam).value
@@ -35,13 +36,13 @@ function Get-ServicePrincipalsPermissions {
 Retrieves the app role assignments for a specified service principal from Microsoft Graph.
 
 .DESCRIPTION
-The Get-MsServicePrincipalsPermissions function retrieves the app role assignments for a specified service principal from Microsoft Graph. It requires the service principal ID as a mandatory parameter.
+The Get-ServicePrincipalsPermission function retrieves the app role assignments for a specified service principal from Microsoft Graph. It requires the service principal ID as a mandatory parameter.
 
 .PARAMETER servicePrincipalId
 The unique identifier (GUID) of the service principal. This parameter is mandatory and must match the expected GUID pattern.
 
 .EXAMPLE
-PS> Get-MsServicePrincipalsPermissions -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
+PS> Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
 This example retrieves the app role assignments for the specified service principal.
 
 .NOTES

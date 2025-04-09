@@ -7,7 +7,7 @@ class appRoleNames : IValidateSetValuesGenerator {
     }
 }
 
-function Get-AppRolePermissions {
+function Get-AppRolePermission {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -52,7 +52,7 @@ function Get-AppRolePermissions {
 Retrieves the permissions for a specified Microsoft App Role.
 
 .DESCRIPTION
-The Get-MsAppRolePermissions function retrieves the permissions associated with a specified Microsoft App Role. 
+The Get-AppRolePermission function retrieves the permissions associated with a specified Microsoft App Role.
 It can filter permissions based on the App Role ID or App Role Name and Type.
 
 .PARAMETER appRoleId
@@ -65,13 +65,13 @@ The name of the App Role. Valid values are auto-generated from the session varia
 The type of the App Role. Valid values are 'Application' and 'Delegated'. Default is 'Application'.
 
 .EXAMPLE
-Get-MsAppRolePermissions -appRoleId "12345678-1234-1234-1234-1234567890ab"
+Get-AppRolePermission -appRoleId "12345678-1234-1234-1234-1234567890ab"
 
 .EXAMPLE
-Get-MsAppRolePermissions -appRoleName "User.Read" -Type "Delegated"
+Get-AppRolePermission -appRoleName "User.Read" -Type "Delegated"
 
 .EXAMPLE
-Get-MsServicePrincipalsPermissions | Get-MsAppRolePermissions
+Get-MsServicePrincipalsPermissions | Get-AppRolePermission
 
 .NOTES
 This function uses session variables to retrieve the App Role permissions. Ensure that the session variables are properly initialized before calling this function.

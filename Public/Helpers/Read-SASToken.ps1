@@ -13,7 +13,7 @@ function Read-SASToken {
     process {
         #region common
 
-        Write-Host "[+] Start collection SAS Token information"
+        Write-Output "[+] Start collection SAS Token information"
 
         #Variables
         Add-Type -AssemblyName system.web

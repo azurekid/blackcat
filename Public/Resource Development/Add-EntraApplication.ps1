@@ -1,12 +1,9 @@
 function Add-EntraApplication {
     [cmdletbinding()]
+    [OutputType([hashtable])]
     param (
         [Parameter(Mandatory = $false)]
-        [string]$DisplayName = 'MS-PIM',
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet('SingleTenant', 'MultiTenant')]
-        [string]$SignInAudience = 'SingleTenant'
+        [string]$DisplayName = 'MS-PIM'
     )
 
     begin {
@@ -29,8 +26,8 @@ function Add-EntraApplication {
                 Method  = 'POST'
                 Body    = $applicationBody
                 ContentType = 'application/json'
+                UserAgent = $($sessionVariables.userAgent)
             }
-
             $appRegistration = Invoke-RestMethod @requestParam
 
 
@@ -47,6 +44,7 @@ function Add-EntraApplication {
                     Method  = 'POST'
                     Body    = $spBody
                     ContentType = 'application/json'
+                    UserAgent = $($sessionVariables.userAgent)
                 }
 
                 $servicePrincipal = Invoke-RestMethod @spRequest
@@ -65,6 +63,7 @@ function Add-EntraApplication {
                     Method  = 'POST'
                     Body    = $roleBody
                     ContentType = 'application/json'
+                    UserAgent = $($sessionVariables.userAgent)
                 }
 
                 Invoke-RestMethod @roleRequest
@@ -85,20 +84,13 @@ function Add-EntraApplication {
 Creates an Entra ID Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .DESCRIPTION
-The Add-EntraApplication function automates the creation of an Entra ID Application and its corresponding Service Principal. 
+The Add-EntraApplication function automates the creation of an Entra ID Application and its corresponding Service Principal.
 It also assigns the Global Administrator role to the Service Principal. This function uses Microsoft Graph API to perform the operations.
 
 .PARAMETER DisplayName
 Specifies the display name of the Entra ID Application. Defaults to 'MS-PIM' if not provided.
 
-.PARAMETER SignInAudience
-Specifies the sign-in audience for the Azure AD Application. 
-Valid values are 'SingleTenant' and 'MultiTenant'. Defaults to 'SingleTenant'.
-
-.EXAMPLE
-Add-EntraApplication -DisplayName "MyApp" -SignInAudience "MultiTenant"
-
-This example creates an Entra ID Application named "MyApp" with a sign-in audience of "MultiTenant", 
+This example creates an Entra ID Application named "MyApp" with a sign-in audience of "MultiTenant",
 creates its Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .NOTES

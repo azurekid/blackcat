@@ -1,14 +1,14 @@
 function New-AuthHeader {
-    [cmdletbinding()]
+    [cmdletbinding(SupportsShouldProcess = $true)]
+    [OutputType([System.Collections.Hashtable])]
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub', 'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase', 'ServiceBus', 'Storage', 'Synapse', 'Other')]
         [string]$EndpointType,
 
-        
         [Parameter(Mandatory = $false)]
         [ValidatePattern('^(https?)://[^\s/$.?#].[^\s]*$')]
-        [string]$endpointUri
+        [string]$EndpointUri
     )
 
     begin {
@@ -21,7 +21,7 @@ function New-AuthHeader {
 
             # Use the provided endpoint URI
             $endpoints = @{
-            Other = $endpointUri
+                Other = $endpointUri
             }
         } else {
             # Use predefined endpoints for other types
@@ -48,51 +48,65 @@ function New-AuthHeader {
     }
 
     process {
-        try {
-            # Get the access token for the specified endpoint
-            $context = Get-AzContext
-            if (-not $context) {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No Azure context found. Please run Connect-AzAccount first." -Severity 'Error'
+        if ($PSCmdlet.ShouldProcess("EndpointType: $EndpointType", "Generate authentication header")) {
+            try {
+                # Get the access token for the specified endpoint
+                $context = Get-AzContext
+                if (-not $context) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No Azure context found. Please run Connect-AzAccount first." -Severity 'Error'
+                }
+
+                $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
+
+                # Create and return the authentication header
+                $authHeader = @{
+                    'Authorization' = "Bearer $($token.Token)"
+                    'Content-Type'  = 'application/json'
+                }
+
+                return $authHeader
             }
-
-            $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
-
-            # Create and return the authentication header
-            $authHeader = @{
-                'Authorization' = "Bearer $($token.Token)"
-                'Content-Type'  = 'application/json'
+            catch {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
             }
-
-            return $authHeader
-        }
-        catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
 
     <#
     .SYNOPSIS
-        Generates an authentication header for Azure REST API interactions.
+        Creates an authentication header for Azure REST API interactions.
 
     .DESCRIPTION
-        This function creates an authentication header based on the current Azure context. 
-        It supports various Azure endpoints, including Microsoft Graph, Key Vault, Azure Management API, 
-        ,Log Analytics and several others.
+        The `New-AuthHeader` function generates an authentication header for various Azure services and APIs.
+        It uses the current Azure context to retrieve an access token for the specified endpoint type.
+        The function supports predefined Azure endpoints as well as custom endpoints when 'Other' is selected.
 
     .PARAMETER EndpointType
-        Specifies the type of Azure endpoint to authenticate against. 
-        Acceptable values are: 'MSGraph', 'KeyVault', 'Azure', 'LogAnalytics', 'Other'.
+        Specifies the type of Azure endpoint to authenticate against.
+        Acceptable values are:
+        'Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub', 'IoTHub',
+        'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase', 'ServiceBus', 'Storage',
+        'Synapse', 'Other'.
+
+    .PARAMETER EndpointUri
+        Specifies a custom endpoint URI when 'Other' is selected as the EndpointType.
+        This parameter is optional but required when 'Other' is used. It must be a valid HTTP or HTTPS URL.
 
     .EXAMPLE
-        Create-AuthHeader -EndpointType 'MSGraph'
-        Generates an authentication header for accessing Microsoft Graph API.
+        New-AuthHeader -EndpointType 'MSGraph'
+        Generates an authentication header for accessing the Microsoft Graph API.
 
     .EXAMPLE
-        Create-AuthHeader -EndpointType 'KeyVault'
-        Generates an authentication header for accessing Key Vault API.
+        New-AuthHeader -EndpointType 'KeyVault'
+        Generates an authentication header for accessing the Azure Key Vault API.
+
+    .EXAMPLE
+        New-AuthHeader -EndpointType 'Other' -EndpointUri 'https://custom.endpoint.com'
+        Generates an authentication header for a custom endpoint.
 
     .NOTES
         Author: Rogier Dijkman
-        Prerequisite: Az.Accounts module
+        Prerequisite: Az.Accounts module must be installed and the user must be logged in using `Connect-AzAccount`.
+        The function uses `Get-AzAccessToken` to retrieve the access token for the specified endpoint.
     #>
 }

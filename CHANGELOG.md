@@ -1,21 +1,42 @@
 [![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjUsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
 
 ![logo](/.github/media/cateye.png?raw=true)
+
 # CHANGELOG
 
-## v0.10.5 [2025-04-11]
+## v0.11.0 [2025-04-09]
+
+_Improvements_
+
+- Updated functions to use `Invoke-AzBatch` and `Invoke-MsGraph` for consistency faster processing.
+- Renamed functions for more clarity.
+- Resolved `PSScriptAnalyzer` findings.
+- Enhanced rotating User Agent to all Web Requests.
+- Added documentation to several functions.
+- Extended parameters and filtering.
+
+## v0.10.5 [2025-04-07]
 
 _Improvements_
 
 - Simplified the `Update-AzConfig`.
-- Added PSGallery deployment
-- Enhanced the installation instructions in `README.md` by adding a section for installing from PSGallery.… in README
+- Added **PSGallery deployment**
+- Enhanced the installation instructions in `README.md` by adding a section for installing from **PSGallery**.… in README
 
 _Bug fixes_
 
 - Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`. 
 
-## v0.10.4 [2025-04-10]
+_Bug fixes_
+
+- BlackCat is now available from the PSGallery
+
+```powershell
+Install-Module -Name BlackCat
+Import-Module -Name BlackCat
+```
+
+## v0.10.4 [2025-04-06]
 
 _Bug fixes_
 

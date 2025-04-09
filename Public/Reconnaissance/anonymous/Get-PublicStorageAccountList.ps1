@@ -1,5 +1,6 @@
-function Get-PublicStorageAccounts {
+function Get-PublicStorageAccountList {
     [cmdletbinding()]
+    [OutputType([System.Collections.ArrayList])] # Updated OutputType
     [Alias("bl cli public storage accounts")]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -33,7 +34,7 @@ function Get-PublicStorageAccounts {
 
         # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $userAgents = $sessionVariables.userAgents.agents
+        $userAgent = ($sessionVariables.userAgents.agents | Get-Random).value
         $result = New-Object System.Collections.ArrayList
     }
 
@@ -87,17 +88,17 @@ function Get-PublicStorageAccounts {
                     $result          = $using:result
                     $includeEmpty    = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
-                    $userAgents      = $using:userAgents
+                    $userAgent       = $using:userAgent
 
                     $permutations | ForEach-Object -Parallel {
                         $dns             = $using:dns
                         $result          = $using:result
                         $includeEmpty    = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
-                        $userAgents      = $using:userAgents
+                        $userAgent       = $using:userAgent
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
-                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
                             if ($includeEmpty -or $response.Content -match '<Blob>') {
@@ -118,7 +119,7 @@ function Get-PublicStorageAccounts {
 
                             if ($IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
-                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $($userAgents.value | Get-Random) -UseBasicParsing -SkipHttpErrorCheck
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
                                 $metaResponse.Headers.GetEnumerator() | Where-Object { $_.Key -like 'x-ms-meta-*' } | ForEach-Object {
@@ -148,45 +149,4 @@ function Get-PublicStorageAccounts {
             return $result
         }
     }
-<#
-.SYNOPSIS
-Retrieves public Azure Storage Accounts and their containers.
-
-.DESCRIPTION
-The Get-AzPublicStorageAccounts function retrieves public Azure Storage Accounts and their containers by performing DNS resolution and container checks. It supports parallel processing for efficient DNS resolution and container checks.
-
-.PARAMETER StorageAccountName
-The name of the Azure Storage Account to check. This parameter is optional.
-
-.PARAMETER Type
-The type of storage service to check. Valid values are 'blob', 'file', 'queue', 'table', 'dfs'. The default value is 'blob'.
-
-.PARAMETER WordList
-A file path to a list of words to use for generating permutations of DNS names. This parameter is optional.
-
-.PARAMETER ThrottleLimit
-The maximum number of concurrent operations for parallel processing. The default value is 1000.
-
-.PARAMETER IncludeEmpty
-A switch to include empty containers in the results. This parameter is optional.
-
-.PARAMETER IncludeMetadata
-A switch to include metadata of the containers in the results. This parameter is optional.
-
-.EXAMPLE
-PS> Get-AzPublicStorageAccounts -StorageAccountName "mystorageaccount"
-
-Retrieves public containers for the specified storage account.
-
-.EXAMPLE
-PS> Get-AzPublicStorageAccounts -StorageAccountName "mystorageaccount" -Type "file" -IncludeEmpty
-
-Retrieves public file containers for the specified storage account, including empty containers.
-
-.EXAMPLE
-PS> Get-AzPublicStorageAccounts -WordList "C:\wordlist.txt" -ThrottleLimit 500
-
-.NOTES
-Author: Rogier Dijkman
-#>
 }

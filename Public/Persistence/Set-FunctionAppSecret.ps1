@@ -1,5 +1,5 @@
 function Set-FunctionAppSecret {
-    [cmdletbinding()]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
@@ -21,34 +21,38 @@ function Set-FunctionAppSecret {
     )
 
     begin {
+        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
+
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 
     process {
         try {
-            $baseUri = "https://management.azure.com"
-            $resourceId = (Invoke-AzBatch -ResourceType 'Microsoft.Web/sites' | Where-Object Name -eq "$Name").id
-            $uri = "$($baseUri)$resourceId/host/default/functionKeys/$($KeyName)?api-version=2024-04-01"
+            if ($PSCmdlet.ShouldProcess("Function App '$Name'", "Set secret key '$KeyName'")) {
+                $baseUri = "https://management.azure.com"
+                $resourceId = (Invoke-AzBatch -ResourceType 'Microsoft.Web/sites' | Where-Object Name -eq "$Name").id
+                $uri = "$($baseUri)$resourceId/host/default/functionKeys/$($KeyName)?api-version=2024-04-01"
 
-            # Prepare the request body
-            $body = @{
-                properties = @{
-                    value = $KeyValue
+                # Prepare the request body
+                $body = @{
+                    properties = @{
+                        value = $KeyValue
+                    }
                 }
+
+                $requestParam = @{
+                    Headers     = $authHeader
+                    Uri         = $uri
+                    Method      = 'PUT'
+                    Body        = $body | ConvertTo-Json -Depth 10
+                    ContentType = 'application/json'
+                    UserAgent   = $sessionVariables.userAgent
+                }
+
+                $apiResponse = Invoke-RestMethod @requestParam
+                return $apiResponse
             }
-
-            $requestParam = @{
-                Headers     = $authHeader
-                Uri         = $uri
-                Method      = 'PUT'
-                Body        = $body | ConvertTo-Json -Depth 10
-                ContentType = 'application/json'
-            }
-
-            $apiResponse = Invoke-RestMethod @requestParam
-            return $apiResponse
-
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
