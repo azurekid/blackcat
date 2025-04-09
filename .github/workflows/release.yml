@@ -17,15 +17,17 @@ jobs:
         run: |
           Write-Host "Publishing module to PowerShell Gallery"
 
-          $tempPath = '.\src\BlackCat\'
+          $tempPath = New-Item -Path .\src\ -ItemType Directory -Force
+
           # publish module
           Write-Host "Publishing module to PowerShell Gallery"
 
           # Set the path to the module
-          Copy-Item .\Private\ -Recurse -Destination $tempPath -Force
-          Copy-Item .\Public\ -Recurse -Destination $tempPath -Force
           Copy-Item .\BlackCat.psd1 -Destination $tempPath -Force
           Copy-Item .\BlackCat.psm1 -Destination $tempPath -Force
+          Copy-Item .\Private -Recurse -Destination $tempPath -Force
+          Copy-Item .\Public -Recurse -Destination $tempPath -Force
+
 
           # Publish the module to the PowerShell Gallery
           Publish-Module -Path "$tempPath" -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
