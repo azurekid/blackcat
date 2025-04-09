@@ -5,6 +5,13 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '.github/**'
+      - '.devcontainer/**'
+      - 'invokes/**'
+      - 'support-files/**'
+      - '*.md'
+
   workflow_dispatch:
 
 jobs:
