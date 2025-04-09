@@ -23,7 +23,7 @@ function Invoke-MsGraph {
         do {
             try {
                 if ($NoBatch) {
-                    $uri = "$($sessionVariables.graphUri)/$relativeUrl"
+                    $uri = "$($sessionVariables.graphUri)/$relativeUrl" -replace 'applications/\(', 'applications('
                     Write-Verbose "Invoking Microsoft Graph API: $uri"
                     $requestParam = @{
                         Headers = $script:graphHeader

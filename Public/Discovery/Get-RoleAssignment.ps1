@@ -7,7 +7,7 @@ function Get-RoleAssignment {
         [switch]$CurrentUser,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [ValidateSet('User', 'Group', 'ServicePrincipal', 'Other')]
+        [ValidateSet('User', 'Group', 'ServicePrincipal')]
         [Alias('principal-type')]
         [string]$PrincipalType,
 
@@ -16,7 +16,7 @@ function Get-RoleAssignment {
         [switch]$IsCustom,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [Alias('object-id')]
+        [Alias('object-id', 'PrincipalId', 'principal-id', 'id')]
         [string]$ObjectId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -25,8 +25,8 @@ function Get-RoleAssignment {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [Alias('skip-custom')]
-        [switch]$SkipCustom,
+        [Alias('exclude-custom')]
+        [switch]$ExcludeCustom,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
@@ -90,7 +90,7 @@ function Get-RoleAssignment {
                     $azureRoles          = $using:script:SessionVariables.AzureRoles
                     $PrincipalType       = $using:PrincipalType
                     $IsCustom            = $using:IsCustom
-                    $SkipCustom          = $using:SkipCustom
+                    $ExcludeCustom       = $using:ExcludeCustom
                     $subscriptionId      = $_
 
                     Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
@@ -147,7 +147,7 @@ function Get-RoleAssignment {
                                     UserAgent = $userAgent
                                 }
 
-                                if (-not $SkipCustom) {
+                                if (-not $ExcludeCustom) {
                                     Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
                                     $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
                                 }
@@ -186,66 +186,66 @@ function Get-RoleAssignment {
         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Completed" -Severity 'Information'
         return $roleAssignmentsList
     }
-
     <#
     .SYNOPSIS
-        Retrieves role assignments across Azure subscriptions for the authenticated context.
+        Retrieves Azure Role-Based Access Control (RBAC) role assignments for the authenticated context.
 
     .DESCRIPTION
-        Get-RoleAssignments queries Azure RBAC (Role Based Access Control) assignments across all accessible
-        subscriptions or a specified subscription. It supports filtering by principal type, object ID, and
-        can isolate assignments for the current user.
-
-        The function utilizes parallel processing to optimize performance when querying multiple subscriptions,
-        with configurable throttling to respect API limits.
+        The `Get-RoleAssignment` function retrieves RBAC role assignments across Azure subscriptions for the authenticated user or specified criteria.
+        It supports filtering by principal type, object ID, subscription ID, and custom roles. The function uses parallel processing to optimize performance
+        when querying multiple subscriptions, with a configurable throttle limit to respect API rate limits.
 
     .PARAMETER CurrentUser
-        Switch parameter to filter results to only show role assignments for the currently authenticated user.
+        Filters results to show role assignments for the currently authenticated user. This parameter is a switch.
 
     .PARAMETER PrincipalType
-        Filters results by principal type. Valid options:
+        Filters results by the type of principal. Valid options are:
         - User
         - Group
         - ServicePrincipal
-        - Other
 
     .PARAMETER ObjectId
-        Filters results by the specific Azure AD Object ID (GUID).
+        Filters results by a specific Azure AD Object ID (GUID). This can be used to target a specific user, group, or service principal.
 
     .PARAMETER SubscriptionId
-        Limits query to a single subscription ID. If omitted, queries all accessible subscriptions.
+        Limits the query to a specific subscription ID. If omitted, the function queries all accessible subscriptions.
+
+    .PARAMETER IsCustom
+        Filters results to include only custom roles. This parameter is a switch.
+
+    .PARAMETER ExcludeCustom
+        Skips retrieving custom role definitions. This parameter is a switch.
 
     .PARAMETER ThrottleLimit
-        Maximum number of concurrent operations. Default is 10 to respect RBAC API rate limits.
-        Performance notes:
-        - 10 concurrent operations: ~2 minutes for 175 subscriptions/23K assignments
-        - 1000 concurrent operations: ~8 minutes for same scope
+        Specifies the maximum number of concurrent operations. The default value is 10. Adjust this value to balance performance and API rate limits.
 
     .OUTPUTS
-        Array of custom objects containing:
-        - PrincipalType: The Azure AD principal type
-        - PrincipalId: The Azure AD object ID of the principal
-        - RoleName: The display name of the RBAC role
-        - Scope: The resource scope of the assignment
+        Returns a collection of custom objects with the following properties:
+        - PrincipalType: The type of Azure AD principal (e.g., User, Group, ServicePrincipal).
+        - PrincipalId: The Azure AD Object ID of the principal.
+        - RoleName: The display name of the RBAC role.
+        - Scope: The resource scope of the role assignment.
+        - IsCustom: Indicates whether the role is a custom role.
 
     .EXAMPLE
-        Get-RoleAssignments -CurrentUser
-        Returns all role assignments for the authenticated user across all accessible subscriptions.
+        Get-RoleAssignment -CurrentUser
+        Retrieves all role assignments for the currently authenticated user across all accessible subscriptions.
 
     .EXAMPLE
-        Get-RoleAssignments -PrincipalType Group
+        Get-RoleAssignment -PrincipalType Group
         Lists all role assignments granted to Azure AD groups across all accessible subscriptions.
 
     .EXAMPLE
-        Get-RoleAssignments -PrincipalType ServicePrincipal -ObjectId '00000000-0000-0000-0000-000000000000'
+        Get-RoleAssignment -PrincipalType ServicePrincipal -ObjectId '00000000-0000-0000-0000-000000000000'
         Retrieves role assignments for a specific service principal identified by its Object ID.
 
     .EXAMPLE
-        Get-RoleAssignments -SubscriptionId '00000000-0000-0000-0000-000000000000' -ThrottleLimit 20
-        Gets all role assignments in the specified subscription with increased concurrent operations.
+        Get-RoleAssignment -SubscriptionId '00000000-0000-0000-0000-000000000000' -ThrottleLimit 20
+        Retrieves all role assignments in the specified subscription with an increased throttle limit for concurrent operations.
 
     .NOTES
-        Requires appropriate Azure RBAC permissions to read role assignments at the queried scope.
-        Consider API rate limits when adjusting ThrottleLimit parameter.
+        - Requires appropriate Azure RBAC permissions to read role assignments at the queried scope.
+        - Be mindful of API rate limits when adjusting the `ThrottleLimit` parameter.
+        - The function uses parallel processing to improve performance when querying multiple subscriptions.
     #>
 }

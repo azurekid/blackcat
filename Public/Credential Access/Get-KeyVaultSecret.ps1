@@ -9,6 +9,10 @@ function Get-KeyVaultSecret {
         [Alias('vault', 'key-vault-name', 'KeyVaultName')]
         [string[]]$Name,
 
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
+        [Alias('rg', 'resource-group')]
+        [string[]]$ResourceGroupName,
+
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
         [int]$ThrottleLimit = 1000
