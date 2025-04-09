@@ -2,7 +2,9 @@ function Get-AccessTokens {
     [cmdletbinding()]
     [OutputType([string])] # Declares that the function can return a string
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch", IgnoreCase = $true)]
         [array]$ResourceTypeNames = @("MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", "Batch"),
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -69,33 +71,49 @@ function Get-AccessTokens {
     end {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
     }
-
     <#
-.SYNOPSIS
-    This function exports access tokens for specified resource types to a JSON file.
+    .SYNOPSIS
+        Retrieves and exports access tokens for specified Azure resource types.
 
-.DESCRIPTION
-    The Get-AccessTokens function requests access tokens for the specified resource types and exports them to a JSON file. It handles errors and logs messages accordingly.
+    .DESCRIPTION
+        The Get-AccessTokens function retrieves access tokens for specified Azure resource types and exports them to a JSON file.
+        It supports publishing the tokens to a secure sharing service or saving them locally. The function handles errors gracefully
+        and provides verbose logging for better traceability.
 
-.PARAMETER ResourceTypeNames
-    The ResourceTypeNames parameter is an optional array of strings that specifies the resource types for which to request access tokens. Default values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
+    .PARAMETER ResourceTypeNames
+        An optional array of strings specifying the Azure resource types for which to request access tokens.
+        Supported values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
+        The default value includes all supported resource types.
 
-.PARAMETER OutputFile
-    The OutputFile parameter is an optional string that specifies the path to the file where the tokens will be exported. The default value is "AccessTokens.json".
+    .PARAMETER OutputFile
+        An optional string specifying the path to the file where the tokens will be exported.
+        The default value is "accesstokens.json".
 
-.EXAMPLE
-    Get-AccessTokens -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
-    This example calls the Get-AccessToken function with specified resource types and output file.
+    .PARAMETER Publish
+        An optional switch parameter. If specified, the tokens will be published to a secure sharing service
+        (https://us.onetimesecret.com) instead of being saved to a file. The function will return a URL to access the shared tokens.
 
-.EXAMPLE
-    Get-AccessTokens -OutputFile "AccessTokens.json"
-    This example calls the Get-AccessToken function with the default resource types and a specified output file.
+    .EXAMPLE
+        Get-AccessTokens -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
+        Retrieves access tokens for "MSGraph" and "ResourceManager" resource types and saves them to "AccessTokens.json".
 
-.EXAMPLE
-    $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json
-    This example shows how to read the exported JSON file back into a PowerShell object for further use.
+    .EXAMPLE
+        Get-AccessTokens -Publish
+        Retrieves access tokens for all default resource types and publishes them to a secure sharing service.
+        Returns a URL to access the shared tokens.
 
-.LINK
-    For more information, see the related documentation or contact support.
-#>
+    .EXAMPLE
+        Get-AccessTokens -OutputFile "AccessTokens.json"
+        Retrieves access tokens for all default resource types and saves them to "AccessTokens.json".
+
+    .EXAMPLE
+        $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json
+        Reads the exported JSON file back into a PowerShell object for further use.
+
+    .NOTES
+        This function requires the Azure PowerShell module to be installed and authenticated.
+
+    .LINK
+        For more information, refer to the Azure PowerShell documentation or contact support.
+    #>
 }
