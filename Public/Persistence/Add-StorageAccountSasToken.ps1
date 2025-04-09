@@ -58,7 +58,7 @@ function Add-StorageAccountSasToken {
         This function adds a SAS token to a specified storage account using the REST API.
 
     .DESCRIPTION
-        The Add-SASTokenToStorageAccount function makes a POST request to add a SAS token to a specified storage account using the provided session variables and authentication headers. It handles errors and logs messages accordingly.
+        The Add-StorageAccountSasToken function makes a POST request to add a SAS token to a specified storage account using the provided session variables and authentication headers. It handles errors and logs messages accordingly.
 
     .PARAMETER Name
         The name parameter is a mandatory string that specifies the name of the storage account.
@@ -74,9 +74,9 @@ function Add-StorageAccountSasToken {
 
     .EXAMPLE
         ```powershell
-        Add-SASTokenToStorageAccount -Name "exampleStorageAccount" -ResourceGroupName "exampleResourceGroup" -SasToken "exampleSasToken" -TokenValidityDays 30
+        Add-StorageAccountSasToken -Name "exampleStorageAccount" -TokenValidityDays 30
         ```
-        This example calls the Add-SASTokenToStorageAccount function with the specified Name, ResourceGroupName, SasToken, and TokenValidityDays.
+        This example calls the Add-StorageAccountSasToken function with the specified Name and TokenValidityDays.
 
     .LINK
         For more information, see the related documentation or contact support.
