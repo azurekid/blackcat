@@ -4,6 +4,20 @@
 
 # CHANGELOG
 
+## v0.12.1 [2025-04-15]
+
+This version introduces new functionality to enhance the BlackCat module's capabilities and improve user experience. Several new functions have been added to extend the toolkit's feature set.
+
+_What's New_
+
+- Added `Get-AzureResourcePermissions` function to retrieve the current permissions a user has on Azure resources
+
+_Improvements_
+
+- Implemented caching mechanisms to reduce API calls and improve speed
+- Added detailed help documentation for all new functions
+- Updated parameter validation across multiple commands
+
 ## v0.12.0 [2025-04-09]
 
 This version includes several significant changes to the BlackCat module, primarily focusing on enhancing the module's functionality and cleaning up outdated references. The most important changes include specifying the functions and files to export, removing outdated role definitions, and cleaning up unused references.
