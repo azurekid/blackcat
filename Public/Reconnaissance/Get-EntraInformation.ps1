@@ -7,8 +7,13 @@ function Get-EntraInformation {
         [Parameter(Mandatory = $true, ParameterSetName = 'Name')]
         [string]$Name,
 
+        [Parameter(Mandatory = $true, ParameterSetName = 'UserPrincipalName')]
+        [ValidatePattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', ErrorMessage = "The value '{1}' is not a valid UPN format")]
+        [string]$UserPrincipalName,
+
         [Parameter(ParameterSetName = 'ObjectId')]
         [Parameter(ParameterSetName = 'Name')]
+        [Parameter(ParameterSetName = 'UserPrincipalName')]
         [switch]$Group
     )
 
@@ -38,6 +43,13 @@ function Get-EntraInformation {
                         $response = Invoke-MsGraph -relativeUrl "users?`$filter=startswith(displayName,'$Name') or startswith(userPrincipalName,'$Name')"
                         $isGroup = $false
                     }
+                }
+                'UserPrincipalName' {
+                    if ($Group) {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "The -Group parameter cannot be used with -UserPrincipalName. parameter." -Severity 'Error'
+                    }
+                    $response = Invoke-MsGraph -relativeUrl "users?`$filter=userPrincipalName eq '$UserPrincipalName'"
+                    $isGroup = $false
                 }
             }
 
@@ -75,6 +87,8 @@ function Get-EntraInformation {
                         ObjectId          = $item.id
                         GroupMemberships  = $groups.displayName
                         Roles             = $roles.displayName
+                        RoleIds           = $roles.id
+                        AccountEnabled    = $item.accountEnabled
                         Mail              = $item.mail
                         JobTitle          = $item.jobTitle
                         Department        = $item.department
