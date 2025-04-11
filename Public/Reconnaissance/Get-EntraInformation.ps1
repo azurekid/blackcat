@@ -20,6 +20,8 @@ function Get-EntraInformation {
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+
+        $userInfo = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
     }
 
     process {
@@ -52,8 +54,12 @@ function Get-EntraInformation {
                     $isGroup = $false
                 }
             }
+            $roleDetails = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions'
 
-            foreach ($item in $response) {
+            # foreach ($item in $response) {
+                $response | ForEach-Object {
+                    $item = $_
+
                 if ($isGroup) {
                     # Get group members
                     $members = Invoke-MsGraph -relativeUrl "groups/$($item.id)/members"
@@ -62,8 +68,8 @@ function Get-EntraInformation {
                     $roles = Invoke-MsGraph -relativeUrl "groups/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"
 
                     # Create custom object with group information
-                    [PSCustomObject]@{
-                        DisplayName      = $item.displayName
+                    $currentItem = [PSCustomObject]@{
+                        DisplayName     = $item.displayName
                         ObjectId        = $item.id
                         Description     = $item.description
                         Roles           = $roles.displayName
@@ -71,30 +77,42 @@ function Get-EntraInformation {
                         GroupType       = $item.groupTypes
                         MailEnabled     = $item.mailEnabled
                         SecurityEnabled = $item.securityEnabled
+                        IsPrivileged    = $False
                     }
+
                 } else {
-                    # Rest of the code for users remains the same
                     # Get group memberships
                     $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf"
 
                     # Get directory roles
                     $roles = Invoke-MsGraph -relativeUrl "users/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"
 
-                    # Create custom object with user information
-                    [PSCustomObject]@{
-                        UserPrincipalName = $item.userPrincipalName
+                    $currentItem = [PSCustomObject]@{
                         DisplayName       = $item.displayName
                         ObjectId          = $item.id
-                        GroupMemberships  = $groups.displayName
-                        Roles             = $roles.displayName
-                        RoleIds           = $roles.id
-                        AccountEnabled    = $item.accountEnabled
-                        Mail              = $item.mail
+                        UserPrincipalName = $item.userPrincipalName
                         JobTitle          = $item.jobTitle
                         Department        = $item.department
+                        GroupMemberships  = $groups.displayName
+                        Roles             = $roles.displayName
+                        Mail              = $item.mail
+                        AccountEnabled    = $item.accountEnabled
+                        IsPrivileged      = $False
+                    }
+
+                }
+                foreach ($role in $roles) {
+                    $privileged = ($roleDetails | Where-Object { $_.displayName -eq $role.displayName }).IsPrivileged
+
+                    if ($privileged -eq $true) {
+                        $currentItem.IsPrivileged = $true
+
                     }
                 }
+
+                ($userInfo).Add($currentItem)
             }
+            return $userInfo
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
