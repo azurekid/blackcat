@@ -61,11 +61,13 @@ function Get-EntraIDPermissions {
 
             $roleDetails = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions'
 
-            $response.Roles | ForEach-Object {
+            $response.Roles | ForEach-Object -parallel {
                 $roleName = $_
+                $roleDetails = $using:roleDetails
+
                 Write-Host "Processing role: $roleName" -ForegroundColor Yellow
                 $roleDetail = $roleDetails | Where-Object { $_.displayName -eq $roleName }
-                # Write-Host "Role ID Details: $($roleDetail | ConvertTo-Json -Depth 3)" -ForegroundColor Green
+
                 if ($roleDetail) {
                     $currentItem = [PSCustomObject]@{
                         RoleName     = $roleDetail.displayName
@@ -73,7 +75,7 @@ function Get-EntraIDPermissions {
                         Actions      = $roleDetail.rolePermissions.allowedResourceActions | Where-Object { $_ -notmatch 'read' }
                         IsPrivileged = $roleDetail.isPrivileged
                     }
-                    ($permissionsOverview).Add($currentItem)
+                    ($using:permissionsOverview).Add($currentItem)
                 }
             }
 
