@@ -4,6 +4,12 @@
 
 # CHANGELOG
 
+## v0.12.4 [2025-04-10]
+
+_Improvements_
+
+- Enrichment of the `Get-EntraInformation` function, which now includes a flag if the user has a privileged role assigned.([#21](https://github.com/azurekid/blackcat/issues/21))
+
 ## v0.12.2 [2025-04-10]
 
 _What's New_
@@ -95,7 +101,7 @@ Import-Module -Name BlackCat
 
 _Bug fixes_
 
-- Resolved mismatching on custom roles ([#20](https://github.com/azurekid/blackcat/issues/24)).
+- Resolved mismatching on custom roles ([#20](https://github.com/azurekid/blackcat/issues/20)).
 
 _What's new?_
 
