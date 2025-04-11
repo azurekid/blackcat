@@ -43,7 +43,7 @@ function Get-EntraIDPermissions {
                         $response = Get-EntraInformation -Name $Name -Group
                     }
                     else {
-                        $response = Get-EntraInformation -Name $ObjectId
+                        $response = Get-EntraInformation -Name $Name
                     }
                 }
                 'UserPrincipalName' {
