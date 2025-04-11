@@ -4,7 +4,24 @@
 
 # CHANGELOG
 
-## v0.12.1 [2025-04-15]
+## v0.12.2 [2025-04-10]
+
+_What's New_
+
+This version introduces a new function `Get-EntraIDPermissions`
+The changes improve the functionality for retrieving permissions and information from Microsoft Entra ID.
+
+* [`Public/Reconnaissance/Get-EntraIDPermissions.ps1`](diffhunk://#diff-38586cd0181e130cae82c08363f103378100397dd69a5e6c79889f5bdd4f6854R1-R147):
+Added the `Get-EntraIDPermissions` function to retrieve and list all permissions a user or group has in Microsoft Entra ID.
+The function supports querying by `ObjectId`, `Name`, or `UserPrincipalName`, and can optionally display only the actions a user can perform using the `ShowActions` switch.
+
+_Improvements_
+
+* [`Public/Reconnaissance/Get-EntraInformation.ps1`](diffhunk://#diff-4f5cf40731d4b799069e33bf6122dd0477072c8d9e0d4ebfb24100f7b9ad5222R10-R16): Added support for querying by `UserPrincipalName` with validation for the UPN format.
+- The function now includes additional details in the response, such as `RoleIds` and `AccountEnabled`. [[1]](diffhunk://#diff-4f5cf40731d4b799069e33bf6122dd0477072c8d9e0d4ebfb24100f7b9ad5222R10-R16) [[2]](diffhunk://#diff-4f5cf40731d4b799069e33bf6122dd0477072c8d9e0d4ebfb24100f7b9ad5222R47-R53) [[3]](diffhunk://#diff-4f5cf40731d4b799069e33bf6122dd0477072c8d9e0d4ebfb24100f7b9ad5222R90-R91)
+
+
+## v0.12.1 [2025-04-10]
 
 This version introduces new functionality to enhance the BlackCat module's capabilities and improve user experience. Several new functions have been added to extend the toolkit's feature set.
 

@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.12.1'
+    ModuleVersion     = '0.12.2'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -40,6 +40,7 @@
         'Get-AzureResourcePermission',
         'Get-CurrentUser',
         'Get-EntraInformation',
+        'Get-EntraIDPermissions',
         'Get-FederatedAppCredential',
         'Get-KeyVaultSecret',
         'Get-ManagedIdentity',
@@ -110,6 +111,7 @@
         'Public\Persistence\Set-FunctionAppSecret.ps1',
         'Public\Reconnaissance\Get-CurrentUser.ps1',
         'Public\Reconnaissance\Get-EntraInformation.ps1',
+        'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
         'Public\Reconnaissance\Get-ManagedIdentity.ps1',
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
