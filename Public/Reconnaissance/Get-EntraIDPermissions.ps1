@@ -1,12 +1,12 @@
 function Get-EntraIDPermissions {
     param (
-        [Parameter(Mandatory = $true, ParameterSetName = 'ObjectId')]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'ObjectId')]
         [string]$ObjectId,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'Name')]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $false, ParameterSetName = 'Name')]
         [string]$Name,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'UserPrincipalName')]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $false, ParameterSetName = 'UserPrincipalName')]
         [ValidatePattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', ErrorMessage = "The value '{1}' is not a valid UPN format")]
         [string]$UserPrincipalName,
 
@@ -59,20 +59,19 @@ function Get-EntraIDPermissions {
                 return
             }
 
-            $roleDetails = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions'
+            $roleDetails = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions' -ErrorVariable Err
 
             $response.Roles | ForEach-Object -parallel {
                 $roleName = $_
                 $roleDetails = $using:roleDetails
 
-                Write-Host "Processing role: $roleName" -ForegroundColor Yellow
                 $roleDetail = $roleDetails | Where-Object { $_.displayName -eq $roleName }
 
                 if ($roleDetail) {
                     $currentItem = [PSCustomObject]@{
                         RoleName     = $roleDetail.displayName
                         Description  = $roleDetail.description
-                        Actions      = $roleDetail.rolePermissions.allowedResourceActions | Where-Object { $_ -notmatch 'read' }
+                        Actions      = $roleDetail.rolePermissions.allowedResourceActions
                         IsPrivileged = $roleDetail.isPrivileged
                     }
                     ($using:permissionsOverview).Add($currentItem)

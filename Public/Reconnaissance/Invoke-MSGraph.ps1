@@ -8,7 +8,7 @@ function Invoke-MsGraph {
         [switch]$NoBatch,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
-        [int]$MaxRetries = 3,  # Maximum number of retries
+        [int]$MaxRetries = 3,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [int]$RetryDelaySeconds = 5 # Initial delay in seconds
@@ -26,10 +26,11 @@ function Invoke-MsGraph {
                     $uri = "$($sessionVariables.graphUri)/$relativeUrl" -replace 'applications/\(', 'applications('
                     Write-Verbose "Invoking Microsoft Graph API: $uri"
                     $requestParam = @{
-                        Headers = $script:graphHeader
-                        Uri     = $uri
-                        Method  = 'GET'
-                        UserAgent = $($sessionVariables.userAgent)
+                        Headers       = $script:graphHeader
+                        Uri           = $uri
+                        Method        = 'GET'
+                        UserAgent     = $($sessionVariables.userAgent)
+                        ErrorVariable = 'Err'
                     }
                 }
                 else {
@@ -45,16 +46,24 @@ function Invoke-MsGraph {
                     }
 
                     $requestParam = @{
-                        Headers     = $script:graphHeader
-                        Uri         = '{0}/$batch' -f $sessionVariables.graphUri
-                        Method      = 'POST'
-                        ContentType = 'application/json'
-                        Body        = $payload | ConvertTo-Json -Depth 10
-                        UserAgent   = $($sessionVariables.userAgent)
+                        Headers       = $script:graphHeader
+                        Uri           = '{0}/$batch' -f $sessionVariables.graphUri
+                        Method        = 'POST'
+                        ContentType   = 'application/json'
+                        Body          = $payload | ConvertTo-Json -Depth 10
+                        UserAgent     = $($sessionVariables.userAgent)
+                        ErrorVariable = 'Err'
                     }
                 }
 
-                $initialResponse = (Invoke-RestMethod @requestParam)
+                try {
+                    $initialResponse = (Invoke-RestMethod @requestParam)
+                } catch {
+                    if ($Err) {
+                        $ErrorMessage = ($Err.Message | ConvertFrom-Json).error.message
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "$($ErrorMessage)" -Severity 'Error'
+                    }
+                }
 
                 if ($NoBatch) {
                     return $initialResponse
@@ -84,9 +93,9 @@ function Invoke-MsGraph {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Unauthorized access to the Graph API." -Severity 'Error'
                     break # No point in retrying if unauthorized
                 }
-                 else {
+                else {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
-                     break # Break out of the retry loop for other errors
+                    break # Break out of the retry loop for other errors
                 }
             }
         } while ($retries -lt $MaxRetries)
