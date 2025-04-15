@@ -1,13 +1,13 @@
 function Get-EntraInformation {
-    [cmdletbinding()]
+    [cmdletbinding(DefaultParameterSetName = 'Other')]
     param (
-        [Parameter(Mandatory = $true, ParameterSetName = 'ObjectId')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ObjectId')]
         [string]$ObjectId,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'Name')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Name')]
         [string]$Name,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'UserPrincipalName')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'UserPrincipalName')]
         [ValidatePattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', ErrorMessage = "The value '{1}' is not a valid UPN format")]
         [string]$UserPrincipalName,
 
@@ -51,6 +51,10 @@ function Get-EntraInformation {
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "The -Group parameter cannot be used with -UserPrincipalName. parameter." -Severity 'Error'
                     }
                     $response = Invoke-MsGraph -relativeUrl "users?`$filter=userPrincipalName eq '$UserPrincipalName'"
+                    $isGroup = $false
+                }
+                'Other' {
+                    $response = Invoke-MsGraph -relativeUrl "me" -NoBatch
                     $isGroup = $false
                 }
             }
