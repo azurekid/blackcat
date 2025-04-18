@@ -1,4 +1,4 @@
-function Get-AzureResourcePermission {
+function Get-ResourcePermission {
     [cmdletbinding()]
     [OutputType([System.Collections.Concurrent.ConcurrentBag[PSCustomObject]])]
     param (
