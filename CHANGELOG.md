@@ -4,6 +4,27 @@
 
 # CHANGELOG
 
+## v0.12.6 [2025-04-18]
+
+_What's New_
+
+This update introduces several changes to the BlackCat PowerShell module, including a function rename, parameter enhancements, and improved filtering logic. The most significant changes involve renaming the `Get-AzureResourcePermission` function to `Lookup-ResourcePermission` and enhancing its parameters for better usability.
+
+_Improvements_
+
+* Renamed the `Get-AzureResourcePermission` function to `Get-ResourcePermission`
+* Added new parameter attributes to `Get-ResourcePermission` for auto-completion, including `ResourceGroupCompleter`, `ResourceTypeCompleter`.
+Additionally, renamed `ResourceGroup` to `ResourceGroupName` for clarity.
+
+* Added a default value to the parameter set (`Other`) to the `Get-EntraInformation` function for additional use cases.
+This improvements makes it possible to easily retrieve information about the current user context without parameters
+
+## v0.12.5 [2025-04-14]
+
+_Improvements_
+
+* Improved processing of Graph requests from the `Invoke-MsGraph` function, and added aditional error handling.
+
 ## v0.12.4 [2025-04-10]
 
 _Improvements_
