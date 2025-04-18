@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.12.5'
+    ModuleVersion     = '0.12.6'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -37,7 +37,7 @@
         'Get-AccessTokens',
         'Get-AppRolePermission',
         'Get-AzResourceSecretList',
-        'Get-AzureResourcePermission',
+        'Get-ResourcePermission',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
         'Get-FederatedAppCredential',
@@ -92,7 +92,7 @@
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
-        'Public\Discovery\Get-AzureResourcePermission.ps1',
+        'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Exfiltration\Get-AccessTokens.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
         'Public\Helpers\ConvertFrom-JWT.ps1',
