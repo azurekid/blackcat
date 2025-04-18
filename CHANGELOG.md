@@ -19,7 +19,7 @@ Additionally, renamed `ResourceGroup` to `ResourceGroupName` for clarity.
 * Added a default value to the parameter set (`Other`) to the `Get-EntraInformation` function for additional use cases.
 This improvements makes it possible to easily retrieve information about the current user context without parameters
 
-## v0.12.5 [2025-04-13]
+## v0.12.5 [2025-04-14]
 
 _Improvements_
 
