@@ -8,12 +8,20 @@ function Get-AzureResourcePermission {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
         [Alias('resource-group')]
-        [string]$ResourceGroup,
+        [string]$ResourceGroupName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceTypeCompleterAttribute()]
         [Alias('resource-type')]
         [string]$ResourceType,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+        )]
+        [Alias('resource-name')]
+        [string]$ResourceName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('permission-type')]
@@ -35,19 +43,27 @@ function Get-AzureResourcePermission {
         try {
             Write-Verbose "Retrieving all resources for the current user context"
 
-                if ($SubscriptionId -and $ResourceGroup) {
+                # Build a dynamic filter string based on provided parameters
+                $filterParts = @()
+
+                if ($SubscriptionId) {
+                    $filterParts += "| where subscriptionId == '$SubscriptionId'"
+                }
+                if ($ResourceGroupName) {
+                    $filterParts += "| where resourceGroup == '$ResourceGroupName'"
+                }
+                if ($ResourceType) {
+                    $filterParts += "| where type == '$($ResourceType.ToLower())'"
+                }
+                if ($ResourceName) {
+                    $filterParts += "| where name == '$ResourceName'"
+                }
+
+                if ($filterParts.Count -gt 0) {
+                    $filterString = $filterParts -join ' '
                     $resources = Invoke-AzBatch -filter $filterString
-                }
-                elseif ($SubscriptionId) {
-                    $resources = Invoke-AzBatch -filter "| where subscriptionId == '$SubscriptionId'"
-                }
-                elseif ($ResourceGroup) {
-                    $resources = Invoke-AzBatch -filter "| where resourceGroup == '$ResourceGroup'"
-                }
-                elseif ($ResourceType){
-                    $resources = Invoke-AzBatch -resourceType $ResourceType
-                }
-                else {
+                    Write-Verbose "Filter string: $filterString"
+                } else {
                     $resources = Invoke-AzBatch
                 }
 
