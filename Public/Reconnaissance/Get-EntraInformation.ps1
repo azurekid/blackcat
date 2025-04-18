@@ -14,6 +14,7 @@ function Get-EntraInformation {
         [Parameter(ParameterSetName = 'ObjectId')]
         [Parameter(ParameterSetName = 'Name')]
         [Parameter(ParameterSetName = 'UserPrincipalName')]
+        [Parameter(ParameterSetName = 'Other')]
         [switch]$Group
     )
 
