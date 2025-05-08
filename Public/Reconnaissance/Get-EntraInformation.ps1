@@ -79,6 +79,7 @@ function Get-EntraInformation {
                         Description     = $item.description
                         Roles           = $roles.displayName
                         Members         = $members.displayName
+                        NumberOfMembers = $members.Count
                         GroupType       = $item.groupTypes
                         MailEnabled     = $item.mailEnabled
                         SecurityEnabled = $item.securityEnabled
@@ -87,7 +88,7 @@ function Get-EntraInformation {
 
                 } else {
                     # Get group memberships
-                    $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf"
+                    $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf" | Where-Object {$_.'@odata.type' -eq '#microsoft.graph.group'}
 
                     # Get directory roles
                     $roles = Invoke-MsGraph -relativeUrl "users/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"

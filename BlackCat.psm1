@@ -67,7 +67,7 @@ New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
 New-Variable -Name SessionVariables -Value $SessionVariables -Scope Script -Force
 
 $manifest = Import-PowerShellDataFile "$PSScriptRoot\BlackCat.psd1"
-$version = $manifest.ModuleVersion
+$script:version = $manifest.ModuleVersion
 
 # Check for updates
 try {
@@ -76,10 +76,10 @@ try {
     $latestVersionLine = $latestManifestContent -split "`n" | Where-Object { $_ -match 'ModuleVersion' }
     $latestVersion = ($latestVersionLine -split '=' | Select-Object -Last 1).Trim().Trim("'")
 
-    if ($latestVersion -gt $version) {
+    if ($latestVersion -gt $script:version) {
         $updateMessage = "A newer version of the module ($latestVersion) is available."
     } else {
-        $updateMessage = "             v$version by Rogier Dijkman"
+        $updateMessage = "             v$script:version by Rogier Dijkman"
     }
 }
 catch {

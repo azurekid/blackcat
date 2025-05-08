@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.12.6'
+    ModuleVersion     = '0.12.7'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -41,6 +41,7 @@
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
         'Get-FederatedAppCredential',
+        'Get-Functions',
         'Get-KeyVaultSecret',
         'Get-ManagedIdentity',
         'Get-PrivilegedApp',
@@ -96,6 +97,7 @@
         'Public\Exfiltration\Get-AccessTokens.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
         'Public\Helpers\ConvertFrom-JWT.ps1',
+        'Public\Helpers\Get-Functions.ps1',
         'Public\Helpers\Get-ServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
