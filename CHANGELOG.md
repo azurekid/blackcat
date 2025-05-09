@@ -4,6 +4,20 @@
 
 # CHANGELOG
 
+## v0.12.7 [2025-05-08]
+
+This pull request introduces several changes to the `BlackCat` PowerShell module, including the addition of a new helper function, enhancements to existing functionality, and updates to the module's metadata. The most significant changes include the creation of the `Get-Functions` helper function, improvements to the `Get-EntraInformation` function, and updates to the module version and metadata.
+
+_What's New_
+
+* **Added `Get-Functions` helper function**: This function lists all public functions within a specified category folder under the `Public` directory. It includes input validation, error handling, and a formatted output of the results.
+
+_Improvements_
+
+* **Enhanced `Get-EntraInformation` function**:
+  - Added a new property, `NumberOfMembers`, to capture the count of group members.
+  - Filtered group memberships to include only objects of type `microsoft.graph.group` when retrieving user group memberships.
+
 ## v0.12.6 [2025-04-18]
 
 _What's New_
