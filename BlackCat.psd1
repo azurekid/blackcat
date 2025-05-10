@@ -54,6 +54,7 @@
         'Get-StorageContainerList',
         'Invoke-AzBatch',
         'Invoke-MsGraph',
+        'Invoke-RunCommand',
         'Invoke-Update',
         'New-AuthHeader',
         'New-JWT',
@@ -93,6 +94,7 @@
         'Public\Discovery\Get-PrivilegedApp.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
+        'Public\Execution\Invoke-RunCommand.ps1'
         'Public\Exfiltration\Get-AccessTokens.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
         'Public\Helpers\ConvertFrom-JWT.ps1',
