@@ -10,6 +10,7 @@
 
 .PARAMETER GroupObjectId
     The ObjectId of the Azure AD group to which the owner will be added. Mandatory if using the 'ObjectId' parameter set.
+    This is the preferred method of identifying the group because it is less noisy than using display names.
 
 .PARAMETER GroupName
     The display name of the Azure AD group to which the owner will be added. Mandatory if using the 'Name' parameter set.
@@ -17,8 +18,9 @@
 .PARAMETER OwnerName
     The display name of the user to be added as an owner. Optional.
 
-.PARAMETER OwnerObjectId
+.PARAMETER ObjectId
     The ObjectId of the user or service principal to be added as an owner. Optional.
+    This is the preferred method of identifying the owner because it is less noisy than using display names.
 
 .PARAMETER UserPrincipalName
     The User Principal Name (UPN) of the user to be added as an owner. Optional.
@@ -57,11 +59,8 @@ function Add-GroupOwner {
         [Parameter(Mandatory = $true, ParameterSetName = 'Name')]
         [string]$GroupName,
 
-        [Parameter(Mandatory = $false)]
-        [string]$OwnerName,
-
-        [Parameter(Mandatory = $false)]
-        [string]$OwnerObjectId,
+        [Parameter(Mandatory = $true)]
+        [string]$ObjectId
 
         [Parameter(Mandatory = $false)]
         [string]$UserPrincipalName,
@@ -92,47 +91,47 @@ function Add-GroupOwner {
             }
 
             # Resolve OwnerObjectId if not provided, using a switch statement
-            if (-not $OwnerObjectId) {
+            if (-not $ObjectId) {
                 switch ($true) {
                     { $OwnerName } {
                         $user = Invoke-MsGraph -relativeUrl "users?`$filter=startswith(displayName,'$OwnerName')"
                         if (-not $user) { throw "No user found with name '$OwnerName'." }
-                        $OwnerObjectId = $user.id
+                        $ObjectId = $user.id
                         break
                     }
                     { $UserPrincipalName } {
                         $user = Invoke-MsGraph -relativeUrl "users?`$filter=userPrincipalName eq '$UserPrincipalName'" | Select-Object -First 1
                         if (-not $user) { throw "No user found with userPrincipalName '$UserPrincipalName'." }
-                        $OwnerObjectId = $user.id
+                        $ObjectId = $user.id
                         break
                     }
                     { $ServicePrincipalId } {
                         $sp = Invoke-MsGraph -relativeUrl "servicePrincipals/$ServicePrincipalId"
                         if (-not $sp) { throw "No service principal found with id '$ServicePrincipalId'." }
-                        $OwnerObjectId = $sp.id
+                        $ObjectId = $sp.id
                         break
                     }
                     { $ServicePrincipalName } {
                         $sp = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=displayName eq '$ServicePrincipalName'" | Select-Object -First 1
                         if (-not $sp) { throw "No service principal found with displayName '$ServicePrincipalName'." }
-                        $OwnerObjectId = $sp.id
+                        $ObjectId = $sp.id
                         break
                     }
                     { $ApplicationId } {
                         $sp = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$ApplicationId'" | Select-Object -First 1
                         if (-not $sp) { throw "No service principal found with applicationId '$ApplicationId'." }
-                        $OwnerObjectId = $sp.id
+                        $ObjectId = $sp.id
                         break
                     }
                     default {
-                        throw "You must provide OwnerObjectId, UserPrincipalName, ServicePrincipalId, ServicePrincipalName, or ApplicationId."
+                        throw "You must provide ObjectId, UserPrincipalName, ServicePrincipalId, ServicePrincipalName, or ApplicationId."
                     }
                 }
             }
 
             # Prepare the request body for adding owner
             $body = @{
-                "@odata.id" = "https://graph.microsoft.com/beta/directoryObjects/$OwnerObjectId"
+                "@odata.id" = "https://graph.microsoft.com/beta/directoryObjects/$ObjectId"
             } | ConvertTo-Json
 
             # Add the owner to the group using Graph API
@@ -149,14 +148,14 @@ function Add-GroupOwner {
 
             # Check if the owner is already assigned to the group
             $existingOwners = Invoke-MsGraph -relativeUrl "groups/$GroupObjectId/owners"
-            if ($existingOwners | Where-Object { $_.id -eq $OwnerObjectId }) {
+            if ($existingOwners | Where-Object { $_.id -eq $ObjectId }) {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Identity is already owner of the group."
                 return
             }
 
             $response = Invoke-RestMethod @requestParameters
 
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Owner $OwnerObjectId added to group $GroupObjectId." -Severity Information
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Owner with $ObjectId added to group with id $GroupObjectId." -Severity Information
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $_.Exception.Message -Severity 'Error'
