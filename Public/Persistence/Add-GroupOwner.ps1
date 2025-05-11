@@ -96,7 +96,7 @@ function Add-GroupOwner {
                 switch ($true) {
                     { $OwnerName } {
                         $user = Invoke-MsGraph -relativeUrl "users?`$filter=startswith(displayName,'$OwnerName')"
-                        if (-not $user) { throw "No user found with name '$UserPrincipalName'." }
+                        if (-not $user) { throw "No user found with name '$OwnerName'." }
                         $OwnerObjectId = $user.id
                         break
                     }
