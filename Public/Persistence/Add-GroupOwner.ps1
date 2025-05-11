@@ -147,18 +147,16 @@ function Add-GroupOwner {
                 ErrorAction = 'SilentlyContinue'
             }
 
-            try {
-                $response = Invoke-RestMethod @requestParameters
-                if ($response -eq $null) {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Owner $OwnerObjectId added to group $GroupObjectId." -Severity 'Success'
-                } else {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add owner. Response: $response" -Severity 'Error'
-                }
-            } catch {
-
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add owner" -Severity 'Error'
+            # Check if the owner is already assigned to the group
+            $existingOwners = Invoke-MsGraph -relativeUrl "groups/$GroupObjectId/owners"
+            if ($existingOwners | Where-Object { $_.id -eq $OwnerObjectId }) {
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Identity is already owner of the group."
+                return
             }
-            Write-Verbose "Owner $OwnerObjectId added to group $GroupObjectId."
+
+            $response = Invoke-RestMethod @requestParameters
+
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Owner $OwnerObjectId added to group $GroupObjectId." -Severity Information
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $_.Exception.Message -Severity 'Error'
