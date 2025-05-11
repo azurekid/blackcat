@@ -137,8 +137,27 @@ function Add-GroupOwner {
 
             # Add the owner to the group using Graph API
             $url = "https://graph.microsoft.com/beta/groups/$GroupObjectId/owners/`$ref"
-            Invoke-RestMethod -Uri $url -Headers $script:graphHeader -Method Post -Body $body -ContentType "application/json"
 
+            $requestParameters = @{
+                Uri         = $url
+                Headers     = $script:graphHeader
+                Method      = 'POST'
+                Body        = $body
+                ContentType = 'application/json'
+                ErrorAction = 'SilentlyContinue'
+            }
+
+            try {
+                $response = Invoke-RestMethod @requestParameters
+                if ($response -eq $null) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Owner $OwnerObjectId added to group $GroupObjectId." -Severity 'Success'
+                } else {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add owner. Response: $response" -Severity 'Error'
+                }
+            } catch {
+
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add owner" -Severity 'Error'
+            }
             Write-Verbose "Owner $OwnerObjectId added to group $GroupObjectId."
         }
         catch {
