@@ -4,6 +4,14 @@
 
 # CHANGELOG
 
+## v0.12.7 [2025-05-11]
+
+_What's New_
+
+This pull request introduces a new PowerShell function, `Add-GroupOwner`, to add owners to Azure AD groups using the Microsoft Graph API. It also updates the module metadata and exports the new function. Below is a summary of the most important changes:
+
+* Added the `Add-GroupOwner` function in `Public/Persistence/Add-GroupOwner.ps1`. This function allows users to add an owner to an Azure AD group by specifying various identifiers (e.g., ObjectId, display name, User Principal Name, etc.) and uses the Microsoft Graph API for execution. It includes robust parameter handling, error checking, and examples for usage.
+
 ## v0.12.6 [2025-04-18]
 
 _What's New_
