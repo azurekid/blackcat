@@ -33,6 +33,7 @@
     FunctionsToExport = @(
         'Add-EntraApplication',
         'Add-StorageAccountSasToken',
+        'Add-GroupOwner',
         'ConvertFrom-JWT',
         'Get-AccessTokens',
         'Get-AppRolePermission',
@@ -105,6 +106,7 @@
         'Public\Helpers\Update-ServiceTag.ps1',
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
+        'Public\Persistence\Add-GroupOwner.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',
         'Public\Persistence\Set-ManagedIdentityPermission.ps1',
         'Public\Persistence\Set-FunctionAppSecret.ps1',
