@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.12.6'
+    ModuleVersion     = '0.12.7'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -33,6 +33,7 @@
     FunctionsToExport = @(
         'Add-EntraApplication',
         'Add-StorageAccountSasToken',
+        'Add-GroupOwner',
         'ConvertFrom-JWT',
         'Get-AccessTokens',
         'Get-AppRolePermission',
@@ -105,6 +106,7 @@
         'Public\Helpers\Update-ServiceTag.ps1',
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
+        'Public\Persistence\Add-GroupOwner.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',
         'Public\Persistence\Set-ManagedIdentityPermission.ps1',
         'Public\Persistence\Set-FunctionAppSecret.ps1',
