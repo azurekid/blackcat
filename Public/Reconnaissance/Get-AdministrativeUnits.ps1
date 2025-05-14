@@ -1,7 +1,14 @@
 function Get-AdministrativeUnits {
     [CmdletBinding()]
     param (
-        [switch]$IncludeDynamicMembershipRules,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('administrative-unit', 'displayName', 'display-name', 'name')]
+        [string]$AdministrativeUnit,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [string]$ObjectId,
+
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeMembers
     )
 
@@ -10,42 +17,64 @@ function Get-AdministrativeUnits {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
     process {
+        $result = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
+
         try {
-            $units = Invoke-MsGraph -relativeUrl "administrativeUnits"
-            if (-not $units) {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No administrative units found." -Severity Warning
-                return
+            Write-Verbose "Processing parameters: ObjectId='$ObjectId', AdministrativeUnit='$AdministrativeUnit', IncludeMembers='$IncludeMembers'"
+
+            if ($ObjectId) {
+                Write-Verbose "Querying administrative unit by ObjectId: $ObjectId"
+                $units = Invoke-MsGraph -relativeUrl "administrativeUnits/$ObjectId" -NoBatch -ErrorAction SilentlyContinue
+                if (-not $units) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit with ObjectId '$ObjectId' not found." -Severity Error
+                    return
+                }
+            }
+            if ($AdministrativeUnit) {
+                Write-Verbose "Querying administrative unit by name: $AdministrativeUnit"
+                $units = Invoke-MsGraph -relativeUrl "administrativeUnits/$AdministrativeUnit" -ErrorAction SilentlyContinue
+
+                if (-not $units) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit '$AdministrativeUnit' not found." -Severity Error
+                    return
+                }
+            } else {
+                Write-Verbose "Querying all administrative units"
+                $units = Invoke-MsGraph -relativeUrl "administrativeUnits"
+
+                if (-not $units) {
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No administrative units found." -Severity Error
+                    return
+                }
             }
 
-            foreach ($unit in $units) {
-                if ($IncludeDynamicMembershipRules) {
-                    # Get full details for dynamic membership properties
-                    $details = Invoke-MsGraph -relativeUrl "administrativeUnits/$($unit.id)?`$select=id,displayName,membershipType,membershipRule,membershipRuleProcessingState" -NoBatch
-                    $output = [PSCustomObject]@{
-                        Id                            = $details.id
-                        DisplayName                   = $details.displayName
-                        MembershipType                = $details.membershipType
-                        MembershipRule                = $details.membershipRule
-                        MembershipRuleProcessingState = $details.membershipRuleProcessingState
-                    }
-                } else {
-                    $output = [PSCustomObject]@{
-                        Id             = $unit.id
-                        DisplayName    = $unit.displayName
-                        MembershipType = $unit.membershipType
-                    }
+            Write-Verbose "Processing administrative units"
+            $units | ForEach-Object -Parallel {
+
+                Write-Verbose "Processing administrative unit: $($_.id)"
+                $currentItem = [PSCustomObject]@{
+                    Id                            = $_.id
+                    DisplayName                   = $_.displayName
+                    MembershipType                = $_.membershipType
+                    MembershipRule                = $_.membershipRule
+                    MembershipRuleProcessingState = $_.membershipRuleProcessingState
                 }
 
-                if ($IncludeMembers) {
-                    $members = Invoke-MsGraph -relativeUrl "administrativeUnits/$($unit.id)/members"
-                    $output | Add-Member -MemberType NoteProperty -Name Members -Value $members.userPrincipalName
-                }
+                if ($using:IncludeMembers) {
+                    Write-Verbose "Including members for administrative unit: $($_.id)"
+                    $members = (Invoke-RestMethod -Uri "$($using:sessionVariables.graphUri)/administrativeUnits/$($_.id)/members" -Headers $using:script:graphHeader).value
 
-                $output
+                    Write-Verbose "Found $($members.Count) members for administrative unit: $($_.id)"
+                    $currentItem | Add-Member -MemberType NoteProperty -Name Members -Value $members.userPrincipalName
+                }
+                ($using:result).Add($currentItem)
             }
+            Write-Verbose "Returning result"
+            return $result
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $_.Exception.Message -Severity 'Error'
+            Write-Verbose "Exception occurred: $($_.Exception.Message)"
         }
     }
 }
