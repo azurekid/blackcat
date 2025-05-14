@@ -15,7 +15,10 @@ function Get-EntraInformation {
         [Parameter(ParameterSetName = 'Name')]
         [Parameter(ParameterSetName = 'UserPrincipalName')]
         [Parameter(ParameterSetName = 'Other')]
-        [switch]$Group
+        [switch]$Group,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'Other')]
+        [switch]$CurrentUser
     )
 
     begin {
