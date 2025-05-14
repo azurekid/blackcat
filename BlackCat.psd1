@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.12.7'
+    ModuleVersion     = '0.13.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -33,9 +33,10 @@
     FunctionsToExport = @(
         'Add-EntraApplication',
         'Add-StorageAccountSasToken',
-        'Add-GroupOwner',
+        'Add-GroupObject',
         'ConvertFrom-JWT',
         'Get-AccessTokens',
+        'Get-AdministrativeUnits',
         'Get-AppRolePermission',
         'Get-AzResourceSecretList',
         'Get-ResourcePermission',
@@ -60,6 +61,7 @@
         'New-JWT',
         'Read-SASToken',
         'Restore-DeletedIdentity',
+        'Set-AdministrativeUnit',
         'Set-AzNetworkSecurityGroupRule',
         'Set-Context',
         'Set-FederatedIdentity',
@@ -106,10 +108,12 @@
         'Public\Helpers\Update-ServiceTag.ps1',
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
-        'Public\Persistence\Add-GroupOwner.ps1',
+        'Public\Persistence\Add-GroupObject.ps1',
+        'Public\Persistence\Set-AdministrativeUnit.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',
         'Public\Persistence\Set-ManagedIdentityPermission.ps1',
         'Public\Persistence\Set-FunctionAppSecret.ps1',
+        'Public\Reconnaissance\Get-AdministrativeUnits.Ps1',
         'Public\Reconnaissance\Get-EntraInformation.ps1',
         'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
         'Public\Reconnaissance\Get-ManagedIdentity.ps1',
