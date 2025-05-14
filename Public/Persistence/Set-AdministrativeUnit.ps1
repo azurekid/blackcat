@@ -28,7 +28,7 @@ function Set-AdministrativeUnit {
     process {
         $result = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
 
-        # try {
+        try {
             Write-Verbose "Processing parameters: ObjectId='$ObjectId', AdministrativeUnit='$AdministrativeUnit', IncludeMembers='$IncludeMembers'"
 
             # Find the administrative unit
@@ -93,11 +93,11 @@ function Set-AdministrativeUnit {
             $result.Add($currentItem)
             Write-Verbose "Returning result"
             return $result
-        # }
-        # catch {
-        #     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $_.Exception.Message -Severity 'Error'
-        #     Write-Verbose "Exception occurred: $($_.Exception.Message)"
-        # }
+        }
+        catch {
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $_.Exception.Message -Severity 'Error'
+            Write-Verbose "Exception occurred: $($_.Exception.Message)"
+        }
     }
 <#
 .SYNOPSIS
