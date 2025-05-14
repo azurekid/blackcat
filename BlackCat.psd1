@@ -39,6 +39,7 @@
         'Get-AdministrativeUnits',
         'Get-AppRolePermission',
         'Get-AzResourceSecretList',
+        'Get-Functions',
         'Get-ResourcePermission',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
@@ -99,6 +100,7 @@
         'Public\Exfiltration\Get-AccessTokens.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
         'Public\Helpers\ConvertFrom-JWT.ps1',
+        'Public\Helpers\Get-Functions.ps1',
         'Public\Helpers\Get-ServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
@@ -166,5 +168,4 @@
 
     # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
     # DefaultCommandPrefix = ''
-
 }
