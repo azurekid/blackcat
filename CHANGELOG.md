@@ -4,13 +4,36 @@
 
 # CHANGELOG
 
+## v0.13.0 [2025-05-13]
+
+_What's New_
+
+This pull request introduces significant updates to the `BlackCat` module, including new functionality for managing Entra ID administrative units, enhancements to group management, and improved logging. The most notable changes are the addition of new cmdlets, the renaming and extension of an existing cmdlet, and the inclusion of verbose logging for better traceability.
+
+### Administrative Unit Management:
+
+* Added `Set-AdministrativeUnit` cmdlet to update properties (e.g., display name, membership type) of Entra ID administrative units and optionally include members in the output.
+* Added `Get-AdministrativeUnits` cmdlet to retrieve administrative units by name or ObjectId, with support for including members in the output.
+
+
+_Improvements_
+
+### Group Management Enhancements:
+
+* Renamed `Add-GroupOwner` to `Add-GroupObject` and extended functionality to allow adding both owners and members to Entra ID groups. Added a new `ObjectType` parameter to specify the role (`Owner` or `Member`).
+
+### Logging Improvements:
+* Enhanced verbose logging in `Invoke-BlackCat` to include the selected user agent for better debugging.
+
+These changes improve the module's functionality and usability, particularly for managing Entra ID resources and debugging scripts.
+
 ## v0.12.7 [2025-05-11]
 
 _What's New_
 
-This pull request introduces a new PowerShell function, `Add-GroupOwner`, to add owners to Azure AD groups using the Microsoft Graph API. It also updates the module metadata and exports the new function. Below is a summary of the most important changes:
+This pull request introduces a new PowerShell function, `Add-GroupOwner`, to add owners to Entra ID groups using the Microsoft Graph API. It also updates the module metadata and exports the new function. Below is a summary of the most important changes:
 
-* Added the `Add-GroupOwner` function in `Public/Persistence/Add-GroupOwner.ps1`. This function allows users to add an owner to an Azure AD group by specifying various identifiers (e.g., ObjectId, display name, User Principal Name, etc.) and uses the Microsoft Graph API for execution. It includes robust parameter handling, error checking, and examples for usage.
+* Added the `Add-GroupOwner` function in `Public/Persistence/Add-GroupOwner.ps1`. This function allows users to add an owner to an Entra ID group by specifying various identifiers (e.g., ObjectId, display name, User Principal Name, etc.) and uses the Microsoft Graph API for execution. It includes robust parameter handling, error checking, and examples for usage.
 
 ## v0.12.6 [2025-04-18]
 
