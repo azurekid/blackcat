@@ -18,7 +18,10 @@ function Set-AdministrativeUnit {
         [string]$MembershipType,
 
         [Parameter(Mandatory = $false)]
-        [string]$MembershipRule
+        [string]$MembershipRule,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$AddUserIds
     )
 
     begin {
@@ -29,7 +32,7 @@ function Set-AdministrativeUnit {
         $result = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
 
         try {
-            Write-Verbose "Processing parameters: ObjectId='$ObjectId', AdministrativeUnit='$AdministrativeUnit', IncludeMembers='$IncludeMembers'"
+            Write-Verbose "Processing parameters: ObjectId='$ObjectId', AdministrativeUnit='$AdministrativeUnit', IncludeMembers='$IncludeMembers', AddUserIds='$AddUserIds'"
 
             # Find the administrative unit
             if ($ObjectId) {
@@ -73,6 +76,29 @@ function Set-AdministrativeUnit {
                 Write-Verbose "No update parameters provided. Skipping update."
             }
 
+            # Add users to administrative unit if specified
+            if ($AddUserIds) {
+                foreach ($userId in $AddUserIds) {
+                    Write-Verbose "Adding user $userId to administrative unit $($unit.id)"
+                    $addMemberBody = @{
+                        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$userId"
+                    }
+                    $addMemberParams = @{
+                        Uri         = "$($sessionVariables.graphUri)/administrativeUnits/$($unit.id)/members/`$ref"
+                        Method      = 'POST'
+                        Headers     = $script:graphHeader
+                        Body        = ($addMemberBody | ConvertTo-Json)
+                        ContentType = 'application/json'
+                        ErrorAction = 'Stop'
+                    }
+                    try {
+                        Invoke-RestMethod @addMemberParams
+                    } catch {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add user $userId $($_.Exception.Message)" -Severity 'Error'
+                    }
+                }
+            }
+
             # Get updated unit
             $updatedUnit = Invoke-MsGraph -relativeUrl "administrativeUnits/$($unit.id)" -NoBatch
 
@@ -104,7 +130,7 @@ function Set-AdministrativeUnit {
 Updates properties of an Azure Active Directory Administrative Unit.
 
 .DESCRIPTION
-The Set-AdministrativeUnit function allows you to update properties such as display name, membership type, and membership rule of an Azure AD Administrative Unit. You can identify the administrative unit by its ObjectId or display name. Optionally, you can include the members of the administrative unit in the output.
+The Set-AdministrativeUnit function allows you to update properties such as display name, membership type, and membership rule of an Azure AD Administrative Unit. You can identify the administrative unit by its ObjectId or display name. Optionally, you can include the members of the administrative unit in the output. You can also add users to the administrative unit.
 
 .PARAMETER AdministrativeUnit
 The display name or alias of the administrative unit to update. Can also be specified as 'administrative-unit', 'displayName', 'display-name', or 'name'.
@@ -124,6 +150,9 @@ The membership type to assign to the administrative unit.
 .PARAMETER MembershipRule
 The membership rule to assign to the administrative unit.
 
+.PARAMETER AddUserIds
+An array of user ObjectIds to add as members to the administrative unit.
+
 .EXAMPLE
 Set-AdministrativeUnit -ObjectId "12345678-90ab-cdef-1234-567890abcdef" -NewDisplayName "New AU Name"
 
@@ -133,6 +162,11 @@ Updates the display name of the administrative unit with the specified ObjectId.
 Set-AdministrativeUnit -AdministrativeUnit "HR Department" -MembershipType "Dynamic" -MembershipRule "(user.department -eq 'HR')" -IncludeMembers
 
 Updates the membership type and rule for the "HR Department" administrative unit and includes its members in the output.
+
+.EXAMPLE
+Set-AdministrativeUnit -ObjectId "12345678-90ab-cdef-1234-567890abcdef" -AddUserIds "user-object-id-1","user-object-id-2"
+
+Adds the specified users to the administrative unit.
 
 .NOTES
 Requires appropriate permissions to update administrative units in Azure Active Directory.
