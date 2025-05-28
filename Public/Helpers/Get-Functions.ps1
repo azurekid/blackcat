@@ -1,53 +1,31 @@
 function Get-Functions {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true, Position=0)]
-        [ArgumentCompleter({
-            param($CommandName, $ParameterName, $WordToComplete, $CommandAst, $FakeBoundParameters)
-
-            # Find all subdirectories in the Public folder
-            $validPaths = @()
-
-            if (Test-Path -Path "Public" -PathType Container) {
-                $publicSubDirs = Get-ChildItem -Path "Public" -Directory
-
-                foreach ($dir in $publicSubDirs) {
-                    # Include subdirectories of Public that match the word to complete
-                    if ($dir.Name -like "$WordToComplete*") {
-                        $validPaths += $dir.Name
-                    }
-                }
-            }
-
-            return $validPaths
-        })]
-        [ValidateScript({
-            if (Test-Path -Path "Public\$_" -PathType Container) {
-                return $true
-            }
-
-            throw "Path '$_' not found. Please specify a valid category path within the Public folder."
-        })]
+        [Parameter(Mandatory=$false, Position=0)]
         [string]$CategoryPath
     )
 
     try {
         Clear-Host
-        # Always use the path inside Public folder
-        $actualPath = "Public\$CategoryPath"
 
-        # Get all PS1 files in the folder
-        $scriptFiles = Get-ChildItem -Path $actualPath -Filter *.ps1 -File -ErrorAction Stop
-
-        if ($scriptFiles.Count -eq 0) {
-            Write-Warning "No PowerShell scripts found in '$CategoryPath'."
-            return
+        # The module root is two levels up from the Helpers folder (since Helpers is inside Public)
+        $moduleRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+        $psd1Path = Join-Path -Path $moduleRoot -ChildPath "BlackCat.psd1"
+        Write-Verbose "Looking for BlackCat.psd1 at $psd1Path"
+        if (-not (Test-Path $psd1Path)) {
+            throw "BlackCat.psd1 not found at $psd1Path"
         }
 
-        $logo = `
-    @"
+        $moduleManifest = Import-PowerShellDataFile -Path $psd1Path
 
 
+        if (-not $moduleManifest.ContainsKey('FileList')) {
+            throw "No 'FileList' key found in BlackCat.psd1"
+        }
+
+        $fileList = $moduleManifest['FileList']
+
+        $logo = @"
     __ ) ___  |  |  |          |      ___|    __ \   |
     __ \     /   |  |     __|  |  /  |       / _` |  __|
     |   |   /   ___ __|  (       <   |      | (   |  |
@@ -57,43 +35,34 @@ function Get-Functions {
                  v$script:version by Rogier Dijkman
 
 "@
+        Write-Host $logo -ForegroundColor Blue
 
-Write-Host $logo -ForegroundColor Blue
-
-        # Create an array to hold our results
         $results = @()
-        $functionCount = 0
         $fileCount = 0
 
-        foreach ($file in $scriptFiles) {
-            $fileCount++
-            $content = Get-Content $file.FullName -Raw -ErrorAction Continue
-            $matches = [regex]::Matches($content, '(?m)^\s*function\s+([a-zA-Z0-9_\-]+)(\s*{|\s+|\r?\n)')
-
-            foreach ($match in $matches) {
-                $functionName = $match.Groups[1].Value
-                # Only include functions that don't start with underscore (public functions)
-                if (-not $functionName.StartsWith('_')) {
-                    $functionCount++
-
-                    # Create a custom object for this function
-                    $results += [PSCustomObject]@{
-                        Category = $CategoryPath
-                        Function = $functionName
-                    }
+        foreach ($filePath in $fileList) {
+            if ($CategoryPath) {
+                # Normalize path separators for comparison
+                $normalizedCategory = $CategoryPath -replace '[\\/]', [IO.Path]::DirectorySeparatorChar
+                if ($filePath -notlike "*$normalizedCategory*") {
+                    continue
                 }
+            }
+            $fileName = [IO.Path]::GetFileNameWithoutExtension((Split-Path -Path $filePath -Leaf))
+            $fileCount++
+            $results += [PSCustomObject]@{
+                Function = $fileName
             }
         }
 
-        Write-Verbose "Found $functionCount public functions in $fileCount files"
+        Write-Verbose "Found $fileCount public functions"
 
-        # Return the results as objects that can be formatted as a table
-        Write-Output $results| Format-Table -AutoSize
+        $results | Format-Table -AutoSize
 
         Write-Host "========== Summary ==========`n" -ForegroundColor Cyan
-        Write-Host "Found $functionCount public functions`n" -ForegroundColor White
+        Write-Host "Found $fileCount public functions`n" -ForegroundColor White
     }
     catch {
-        Write-Error "Error processing category folder: $_"
+        Write-Error "Error processing BlackCat.psd1: $_"
     }
 }

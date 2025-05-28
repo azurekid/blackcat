@@ -5,7 +5,6 @@ function Get-PublicResourceList {
         [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [string]$Name,
 
-
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$WordList,
 
@@ -14,14 +13,11 @@ function Get-PublicResourceList {
     )
 
     begin {
-        # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
-
         try {
-            # Read word list efficiently
             if ($WordList) {
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
                 Write-Verbose "Loaded $($permutations.Count) permutations from '$WordList'"
@@ -59,61 +55,51 @@ function Get-PublicResourceList {
             $totalDns = $dnsNames.Count
             Write-Verbose "Starting DNS resolution for $totalDns names..."
 
-            # Parallel DNS resolution with improved error handling and progress
+            $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+
             $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+                function Get-ResourceType {
+                    param($dnsName)
+                    switch -Regex ($dnsName) {
+                        '\.blob\.core\.windows\.net$'         { return 'StorageBlob' }
+                        '\.file\.core\.windows\.net$'         { return 'StorageFile' }
+                        '\.table\.core\.windows\.net$'        { return 'StorageTable' }
+                        '\.queue\.core\.windows\.net$'        { return 'StorageQueue' }
+                        '\.database\.windows\.net$'           { return 'SqlDatabase' }
+                        '\.documents\.azure\.com$'            { return 'CosmosDB' }
+                        '\.vault\.azure.net$'                 { return 'KeyVault' }
+                        '\.azurecr\.io$'                      { return 'ContainerRegistry' }
+                        '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
+                        '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
+                        '\.azureedge\.net$'                   { return 'CDN' }
+                        '\.azurewebsites\.net$'               { return 'AppService' }
+                        default                               { return 'Unknown' }
+                    }
+                }
+
                 try {
                     $validDnsNames = $using:validDnsNames
+                    $results = $using:results
                     if ([System.Net.Dns]::GetHostEntry($_)) {
-                        $validDnsNames.Add($_)
-                        Write-Output "Get-AzPublicResources: '$_' is valid"
+                        $resourceType = Get-ResourceType -dnsName $_
+                        $obj = [PSCustomObject]@{
+                            ResourceName = $_.Split('.')[0]
+                            ResourceType = $resourceType
+                            Uri          = "https://$_"
+                        }
+                        $results.Add($obj)
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
-                    Write-Verbose "Get-AzPublicResources: '$_' does not exist"
+                    # Not found, skip
                 }
             }
 
+            # Output all found resources
+            $results.ToArray() | Sort-Object Uri
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-    <#
-    .SYNOPSIS
-        Retrieves Azure public resources based on the provided name and type.
-
-    .DESCRIPTION
-        The Get-PublicResourceList function retrieves Azure public resources by generating DNS names based on the provided name and type, and then performing DNS resolution to check their validity. It supports parallel processing for efficient DNS resolution.
-
-    .PARAMETER Name
-        The base name to use for generating DNS names. This parameter is mandatory and must match the pattern '^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$'.
-
-    .PARAMETER Type
-        The type of Azure resource. This parameter is optional and defaults to 'blob'. Valid values are 'blob', 'file', 'queue', 'table', and 'dfs'.
-
-    .PARAMETER WordList
-        An optional path to a file containing a list of words to use for generating permutations of DNS names.
-
-    .PARAMETER ThrottleLimit
-        An optional parameter to specify the throttle limit for parallel DNS resolution. The default value is 1000.
-
-    .DEPENDENCIES
-        - PowerShell 5.1 or later
-        - Azure PowerShell module (Az.Resources)
-        - System.Collections.Concurrent.ConcurrentBag
-        - System.Collections.Generic.HashSet
-        - System.Net.Dns
-
-    .EXAMPLE
-        Get-PublicResourceList -Name "example" -Type "blob"
-        Retrieves Azure public resources for the name "example" with the type "blob".
-
-    .EXAMPLE
-        Get-PublicResourceList -Name "example" -WordList "wordlist.txt"
-        Retrieves Azure public resources for the name "example" using permutations from the specified word list.
-
-    .LINK
-        https://docs.microsoft.com/en-us/powershell/module/az.resources/
-    #>
-#>
 }
