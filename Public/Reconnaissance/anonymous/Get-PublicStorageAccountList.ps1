@@ -18,7 +18,7 @@ function Get-PublicStorageAccountList {
 
         [Parameter(Mandatory = $false)]
         [Alias("throttle-limit")]
-        [int]$ThrottleLimit = 1000,
+        [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
         [Alias("include-empty")]
