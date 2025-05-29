@@ -8,6 +8,7 @@ assets
 attachments
 azure
 backup
+bicep
 binaries
 centralus
 chef
@@ -32,6 +33,7 @@ exe
 files
 filestorage
 finance
+git
 github
 gitlab
 hidden
@@ -71,6 +73,7 @@ secret
 secrets
 service
 services
+shop
 site
 slides
 splunk
@@ -90,6 +93,7 @@ useast
 useast2
 userfiles
 web
+webshop
 westcentralus
 westus
 westus2

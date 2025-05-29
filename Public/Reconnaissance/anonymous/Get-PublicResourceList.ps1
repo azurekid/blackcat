@@ -9,7 +9,7 @@ function Get-PublicResourceList {
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [int]$ThrottleLimit = 100
+        [int]$ThrottleLimit = 50
     )
 
     begin {
@@ -91,11 +91,8 @@ function Get-PublicResourceList {
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
-                    # Not found, skip
                 }
             }
-
-            # Output all found resources
             $results.ToArray() | Sort-Object Uri
         }
         catch {
