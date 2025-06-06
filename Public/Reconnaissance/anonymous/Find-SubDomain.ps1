@@ -15,24 +15,26 @@ function Find-SubDomain {
     [OutputType([System.Collections.ArrayList])]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ValueFromPipeline = $true)]
-        [Alias('domain-name')]
+        [Alias('domain-name', 'domain')]
         [ValidatePattern('^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$',
             ErrorMessage = 'Domain name must be in valid format (e.g., example.com)')]
         [string[]]$DomainName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidateSet([SubdomainCategories])]
+        [Alias('cat', 'c')]
         [string]$Category = 'common',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [Alias('word-list')]
+        [Alias('word-list', 'w')]
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [Alias('throttle-limit')]
+        [Alias('throttle-limit', 'threads', 't')]
         [int]$ThrottleLimit = 100,
 
         [Parameter(Mandatory = $false)]
+        [Alias('deep', 'd')]
         [switch]$DeepSearch
     )
 
