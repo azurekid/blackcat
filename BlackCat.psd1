@@ -39,7 +39,7 @@
         'Get-AdministrativeUnits',
         'Get-AppRolePermission',
         'Get-AzResourceSecretList',
-        'Get-Functions',
+        'Show-BlackCatCommands',
         'Get-ResourcePermission',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
