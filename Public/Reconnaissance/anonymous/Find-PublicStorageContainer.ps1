@@ -53,11 +53,11 @@ function Find-PublicStorageContainer {
         [string]$Type = 'blob',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [Alias("word-list")]
+        [Alias("word-list", "w")]
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [Alias("throttle-limit")]
+        [Alias("throttle-limit", "t", "threads")]
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
