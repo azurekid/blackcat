@@ -12,7 +12,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.13.2'
+    ModuleVersion     = '0.13.3'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -93,15 +93,23 @@
         'Private\Write-Message.ps1',
         'Private\Test-DnsName.ps1',
         'Private\Get-AllPages.ps1',
+
+        # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
+
+        # Discovery
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
+
+        # Exfiltration
         'Public\Exfiltration\Get-AccessTokens.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
+
+        # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
         'Public\Helpers\Get-Functions.ps1',
         'Public\Helpers\Get-ServiceTag.ps1',
@@ -111,7 +119,11 @@
         'Public\Helpers\Read-SASToken.ps1',
         'Public\Helpers\Switch-Context.ps1',
         'Public\Helpers\Update-ServiceTag.ps1',
+
+        # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
+
+        # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
         'Public\Persistence\Add-GroupObject.ps1',
         'Public\Persistence\Set-AdministrativeUnit.ps1',
@@ -120,7 +132,8 @@
         'Public\Persistence\Set-ManagedIdentityPermission.ps1',
         'Public\Persistence\Set-FunctionAppSecret.ps1',
         'Public\Persistence\Set-UserCredential.ps1',
-        'Public\Persistence\anonymous\Invoke-EnumSubDomains.ps1',
+
+        # Reconnaissance
         'Public\Reconnaissance\Get-AdministrativeUnits.Ps1',
         'Public\Reconnaissance\Get-EntraInformation.ps1',
         'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
@@ -128,10 +141,17 @@
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
         'Public\Reconnaissance\Invoke-MsGraph.ps1',
-        'Public\Reconnaissance\anonymous\Get-PublicResourceList.ps1',
-        'Public\Reconnaissance\anonymous\Get-PublicStorageAccountList.ps1',
+
+        # Anonymous Reconnaissance
+        'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
+        'Public\Reconnaissance\anonymous\Find-PublicStorageContainer.ps1',
+        'Public\Reconnaissance\anonymous\Find-SubDomain.ps1',
+
+        # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
+
+        # Module files
         'BlackCat.psd1'
         'BlackCat.psm1'
     )
