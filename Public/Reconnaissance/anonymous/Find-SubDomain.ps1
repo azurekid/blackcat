@@ -21,8 +21,8 @@ function Find-SubDomain {
         [string[]]$DomainName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet([SubdomainCategories])]
         [Alias('cat', 'c')]
+        [ValidateSet([SubdomainCategories])]
         [string]$Category = 'common',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -137,72 +137,66 @@ function Find-SubDomain {
             return $result | Sort-Object Domain, Category, Url | Format-Table -AutoSize
         }
     }
-    <#
-    .SYNOPSIS
-        Performs automated enumeration of subdomains for one or more domain names.
+<#
+.SYNOPSIS
+    Discovers active subdomains for specified domain names through DNS resolution.
 
-    .DESCRIPTION
-        The Find-SubDomain function discovers publicly resolvable subdomains for specified domain names by generating candidate subdomain names from built-in or custom wordlists and performing DNS lookups.
-        It supports multiple subdomain categories (e.g., common, development, marketing, etc.), custom wordlists, and a deep search mode for more exhaustive enumeration.
-        Results include the resolved subdomain URL, IP address, DNS hostname, and associated category.
+.DESCRIPTION
+    Find-SubDomain performs subdomain enumeration by testing a list of common subdomain prefixes
+    against one or more domain names. It resolves each potential subdomain via DNS lookups and
+    reports those that successfully resolve.
 
-    .PARAMETER DomainName
-        One or more domain names to enumerate subdomains for. Each domain must be in a valid format (e.g., example.com).
+    The function can use built-in subdomain lists organized by categories (such as 'common',
+    'dev', etc.) or a custom word list provided by the user. A 'deep' search option is available
+    for more thorough enumeration with expanded subdomain lists.
 
-    .PARAMETER Category
-        Specifies the category of subdomains to check. Valid options include:
-            - all: Use all available subdomain categories
-            - common: Common subdomains (default)
-            - development: Development-related subdomains
-            - marketing: Marketing-related subdomains
-            - ecommerce: E-commerce related subdomains
-            - corporate: Corporate-related subdomains
-            - infrastructure: Infrastructure-related subdomains
-            - education: Education-related subdomains
-            - security: Security-related subdomains
-            - media: Media-related subdomains
-            - networking: Networking-related subdomains
-            - cloud: Cloud-related subdomains
+.PARAMETER DomainName
+    One or more domain names to enumerate subdomains for (e.g., example.com).
+    Must be in valid domain format (e.g., example.com).
 
-    .PARAMETER WordList
-        Path to a custom wordlist file containing subdomain prefixes, one per line. If provided, these prefixes are used instead of the built-in categories.
+.PARAMETER Category
+    The category of subdomains to check. Available options include 'all' and any categories
+    defined in the session variables. Default is 'common'.
 
-    .PARAMETER ThrottleLimit
-        Maximum number of concurrent DNS resolution operations. Default is 100. Adjust to control parallelism and resource usage.
+.PARAMETER WordList
+    Path to a custom file containing subdomain prefixes to check, one per line.
+    When specified, these prefixes will be used in addition to any from the selected category.
 
-    .PARAMETER DeepSearch
-        Switch to enable deep search mode, which uses an extended list of subdomain prefixes for more comprehensive enumeration.
+.PARAMETER ThrottleLimit
+    Maximum number of concurrent DNS resolutions to perform. Default is 100.
+    Adjust based on available system resources.
 
-    .EXAMPLE
-        Find-SubDomain -DomainName example.com
-        # Enumerates common subdomains for example.com.
+.PARAMETER DeepSearch
+    When specified, uses an expanded list of subdomains for more thorough enumeration.
+    This significantly increases the number of DNS lookups performed.
 
-    .EXAMPLE
-        Find-SubDomain -DomainName example.com -Category development
-        # Enumerates development-related subdomains for example.com.
+.EXAMPLE
+    Find-SubDomain -DomainName example.com
 
-    .EXAMPLE
-        Find-SubDomain -DomainName example.com -WordList .\subdomains.txt
-        # Uses a custom wordlist to enumerate subdomains for example.com.
+    Checks for common subdomains of example.com.
 
-    .EXAMPLE
-        Find-SubDomain -DomainName example.com -DeepSearch
-        # Performs a deep enumeration using an extended subdomain list.
+.EXAMPLE
+    Find-SubDomain -DomainName example.com -Category dev
 
-    .EXAMPLE
-        "example.com", "example.org" | Find-SubDomain
-        # Enumerates common subdomains for multiple domains provided via pipeline.
+    Checks for development-related subdomains of example.com.
 
-    .OUTPUTS
-        System.Collections.ArrayList
-        Returns a collection of discovered subdomains, each with properties: Domain, Category, Url, HostName, and IpAddress.
+.EXAMPLE
+    Find-SubDomain -DomainName example.com,sample.org -DeepSearch
 
-    .NOTES
-        - Requires network connectivity for DNS resolution.
-        - Deep search mode increases coverage but may take significantly longer.
-        - Results are sorted by Domain, Category, and Url.
+    Performs a deep search for subdomains on both example.com and sample.org.
 
-    .LINK
-        https://github.com/azurekid/blackcat
-    #>
+.EXAMPLE
+    Find-SubDomain -DomainName example.com -WordList .\my-subdomains.txt -ThrottleLimit 50
+
+    Checks subdomains from a custom list against example.com with 50 concurrent threads.
+
+.OUTPUTS
+    System.Collections.ArrayList
+    Returns a collection of PSCustomObjects containing Domain, Category, Url, HostName, and IpAddress properties.
+
+.NOTES
+    Requires access to DNS services for hostname resolution.
+    Performance depends on network connectivity and DNS server responsiveness.
+    Consider using a lower ThrottleLimit on systems with limited resources.
+#>
 }
