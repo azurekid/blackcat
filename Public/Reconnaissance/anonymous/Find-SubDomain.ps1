@@ -194,9 +194,5 @@ function Find-SubDomain {
     System.Collections.ArrayList
     Returns a collection of PSCustomObjects containing Domain, Category, Url, HostName, and IpAddress properties.
 
-.NOTES
-    Requires access to DNS services for hostname resolution.
-    Performance depends on network connectivity and DNS server responsiveness.
-    Consider using a lower ThrottleLimit on systems with limited resources.
 #>
 }
