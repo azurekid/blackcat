@@ -72,7 +72,7 @@
         'Set-FunctionAppSecret',
         'Set-ManagedIdentityPermission',
         'Set-UserCredential',
-        'Switch-Context',
+        'Select-AzureContext',
         'Update-ServiceTag'
     )
 
@@ -118,7 +118,7 @@
         'Public\Helpers\New-AuthHeader.ps1',
         'Public\Helpers\New-JWT.ps1',
         'Public\Helpers\Read-SASToken.ps1',
-        'Public\Helpers\Switch-Context.ps1',
+        'Public\Helpers\Select-AzureContext.ps1',
         'Public\Helpers\Update-ServiceTag.ps1',
 
         # Impair Defenses
