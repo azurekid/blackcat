@@ -45,20 +45,15 @@ function Select-AzureContext {
 
     process {
         try {
-            # Get all available contexts
             $contexts = Get-AzContext -ListAvailable
             $currentContext = Get-AzContext
 
-            # If no parameters or List switch, display available contexts
             if ($PSCmdlet.ParameterSetName -eq 'List' -or !$SwitchTo) {
-                # Display available contexts in a friendly format with added friendly names
                 $index = 1
                 $contextList = $contexts | ForEach-Object {
-                    # Create friendly name from subscription and account
                     $userName = $_.Account.Id.Split('@')[0]
                     $subscriptionName = $_.Subscription.Name -replace '^\s+', ''
                     
-                    # Determine if this is the current context
                     $isCurrent = ($_.Id -eq $currentContext.Id)
                     $currentMarker = if ($isCurrent) { "* " } else { "  " }
                     
@@ -94,11 +89,10 @@ function Select-AzureContext {
                     }
                 }
                 else {
-                    # Try different matching strategies
                     $targetContext = $contexts | Where-Object {
                         $userName = $_.Account.Id.Split('@')[0]
                         $subscriptionName = $_.Subscription.Name -replace '^\s+', ''
-                        $friendlyName = "[$userName] $subscriptionName"
+                        $friendlyName = """[$userName] $subscriptionName"""
                         
                         # Check for exact matches first
                         $_.Name -eq $SwitchTo -or
@@ -108,23 +102,19 @@ function Select-AzureContext {
                         $userName -eq $SwitchTo
                     }
                     
-                    # If no exact match, try partial match
                     if (-not $targetContext) {
                         $targetContext = $contexts | Where-Object {
                             $userName = $_.Account.Id.Split('@')[0]
-                            # $subscriptionName = $_.Subscription.Name -replace '^\s+', ''
                             
-                            # Check for partial matches
                             $_.Name -like "*$SwitchTo*" -or
                             $_.Account.Id -like "*$SwitchTo*" -or
                             $_.Subscription.Name -like "*$SwitchTo*" -or
                             $userName -like "*$SwitchTo*"
-                        } | Select-Object -First 1  # Take just the first match for partial matches
+                        } | Select-Object -First 1
                     }
                 }
 
                 if ($targetContext) {
-                    # If multiple contexts were matched, show them and ask user to be more specific
                     if ($targetContext -is [array] -and $targetContext.Count -gt 1) {
                         Write-Host "Multiple contexts matched your criteria. Please be more specific:" -ForegroundColor Yellow
                         $index = 1
