@@ -35,7 +35,7 @@
         'Add-StorageAccountSasToken',
         'Add-GroupObject',
         'ConvertFrom-JWT',
-        'Get-AccessTokens',
+        'Export-AzAccessToken',
         'Get-AdministrativeUnits',
         'Get-AppRolePermission',
         'Get-AzResourceSecretList',
@@ -107,7 +107,7 @@
         'Public\Discovery\Get-ResourcePermission.ps1',
 
         # Exfiltration
-        'Public\Exfiltration\Get-AccessTokens.ps1',
+        'Public\Exfiltration\Export-AzAccessToken.ps1',
         'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
 
         # Helpers
