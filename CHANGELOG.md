@@ -4,6 +4,18 @@
 
 # CHANGELOG
 
+## v0.13.3 [2025-06-07]
+
+_What's New_
+
+This update renames the `Get-AccessTokens` function to `Export-AzAccessToken` for improved user experience and better consistency with PowerShell naming conventions. The function now uses a more accurate verb (`Export`) and includes the standard Azure prefix (`Az`).
+
+_Improvements_
+
+* Renamed `Get-AccessTokens` to `Export-AzAccessToken` to better reflect its purpose of exporting tokens to a file or secure sharing service.
+* Updated function documentation to use the new name in examples and descriptions.
+* Updated module manifest to reference the new function name and file.
+
 ## v0.13.0 [2025-05-13]
 
 _What's New_

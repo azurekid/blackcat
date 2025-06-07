@@ -96,9 +96,9 @@ function Show-BlackCatCommands {
                 if ($description -eq "No description available") {
                     $content = Get-Content -Path $fullFilePath -Raw
                     
-                    # Special handling for Get-AccessTokens.ps1
-                    if ($fileName -eq "Get-AccessTokens") {
-                        $description = "The Get-AccessTokens function retrieves access tokens for specified Azure resource types and exports them to a JSON file."
+                    # Special handling for Export-AzAccessToken.ps1
+                    if ($fileName -eq "Export-AzAccessToken") {
+                        $description = "The Export-AzAccessToken function retrieves access tokens for specified Azure resource types and exports them to a JSON file or publishes them to a secure sharing service."
                     }
                     # Look for .DESCRIPTION in a comment block
                     elseif ($content -match '<#(?:.|\n)*?\.DESCRIPTION\s*\r?\n\s*(.*?)(?:\r?\n\s*\.|\r?\n\s*\r?\n|\r?\n\s*#>|$)') {
