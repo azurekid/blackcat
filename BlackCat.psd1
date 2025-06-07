@@ -50,7 +50,7 @@
         'Find-AzurePublicResource',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
-        'Get-PublicStorageAccountList',
+        'Get-AzBlobContent',
         'Get-RoleAssignment',
         'Get-ServicePrincipalsPermission',
         'Get-ServiceTag',
@@ -58,7 +58,6 @@
         'Get-StorageContainerList',
         'Invoke-AzBatch',
         'Invoke-MsGraph',
-        'Invoke-EnumSubDomains',
         'Invoke-Update',
         'New-AuthHeader',
         'New-JWT',
@@ -108,7 +107,7 @@
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
-        'Public\Exfiltration\anonymous\Get-PublicStorageAccountContent.ps1',
+        'Public\Exfiltration\anonymous\Get-AzBlobContent.ps1',
 
         # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
