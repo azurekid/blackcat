@@ -35,7 +35,11 @@ function Find-SubDomain {
 
         [Parameter(Mandatory = $false)]
         [Alias('deep', 'd')]
-        [switch]$DeepSearch
+        [switch]$DeepSearch,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('as-table', 'at')]
+        [switch]$AsTable
     )
 
     begin {
@@ -44,7 +48,7 @@ function Find-SubDomain {
         $result = [System.Collections.ArrayList]::new()
         $type = if ($DeepSearch) { 'deep' } else { 'default' }
         if ($type -eq 'deep') {
-            Write-Message  -FunctionName $($MyInvocation.MyCommand.Name) "Deep search $($type -eq 'deep' ? 'enabled' : 'disabled')" -Severity Information
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "Deep search enabled" -Severity Information
         }
     }
 
@@ -60,7 +64,7 @@ function Find-SubDomain {
             if ($Category -eq 'all') {
                 foreach ($cat in $SessionVariables.subdomains[$type].Keys) {
                     # Skip the 'common' category when 'all' is selected for improved performance
-
+                    if ($cat -ne 'common') {
                         foreach ($sd in $SessionVariables.subdomains[$type].$cat) {
                             [void]$subdomains.Add($sd)
                         }
@@ -88,17 +92,17 @@ function Find-SubDomain {
                 Write-Verbose "$($MyInvocation.MyCommand.Name): Starting DNS resolution for $totalDns names for domain $domain..."
 
                 $dnsNames | ForEach-Object -Parallel {
-                    $result     = $using:result
-                    $type       = $using:type
-                    $domain     = $using:domain
+                    $result = $using:result
+                    $type = $using:type
+                    $domain = $using:domain
                     $subdomains = $using:SessionVariables.subdomains
                     try {
                         Write-Verbose "$($MyInvocation.MyCommand.Name): Resolving DNS for '$_'"
-                        $dnsInfo   = [System.Net.Dns]::GetHostEntry($_)
+                        $dnsInfo = [System.Net.Dns]::GetHostEntry($_)
                         $ipAddress = $dnsInfo.AddressList.IpAddressToString
                         $subdomain = $_.Split('.')[0]
-                        $uri       = "https://$_"
-                        $hostName  = $dnsInfo.HostName
+                        $uri = "https://$_"
+                        $hostName = $dnsInfo.HostName
 
                         $foundCategory = $null
                         foreach ($catLookup in $subdomains[$type].Keys) {
@@ -142,10 +146,15 @@ function Find-SubDomain {
         }
         else {
             Write-Information "Found $($result.Count) public resources" -InformationAction Continue
-            return $result | Sort-Object Domain, Category, Url | Format-Table -AutoSize
+            if ($AsTable) {
+                $result | Format-Table -AutoSize
+            }
+            else {
+                $result | Format-List
+            }
         }
     }
-<#
+    <#
 .SYNOPSIS
     Discovers active subdomains for specified domain names through DNS resolution.
 
