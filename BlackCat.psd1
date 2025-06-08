@@ -53,7 +53,7 @@
         'Get-AzBlobContent',
         'Get-RoleAssignment',
         'Get-ServicePrincipalsPermission',
-        'Get-ServiceTag',
+        'Find-AzureServiceTag',
         'Get-StorageAccountKey',
         'Get-StorageContainerList',
         'Invoke-AzBatch',
@@ -113,7 +113,7 @@
         # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
         'Public\Helpers\Get-Functions.ps1',
-        'Public\Helpers\Get-ServiceTag.ps1',
+        'Public\Helpers\Find-AzureServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
         'Public\Helpers\New-JWT.ps1',
