@@ -45,7 +45,7 @@ if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
-$global:SessionVariables = [ordered]@{
+$script:SessionVariables = [ordered]@{
     baseUri          = ''
     graphUri         = 'https://graph.microsoft.com/beta'
     batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01'

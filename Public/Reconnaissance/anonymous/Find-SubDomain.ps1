@@ -23,7 +23,7 @@ function Find-SubDomain {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('cat', 'c')]
         [ValidateSet([SubdomainCategories])]
-        [string]$Category = 'common',
+        [string]$Category = 'all',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('word-list', 'w')]
@@ -59,9 +59,12 @@ function Find-SubDomain {
 
             if ($Category -eq 'all') {
                 foreach ($cat in $SessionVariables.subdomains[$type].Keys) {
-                    foreach ($sd in $SessionVariables.subdomains[$type].$cat) {
-                        [void]$subdomains.Add($sd)
-                    }
+                    # Skip the 'common' category when 'all' is selected for improved performance
+
+                        foreach ($sd in $SessionVariables.subdomains[$type].$cat) {
+                            [void]$subdomains.Add($sd)
+                        }
+
                 }
             }
             else {
@@ -99,11 +102,22 @@ function Find-SubDomain {
 
                         $foundCategory = $null
                         foreach ($catLookup in $subdomains[$type].Keys) {
+                            # Skip the 'common' category when 'all' is selected
+                            if ($using:Category -eq 'all' -and $catLookup -eq 'common') {
+                                continue
+                            }
+
                             if ($subdomains[$type].$catLookup -contains $subdomain) {
                                 $foundCategory = $catLookup
                                 Write-Verbose "Found category '$catLookup' for subdomain '$_'"
                                 break
                             }
+                        }
+
+                        # Default to 'common' if no category was found
+                        if ($null -eq $foundCategory) {
+                            $foundCategory = 'common'
+                            Write-Verbose "No category found for subdomain '$_', defaulting to 'common'"
                         }
 
                         $resultObject = [PSCustomObject]@{
