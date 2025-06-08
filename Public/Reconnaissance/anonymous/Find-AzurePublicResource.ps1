@@ -60,18 +60,53 @@ function Find-AzurePublicResource {
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
             $domains = @(
+                # Storage
                 'blob.core.windows.net',
                 'file.core.windows.net',
                 'table.core.windows.net',
                 'queue.core.windows.net',
-                'database.windows.net',
-                'documents.azure.com',
-                'vault.azure.net',
-                'azurecr.io',
+                'dfs.core.windows.net',            # Data Lake Storage Gen2
+
+                # Databases
+                'database.windows.net',            # SQL Database
+                'documents.azure.com',             # Cosmos DB
+                'redis.cache.windows.net',         # Redis Cache
+                'mysql.database.azure.com',        # MySQL
+                'postgres.database.azure.com',     # PostgreSQL
+                'mariadb.database.azure.com',      # MariaDB
+
+                # Security
+                'vault.azure.net',                 # Key Vault
+
+                # Compute & Containers
+                'azurecr.io',                      # Container Registry
+                'azurewebsites.net',               # App Service/Functions
+                'scm.azurewebsites.net',           # App Service Kudu
+                'azurestaticapps.net',             # Static Web Apps
+                'staticapp.azurestaticapps.net',   # Static Web Apps alternate
+
+                # AI/ML
                 'cognitiveservices.azure.com',
+                'openai.azure.com',                # Azure OpenAI
+                'search.windows.net',              # Azure Search
+                'azureml.net',                     # Machine Learning
+
+                # Integration
                 'servicebus.windows.net',
-                'azureedge.net',
-                'azurewebsites.net'
+                'azure-api.net',                   # API Management
+                'azurefd.net',                     # Front Door
+                'service.signalr.net',             # SignalR Service
+                'webpubsub.azure.com',             # Web PubSub
+
+                # Other
+                'azureedge.net',                   # CDN
+                'azurefd.net',                     # Front Door
+                'azure-devices.net',               # IoT Hub
+                'eventgrid.azure.net',             # Event Grid
+                'azuremicroservices.io',           # Spring Apps
+                'azuresynapse.net',                # Synapse Analytics
+                'atlas.microsoft.com',             # Azure Maps
+                'batch.azure.com'                  # Azure Batch
             )
 
             $domains | ForEach-Object {
@@ -92,18 +127,53 @@ function Find-AzurePublicResource {
                 function Get-ResourceType {
                     param($dnsName)
                     switch -Regex ($dnsName) {
+                        # Storage
                         '\.blob\.core\.windows\.net$'         { return 'StorageBlob' }
                         '\.file\.core\.windows\.net$'         { return 'StorageFile' }
                         '\.table\.core\.windows\.net$'        { return 'StorageTable' }
                         '\.queue\.core\.windows\.net$'        { return 'StorageQueue' }
+                        '\.dfs\.core\.windows\.net$'          { return 'DataLakeStorage' }
+
+                        # Databases
                         '\.database\.windows\.net$'           { return 'SqlDatabase' }
                         '\.documents\.azure\.com$'            { return 'CosmosDB' }
-                        '\.vault\.azure.net$'                 { return 'KeyVault' }
+                        '\.redis\.cache\.windows\.net$'       { return 'RedisCache' }
+                        '\.mysql\.database\.azure\.com$'      { return 'MySQL' }
+                        '\.postgres\.database\.azure\.com$'   { return 'PostgreSQL' }
+                        '\.mariadb\.database\.azure\.com$'    { return 'MariaDB' }
+
+                        # Security
+                        '\.vault\.azure\.net$'                { return 'KeyVault' }
+
+                        # Compute & Containers
                         '\.azurecr\.io$'                      { return 'ContainerRegistry' }
-                        '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
-                        '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
-                        '\.azureedge\.net$'                   { return 'CDN' }
                         '\.azurewebsites\.net$'               { return 'AppService' }
+                        '\.scm\.azurewebsites\.net$'          { return 'AppServiceKudu' }
+                        '\.azurestaticapps\.net$'             { return 'StaticWebApp' }
+                        '\.staticapp\.azurestaticapps\.net$'  { return 'StaticWebApp' }
+
+                        # AI/ML
+                        '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
+                        '\.openai\.azure\.com$'               { return 'AzureOpenAI' }
+                        '\.search\.windows\.net$'             { return 'AzureSearch' }
+                        '\.azureml\.net$'                     { return 'MachineLearning' }
+
+                        # Integration
+                        '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
+                        '\.azure-api\.net$'                   { return 'APIManagement' }
+                        '\.azurefd\.net$'                     { return 'FrontDoor' }
+                        '\.service\.signalr\.net$'            { return 'SignalR' }
+                        '\.webpubsub\.azure\.com$'            { return 'WebPubSub' }
+
+                        # Other
+                        '\.azureedge\.net$'                   { return 'CDN' }
+                        '\.azure-devices\.net$'               { return 'IoTHub' }
+                        '\.eventgrid\.azure\.net$'            { return 'EventGrid' }
+                        '\.azuremicroservices\.io$'           { return 'SpringApps' }
+                        '\.azuresynapse\.net$'                { return 'SynapseAnalytics' }
+                        '\.atlas\.microsoft\.com$'            { return 'AzureMaps' }
+                        '\.batch\.azure\.com$'                { return 'AzureBatch' }
+
                         default                               { return 'Unknown' }
                     }
                 }
