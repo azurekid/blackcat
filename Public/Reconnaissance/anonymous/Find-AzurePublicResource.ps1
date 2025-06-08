@@ -82,8 +82,6 @@ function Find-AzurePublicResource {
                 'azurecr.io',                      # Container Registry
                 'azurewebsites.net',               # App Service/Functions
                 'scm.azurewebsites.net',           # App Service Kudu
-                'azurestaticapps.net',             # Static Web Apps
-                'staticapp.azurestaticapps.net',   # Static Web Apps alternate
 
                 # AI/ML
                 'cognitiveservices.azure.com',
@@ -94,13 +92,11 @@ function Find-AzurePublicResource {
                 # Integration
                 'servicebus.windows.net',
                 'azure-api.net',                   # API Management
-                'azurefd.net',                     # Front Door
                 'service.signalr.net',             # SignalR Service
                 'webpubsub.azure.com',             # Web PubSub
 
                 # Other
                 'azureedge.net',                   # CDN
-                'azurefd.net',                     # Front Door
                 'azure-devices.net',               # IoT Hub
                 'eventgrid.azure.net',             # Event Grid
                 'azuremicroservices.io',           # Spring Apps
@@ -149,8 +145,8 @@ function Find-AzurePublicResource {
                         '\.azurecr\.io$'                      { return 'ContainerRegistry' }
                         '\.azurewebsites\.net$'               { return 'AppService' }
                         '\.scm\.azurewebsites\.net$'          { return 'AppServiceKudu' }
-                        '\.azurestaticapps\.net$'             { return 'StaticWebApp' }
-                        '\.staticapp\.azurestaticapps\.net$'  { return 'StaticWebApp' }
+                        #'\.azurestaticapps\.net$'             { return 'StaticWebApp' }
+                        #'\.staticapp\.azurestaticapps\.net$'  { return 'StaticWebApp' }
 
                         # AI/ML
                         '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
@@ -161,7 +157,6 @@ function Find-AzurePublicResource {
                         # Integration
                         '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
                         '\.azure-api\.net$'                   { return 'APIManagement' }
-                        '\.azurefd\.net$'                     { return 'FrontDoor' }
                         '\.service\.signalr\.net$'            { return 'SignalR' }
                         '\.webpubsub\.azure\.com$'            { return 'WebPubSub' }
 
