@@ -23,7 +23,7 @@ function Find-SubDomain {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('cat', 'c')]
         [ValidateSet([SubdomainCategories])]
-        [string]$Category = 'common',
+        [string]$Category = 'all',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('word-list', 'w')]
@@ -38,14 +38,18 @@ function Find-SubDomain {
         [switch]$DeepSearch,
 
         [Parameter(Mandatory = $false)]
-        [Alias('as-table', 'at')]
-        [switch]$AsTable
+        [Alias('json', 'raw')]
+        [switch]$AsJson,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('table', 'list')]
+        [switch]$Detailed
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
 
-        $result = [System.Collections.ArrayList]::new()
+        $results = [System.Collections.ArrayList]::new()
         $type = if ($DeepSearch) { 'deep' } else { 'default' }
         if ($type -eq 'deep') {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "Deep search enabled" -Severity Information
@@ -92,7 +96,7 @@ function Find-SubDomain {
                 Write-Verbose "$($MyInvocation.MyCommand.Name): Starting DNS resolution for $totalDns names for domain $domain..."
 
                 $dnsNames | ForEach-Object -Parallel {
-                    $result = $using:result
+                    $results = $using:results
                     $type = $using:type
                     $domain = $using:domain
                     $subdomains = $using:SessionVariables.subdomains
@@ -126,7 +130,7 @@ function Find-SubDomain {
                             IpAddress = $ipAddress
                         }
 
-                        [void]$result.Add($resultObject)
+                        [void]$results.Add($resultObject)
                     }
                     catch [System.Net.Sockets.SocketException] {
                         Write-Verbose "$($MyInvocation.MyCommand.Name): DNS resolution failed for '$_' - $($_.Exception.Message)"
@@ -140,18 +144,20 @@ function Find-SubDomain {
     }
 
     end {
-        Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
-        if (-not $result -or $result.Count -eq 0) {
-            Write-Information "No public resources found" -InformationAction Continue
-        }
-        else {
-            Write-Information "Found $($result.Count) public resources" -InformationAction Continue
-            if ($AsTable) {
-                $result | Format-Table -AutoSize
+         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
+        if ($results.Count -gt 0) {
+            if ($AsJson) {
+                return ($results | ConvertTo-Json -Depth 4)
+            }
+            elseif ($Detailed) {
+                return ($results | Format-Table -AutoSize)
             }
             else {
-                $result | Format-List
+                return $results | Select-Object Domain, Category, Url
             }
+        }
+        else {
+            Write-Information "No public resources found" -InformationAction Continue
         }
     }
     <#
@@ -186,6 +192,14 @@ function Find-SubDomain {
 .PARAMETER DeepSearch
     When specified, uses an expanded list of subdomains for more thorough enumeration.
     This significantly increases the number of DNS lookups performed.
+
+.PARAMETER AsJson
+Returns results in JSON format.
+Aliases: json, raw
+
+.PARAMETER Detailed
+Returns results in detailed table format.
+Aliases: table, list
 
 .EXAMPLE
     Find-SubDomain -DomainName example.com
