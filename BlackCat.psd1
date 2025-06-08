@@ -72,6 +72,7 @@
         'Set-ManagedIdentityPermission',
         'Set-UserCredential',
         'Select-AzureContext',
+        'Test-LookalikeDomains',
         'Update-ServiceTag'
     )
 
@@ -122,6 +123,9 @@
 
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
+
+        # Initial Access
+        'Public\Initial Access\Test-LookalikeDomains.ps1',
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
