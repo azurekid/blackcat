@@ -40,7 +40,15 @@ function Find-AzurePublicResource {
 
         [Parameter(Mandatory = $false)]
         [Alias("throttle-limit", 't', 'threads')]
-        [int]$ThrottleLimit = 50
+        [int]$ThrottleLimit = 50,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('json', 'raw')]
+        [switch]$AsJson,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('table', 'list')]
+        [switch]$Detailed
     )
 
     begin {

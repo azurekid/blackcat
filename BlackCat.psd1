@@ -31,49 +31,68 @@
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport = @(
-        'Add-EntraApplication',
-        'Add-StorageAccountSasToken',
-        'Add-GroupObject',
-        'ConvertFrom-JWT',
-        'Export-AzAccessToken',
-        'Get-AdministrativeUnits',
-        'Get-AppRolePermission',
-        'Get-AzResourceSecretList',
-        'Show-BlackCatCommands',
-        'Get-ResourcePermission',
-        'Get-EntraInformation',
-        'Get-EntraIDPermissions',
-        'Get-FederatedAppCredential',
+        # Credential Access
         'Get-KeyVaultSecret',
-        'Get-ManagedIdentity',
-        'Get-PrivilegedApp',
-        'Find-AzurePublicResource',
-        'Find-PublicStorageContainer',
-        'Find-SubDomain',
-        'Get-AzBlobContent',
-        'Get-RoleAssignment',
-        'Get-ServicePrincipalsPermission',
-        'Find-AzureServiceTag',
         'Get-StorageAccountKey',
-        'Get-StorageContainerList',
-        'Invoke-AzBatch',
-        'Invoke-MsGraph',
+
+        # Discovery
+        'Get-AppRolePermission',
+        'Get-FederatedAppCredential',
+        'Get-PrivilegedApp',
+        'Get-ServicePrincipalsPermission',
+        'Get-ResourcePermission',
+
+        # Exfiltration
+        'Export-AzAccessToken',
+        'Get-AzBlobContent',
+
+        # Helpers
+        'ConvertFrom-JWT',
+        'Show-BlackCatCommands',
+        'Find-AzureServiceTag',
         'Invoke-Update',
         'New-AuthHeader',
         'New-JWT',
         'Read-SASToken',
-        'Restore-DeletedIdentity',
+        'Select-AzureContext',
+        'Update-AzureServiceTag',
+
+        # Impair Defenses
+        'Set-AzNetworkSecurityGroupRule',
+
+        # Initial Access
+        'Test-LookalikeDomains',
+
+        # Persistence
+        'Add-StorageAccountSasToken',
+        'Add-GroupObject',
         'Set-AdministrativeUnit',
         'Set-AppRegistrationOwner',
-        'Set-AzNetworkSecurityGroupRule',
-        'Set-Context',
         'Set-FederatedIdentity',
-        'Set-FunctionAppSecret',
         'Set-ManagedIdentityPermission',
+        'Set-FunctionAppSecret',
         'Set-UserCredential',
-        'Select-AzureContext',
-        'Test-LookalikeDomains',
-        'Update-ServiceTag'
+
+        # Reconnaissance
+        'Get-AdministrativeUnits',
+        'Get-EntraInformation',
+        'Get-EntraIDPermissions',
+        'Get-ManagedIdentity',
+        'Get-StorageContainerList',
+        'Invoke-AzBatch',
+        'Invoke-MsGraph',
+        'Find-AzurePublicResource',
+        'Find-PublicStorageContainer',
+        'Find-SubDomain',
+
+        # Resource Development
+        'Add-EntraApplication',
+        'Restore-DeletedIdentity',
+
+        # Other (functions not found in FileList)
+        'Get-AzResourceSecretList',
+        'Get-RoleAssignment',
+        'Set-Context'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -112,14 +131,14 @@
 
         # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
-        'Public\Helpers\Get-Functions.ps1',
+        'Public\Helpers\Show-BlackCatCommands.ps1',
         'Public\Helpers\Find-AzureServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
         'Public\Helpers\New-JWT.ps1',
         'Public\Helpers\Read-SASToken.ps1',
         'Public\Helpers\Select-AzureContext.ps1',
-        'Public\Helpers\Update-ServiceTag.ps1',
+        'Public\Helpers\Update-AzureServiceTag.ps1',
 
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
