@@ -1,4 +1,4 @@
-function Update-ServiceTag {
+function Update-AzureServiceTag {
     [cmdletbinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -25,10 +25,26 @@ function Update-ServiceTag {
                 $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*Azure IP Ranges*").href
 
                 Write-Verbose "Downloading Service Tags from $uri"
-                (Invoke-RestMethod -uri $uri).values | ConvertTo-Json -Depth 100 | Out-File $helperPath/ServiceTags.json -Force
+                $serviceTagData = Invoke-RestMethod -uri $uri
+                
+                # Extract the values array from the service tag data if it exists
+                $serviceTagValues = if ($serviceTagData.PSObject.Properties.Name -contains 'values') {
+                    $serviceTagData.values
+                } else {
+                    $serviceTagData
+                }
+                
+                # Save to file
+                $serviceTagValues | ConvertTo-Json -Depth 100 | Out-File $helperPath/ServiceTags.json -Force
 
                 Write-Verbose "Updating Service Tags for $Region"
-                $sessionVariables.serviceTags = (Get-Content $helperPath/ServiceTags.json | ConvertFrom-Json)
+                # Initialize session variables if they don't exist
+                if (-not $script:SessionVariables) { $script:SessionVariables = @{} }
+                
+                # Store service tags in script scope
+                $script:SessionVariables.serviceTags = $serviceTagValues
+                
+                Write-Verbose "Successfully updated service tags with $($serviceTagValues.Count) entries"
             }
         }
         catch {
