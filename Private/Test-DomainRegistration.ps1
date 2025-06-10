@@ -6,7 +6,7 @@ function Test-DomainRegistration {
         
         [Parameter(Mandatory = $false)]
         [ValidateSet("rdap", "whois", "dns", "all")]
-        [string]$Method = "rdap"
+        [string]$Method = "all"
     )
     
     # Add some verification to ensure the domain is a valid format
@@ -100,7 +100,7 @@ function Test-DomainRegistration {
                     }
                     else {
                         # For other errors, try the next service
-                        Write-Verbose "Error with $rdapService: $($_.Exception.Message)"
+                        Write-Verbose "Error with $rdapService $($_.Exception.Message)"
                         break
                     }
                 }
