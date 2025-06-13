@@ -1,4 +1,4 @@
-function Get-AccessTokens {
+function Export-AzAccessToken {
     [cmdletbinding()]
     [OutputType([string])] # Declares that the function can return a string
     param (
@@ -73,12 +73,14 @@ function Get-AccessTokens {
     }
     <#
     .SYNOPSIS
-        Retrieves and exports access tokens for specified Azure resource types.
+        Exports access tokens for specified Azure resource types.
 
     .DESCRIPTION
-        The Get-AccessTokens function retrieves access tokens for specified Azure resource types and exports them to a JSON file.
-        It supports publishing the tokens to a secure sharing service or saving them locally. The function handles errors gracefully
-        and provides verbose logging for better traceability.
+        The Export-AzAccessToken function retrieves access tokens for specified Azure resource types and exports them to a JSON file.
+        It supports publishing the tokens to a secure sharing service (onetimesecret.com) or saving them locally.
+        The function retrieves tokens for each specified resource type, extracts token information including UPN, Audience, Roles, Scope, and the actual token.
+        It handles errors gracefully and provides verbose logging for better traceability.
+        When using the Publish parameter, it returns a secure URL where the tokens can be accessed once.
 
     .PARAMETER ResourceTypeNames
         An optional array of strings specifying the Azure resource types for which to request access tokens.
@@ -94,26 +96,16 @@ function Get-AccessTokens {
         (https://us.onetimesecret.com) instead of being saved to a file. The function will return a URL to access the shared tokens.
 
     .EXAMPLE
-        Get-AccessTokens -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
-        Retrieves access tokens for "MSGraph" and "ResourceManager" resource types and saves them to "AccessTokens.json".
+        Export-AzAccessToken -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
+        Exports access tokens for "MSGraph" and "ResourceManager" resource types and saves them to "AccessTokens.json".
 
     .EXAMPLE
-        Get-AccessTokens -Publish
-        Retrieves access tokens for all default resource types and publishes them to a secure sharing service.
+        Export-AzAccessToken -Publish
+        Exports access tokens for all default resource types and publishes them to a secure sharing service.
         Returns a URL to access the shared tokens.
-
-    .EXAMPLE
-        Get-AccessTokens -OutputFile "AccessTokens.json"
-        Retrieves access tokens for all default resource types and saves them to "AccessTokens.json".
-
-    .EXAMPLE
-        $tokens = Get-Content -Path "AccessTokens.json" -Raw | ConvertFrom-Json
-        Reads the exported JSON file back into a PowerShell object for further use.
 
     .NOTES
         This function requires the Azure PowerShell module to be installed and authenticated.
-
-    .LINK
-        For more information, refer to the Azure PowerShell documentation or contact support.
+        The ConvertFrom-JWT function is required to process the token contents.
     #>
 }
