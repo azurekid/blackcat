@@ -28,6 +28,7 @@ dev
 development
 dns
 docker
+docs
 exe
 files
 filestorage
