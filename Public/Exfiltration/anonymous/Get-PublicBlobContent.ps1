@@ -1,4 +1,4 @@
-function Get-AzBlobContent {
+function Get-PublicBlobContent {
     [cmdletbinding(DefaultParameterSetName = "Download")]
     param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Download")]
