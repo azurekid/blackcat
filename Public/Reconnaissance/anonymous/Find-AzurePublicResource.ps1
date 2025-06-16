@@ -16,6 +16,14 @@
 .PARAMETER ThrottleLimit
     Optional. The maximum number of concurrent DNS resolution operations. Default is 50.
 
+.PARAMETER AsJson
+    Returns results in JSON format.
+    Aliases: json, raw
+
+.PARAMETER Detailed
+    Returns results in detailed table format.
+    Aliases: table, list
+
 .EXAMPLE
     Find-AzurePublicResource -Name "mycompany" -WordList "./words.txt" -ThrottleLimit 100
 
@@ -69,10 +77,10 @@ function Find-AzurePublicResource {
 
             $domains = @(
                 # Storage
-                'blob.core.windows.net',
-                'file.core.windows.net',
-                'table.core.windows.net',
-                'queue.core.windows.net',
+                'blob.core.windows.net',           # Blob Storage
+                'file.core.windows.net',           # File Storage
+                'table.core.windows.net',          # Table Storage
+                'queue.core.windows.net',          # Queue Storage
                 'dfs.core.windows.net',            # Data Lake Storage Gen2
 
                 # Databases
@@ -153,8 +161,6 @@ function Find-AzurePublicResource {
                         '\.azurecr\.io$'                      { return 'ContainerRegistry' }
                         '\.azurewebsites\.net$'               { return 'AppService' }
                         '\.scm\.azurewebsites\.net$'          { return 'AppServiceKudu' }
-                        #'\.azurestaticapps\.net$'             { return 'StaticWebApp' }
-                        #'\.staticapp\.azurestaticapps\.net$'  { return 'StaticWebApp' }
 
                         # AI/ML
                         '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
@@ -184,12 +190,17 @@ function Find-AzurePublicResource {
                 try {
                     $validDnsNames = $using:validDnsNames
                     $results = $using:results
-                    if ([System.Net.Dns]::GetHostEntry($_)) {
+                    $dnsResult = [System.Net.Dns]::GetHostEntry($_)
+                    if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
                         $resourceType = Get-ResourceType -dnsName $_
+
+                        # $resourceType = Get-ResourceType -dnsName $_
                         $obj = [PSCustomObject]@{
                             ResourceName = $_.Split('.')[0]
                             ResourceType = $resourceType
                             Uri          = "https://$_"
+                            HostName     = $dnsResult.HostName
+                            IPAddress    = $dnsResult.AddressList
                         }
                         $results.Add($obj)
                     }
@@ -197,10 +208,27 @@ function Find-AzurePublicResource {
                 catch [System.Net.Sockets.SocketException] {
                 }
             }
-            $results.ToArray() | Sort-Object Uri
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+        }
+    }
+    
+    end {
+        Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
+        if ($results -and $results.Count -gt 0) {
+            if ($AsJson) {
+                return ($results | ConvertTo-Json -Depth 4)
+            }
+            elseif ($Detailed) {
+                return ($results | Format-Table -AutoSize)
+            }
+            else {
+                return $results | Select-Object ResourceName, ResourceType, Uri
+            }
+        }
+        else {
+            Write-Information "No public Azure resources found" -InformationAction Continue
         }
     }
 }
