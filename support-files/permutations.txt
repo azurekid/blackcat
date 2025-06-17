@@ -1,4 +1,3 @@
-
 $root
 $webaccounting
 $logs
@@ -29,6 +28,7 @@ dev
 development
 dns
 docker
+docs
 exe
 files
 filestorage

@@ -1,4 +1,44 @@
-function Get-PublicStorageAccountList {
+<#
+.SYNOPSIS
+    Finds publicly accessible Azure Storage containers for a given storage account name and type.
+
+.DESCRIPTION
+    The Find-PublicStorageContainer function attempts to discover public Azure Storage containers (blob, file, queue, table, or dfs) by generating permutations of storage account names and checking their DNS resolution and accessibility.
+    It supports parallel processing for both DNS resolution and container enumeration, and can optionally include empty containers and container metadata in the results.
+
+.PARAMETER StorageAccountName
+    The base name of the Azure Storage account to check. Permutations will be generated based on this value.
+
+.PARAMETER Type
+    The type of Azure Storage service to check. Valid values are 'blob', 'file', 'queue', 'table', or 'dfs'. Defaults to 'blob'.
+
+.PARAMETER WordList
+    Path to a file containing additional words or permutations to use when generating storage account names.
+
+.PARAMETER ThrottleLimit
+    The maximum number of parallel operations to run during DNS resolution and container checks. Defaults to 50.
+
+.PARAMETER IncludeEmpty
+    Switch to include empty containers in the results. By default, only containers with blobs/files are included.
+
+.PARAMETER IncludeMetadata
+    Switch to include container metadata in the results by making an additional metadata request for each discovered container.
+
+.OUTPUTS
+    System.Collections.ArrayList
+    Returns an array list of PSCustomObject items, each representing a discovered public storage container with properties such as StorageAccountName, Container, FileCount, IsEmpty, Uri, and optionally Metadata.
+
+.EXAMPLE
+    Find-PublicStorageContainer -StorageAccountName "examplestorage" -Type "blob" -WordList "permutations.txt" -IncludeEmpty -IncludeMetadata
+
+    Attempts to find public blob containers for the storage account "examplestorage" using permutations from "permutations.txt", including empty containers and their metadata.
+
+.NOTES
+    - Requires appropriate permissions to perform DNS resolution and HTTP requests.
+    - Uses parallel processing for improved performance; adjust ThrottleLimit based on system resources.
+    - Designed for reconnaissance and security assessment purposes.
+#>
+function Find-PublicStorageContainer {
     [cmdletbinding()]
     [OutputType([System.Collections.ArrayList])] # Updated OutputType
     [Alias("bl cli public storage accounts")]
@@ -13,11 +53,11 @@ function Get-PublicStorageAccountList {
         [string]$Type = 'blob',
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [Alias("word-list")]
+        [Alias("word-list", "w")]
         [string]$WordList,
 
         [Parameter(Mandatory = $false)]
-        [Alias("throttle-limit")]
+        [Alias("throttle-limit", "t", "threads")]
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
