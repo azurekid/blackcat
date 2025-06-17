@@ -53,8 +53,6 @@
         'Set-AzNetworkSecurityGroupRule',
 
         # Initial Access
-        'Test-DnsTwistDomain',
-        'Test-DomainRegistration',
 
         # Persistence
         'Add-StorageAccountSasToken',
@@ -104,9 +102,7 @@
         'Private\Get-CidrAddresses.ps1',
         'Private\Invoke-SplitJWT.ps1',
         'Private\Write-Message.ps1',
-        'Private\Test-DnsName.ps1',
         'Private\Get-AllPages.ps1',
-        'Private\Get-DnsTwistDomains.ps1',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
@@ -138,8 +134,6 @@
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
 
         # Initial Access
-        'Public\Initial Access\Test-DnsTwistDomain.ps1'
-        'Public\Initial Access\Test-DomainRegistration.ps1',
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
