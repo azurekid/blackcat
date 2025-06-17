@@ -4,6 +4,20 @@
 
 # CHANGELOG
 
+## v0.13.4 [2025-06-10]
+
+_What's New_
+
+This update introduces a new function `Test-DnsTwistDomain` that helps identify potential typosquatting domains that could be used in phishing attacks.
+
+_Improvements_
+
+* Added `Test-DnsTwistDomain` function to detect and assess typosquatting domains
+* Implemented ten different typosquatting techniques including character omission, homoglyph attacks, and TLD variations
+* Added risk scoring algorithm to prioritize potentially malicious domain registrations
+* Created custom formatting to improve readability of results with color-coded risk levels
+* Added comprehensive unit tests for the new functionality
+
 ## v0.13.3 [2025-06-07]
 
 _What's New_
