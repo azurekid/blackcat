@@ -35,10 +35,27 @@ function Get-PublicBlobContent {
             }
 
             # Get the XML content from the URI
-            $requestUrl = if ($BlobUrl -like "*`?*") {
-                "$BlobUrl&include=versions"
-            } else {
-                "$BlobUrl?include=versions"
+            # Remove trailing slash if present
+            # $BlobUrl = $BlobUrl.TrimEnd('/')
+
+            # Check if the URL already contains the container list parameters
+            if ($BlobUrl -notlike "*restype=container&comp=list*") {
+                # Add container list parameters with the appropriate separator
+                $separator = if ($BlobUrl -like "*`?*") { "?" } else { "?" }
+                $requestUrl = "$BlobUrl$separator" + "restype=container&comp=list"
+                Write-Host "Request URL does not contain container list parameters, adding them: $requestUrl"
+                Write-Host "Using request URL: $requestUrl"
+            }
+            else {
+                $requestUrl = $BlobUrl
+                Write-Host "Request URL already contains container list parameters: $requestUrl"
+                Write-Host "Using request URL: $requestUrl"
+            }
+
+            # Add the versions parameter if it's not already there
+            if ($requestUrl -notlike "*include=versions*") {
+                $requestUrl = "$requestUrl&include=versions"
+                Write-Host "Request URL: $requestUrl"
             }
 
             $params = @{
@@ -56,7 +73,7 @@ function Get-PublicBlobContent {
             if ($BlobUrl -match '^(https?://[^/]+)/([^/?]+)') {
                 $matchResults = $matches
                 $serviceEndpoint = $matchResults[1] + "/"
-                $containerName   = $matchResults[2]
+                $containerName = $matchResults[2]
             }
             else {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Invalid URI format. Expected format: https://storage.blob.core.windows.net/container" -ErrorAction Error
@@ -80,30 +97,30 @@ function Get-PublicBlobContent {
             if ($ListOnly) {
                 $fileList = @()
                 foreach ($match in $fileMatches) {
-                    $fileName = $match.Groups[1].Value
+                    $fileName  = $match.Groups[1].Value
                     $versionId = $match.Groups[2].Value
                     $isCurrentVersion = $match.Groups.Count -gt 3 -and $match.Groups[3].Value -eq 'true'
                     $status = if ($isCurrentVersion) { "Current" } else { "Deleted" }
-                    
+
                     $fileList += [PSCustomObject]@{
-                        Name = $fileName
-                        Status = $status
+                        Name      = $fileName
+                        Status    = $status
                         VersionId = $versionId
-                        FullPath = "$serviceEndpoint$containerName/$fileName"
+                        FullPath  = "$serviceEndpoint$containerName/$fileName"
                     }
                 }
                 return $fileList
             }
 
             # Download each file based on the current version status
-            $fileMatches | ForEach-Object -Parallel{
+            $fileMatches | ForEach-Object -Parallel {
                 $fileName         = $_.Groups[1].Value
                 $versionId        = $_.Groups[2].Value
                 $isCurrentVersion = $_.Groups[3].Value -eq 'true'
 
-                $serviceEndpoint  = $using:serviceEndpoint
-                $containerName    = $using:containerName
-                $OutputPath       = $using:OutputPath
+                $serviceEndpoint = $using:serviceEndpoint
+                $containerName   = $using:containerName
+                $OutputPath      = $using:OutputPath
 
                 if ($isCurrentVersion) {
                     $fileUrl = "$serviceEndpoint$containerName/$fileName"
@@ -151,7 +168,7 @@ function Get-PublicBlobContent {
         Downloads or lists files from a public Azure Blob Storage account, including deleted (soft-deleted) blobs.
 
     .DESCRIPTION
-        The Get-AzBlobContent function downloads files from a specified public Azure Blob Storage account URL.
+        The Get-PublicBlobContent function downloads files from a specified public Azure Blob Storage account URL.
         It can also download deleted (soft-deleted) blobs if the IncludeDeleted switch is specified.
         Use the ListOnly parameter to preview the blobs before downloading them.
 
@@ -174,39 +191,28 @@ function Get-PublicBlobContent {
         Aliases: list-only, show, preview
 
     .EXAMPLE
-        ```powershell
-        Get-AzBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -OutputPath "/home/user/downloads"
-        ```
+        Get-PublicBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -OutputPath "/home/user/downloads"
+
         This example downloads the current versions of the files from the specified Azure Blob Storage account to the /home/user/downloads directory.
 
     .EXAMPLE
-        ```powershell
-        Get-AzBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -path "/home/user/downloads" -IncludeDeleted
-        ```
-        This example uses Linux-friendly aliases to download both current and deleted versions of the files.
+        Get-PublicBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -path "/home/user/downloads" -IncludeDeleted
+
+        This example uses aliases to download both current and deleted versions of the files.
 
     .EXAMPLE
-        ```powershell
-        Get-AzBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -ListOnly
-        ```
+        Get-PublicBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -ListOnly
+
         This example lists all current blobs in the container without downloading them.
 
     .EXAMPLE
-        ```powershell
-        Get-AzBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -ListOnly
-        ```
-        This example lists only current blobs in the container without downloading them. Note that -OutputPath is not required.
+        Get-PublicBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -IncludeDeleted -ListOnly
 
-    .EXAMPLE
-        ```powershell
-        Get-AzBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -IncludeDeleted -ListOnly
-        ```
         This example lists both current and deleted blobs in the container without downloading them.
 
     .EXAMPLE
-        ```powershell
-        Get-PublicStorageAccounts -storageAccountName 'mystorage' | Get-AzBlobContent -OutputPath "/home/user/downloads"
-        ```
+        Get-PublicStorageAccounts -storageAccountName 'mystorage' | Get-PublicBlobContent -OutputPath "/home/user/downloads"
+
         This example retrieves public file containers for the specified storage account and downloads the files to the /home/user/downloads directory.
 
     .NOTES
