@@ -36,7 +36,7 @@
 
         # Exfiltration
         'Export-AzAccessToken',
-        'Get-AzBlobContent',
+        'Get-PublicBlobContent',
 
         # Helpers
         'ConvertFrom-JWT',
@@ -107,7 +107,6 @@
         'Private\Test-DnsName.ps1',
         'Private\Get-AllPages.ps1',
         'Private\Get-DnsTwistDomains.ps1',
-        # 'Private\Test-DomainRegistration.ps1',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
@@ -122,7 +121,7 @@
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
-        'Public\Exfiltration\anonymous\Get-AzBlobContent.ps1',
+        'Public\Exfiltration\anonymous\Get-PublicBlobContent.ps1',
 
         # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
