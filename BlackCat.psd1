@@ -53,6 +53,9 @@
         'Set-AzNetworkSecurityGroupRule',
 
         # Initial Access
+        'Test-DnsTwistDomain',
+        'Test-DomainRegistration',
+        'Get-DnsTwinsDomains',
 
         # Persistence
         'Add-StorageAccountSasToken',
@@ -134,6 +137,9 @@
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
 
         # Initial Access
+        'Public\Initial Access\Test-DnsTwistDomain.ps1',
+        'Public\Initial Access\Test-DomainRegistration.ps1',
+        'Public\Initial Access\Get-DnsTwinsDomains.ps1',
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
