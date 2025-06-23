@@ -34,28 +34,18 @@ function Get-PublicBlobContent {
                 }
             }
 
-            # Get the XML content from the URI
-            # Remove trailing slash if present
-            # $BlobUrl = $BlobUrl.TrimEnd('/')
-
             # Check if the URL already contains the container list parameters
             if ($BlobUrl -notlike "*restype=container&comp=list*") {
-                # Add container list parameters with the appropriate separator
                 $separator = if ($BlobUrl -like "*`?*") { "?" } else { "?" }
                 $requestUrl = "$BlobUrl$separator" + "restype=container&comp=list"
-                Write-Host "Request URL does not contain container list parameters, adding them: $requestUrl"
-                Write-Host "Using request URL: $requestUrl"
             }
             else {
                 $requestUrl = $BlobUrl
-                Write-Host "Request URL already contains container list parameters: $requestUrl"
-                Write-Host "Using request URL: $requestUrl"
             }
 
             # Add the versions parameter if it's not already there
             if ($requestUrl -notlike "*include=versions*") {
                 $requestUrl = "$requestUrl&include=versions"
-                Write-Host "Request URL: $requestUrl"
             }
 
             $params = @{
@@ -69,7 +59,6 @@ function Get-PublicBlobContent {
 
             $fileContent = Invoke-RestMethod @params
 
-            # Extract service endpoint and container name from the URI
             if ($BlobUrl -match '^(https?://[^/]+)/([^/?]+)') {
                 $matchResults = $matches
                 $serviceEndpoint = $matchResults[1] + "/"
@@ -93,7 +82,6 @@ function Get-PublicBlobContent {
             $messageType = if ($ListOnly) { "to list" } else { "to download" }
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Found $($fileMatches.Count) files $messageType" -Severity 'Information'
 
-            # If ListOnly is specified, display the files and exit
             if ($ListOnly) {
                 $fileList = @()
                 foreach ($match in $fileMatches) {
@@ -112,7 +100,6 @@ function Get-PublicBlobContent {
                 return $fileList
             }
 
-            # Download each file based on the current version status
             $fileMatches | ForEach-Object -Parallel {
                 $fileName         = $_.Groups[1].Value
                 $versionId        = $_.Groups[2].Value
@@ -130,9 +117,8 @@ function Get-PublicBlobContent {
                 }
 
                 $downloadPath = Join-Path -Path $OutputPath -ChildPath $fileName
-
-                # Ensure the directory exists
                 $downloadDirPath = Split-Path -Path $downloadPath
+
                 if (-not (Test-Path -Path $downloadDirPath)) {
 
                     New-Item -ItemType Directory -Path $downloadDirPath -Force | Out-Null
