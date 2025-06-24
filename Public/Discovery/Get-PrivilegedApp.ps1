@@ -28,7 +28,8 @@ function Get-PrivilegedApp {
                 'Policy.ReadWrite.ConditionalAccess',
                 'GroupMember.ReadWrite.All',
                 'Group.ReadWrite.All',
-                'RoleManagement.ReadWrite.Directory'
+                'RoleManagement.ReadWrite.Directory',
+                'Application.ReadWrite.All'
             )
 
             $applications | ForEach-Object -Parallel {
