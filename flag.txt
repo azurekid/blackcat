@@ -1,0 +1,19 @@
+CONGRATULATIONS! 
+
+You've found the hidden flag: BlackCat{Purr3ct_St0rag3_3num3r4t10n}
+
+-------------------------------------
+HINT FOR THE NEXT EXERCISE:
+-------------------------------------
+
+Now that you've mastered basic storage account enumeration, try the following:
+
+1. Look for SAS tokens in the JavaScript files of the $web container
+2. Check if there are any other storage accounts with similar naming patterns
+3. Try to find any connection strings in KeyVault that might lead to additional storage accounts
+
+Remember: Sometimes the most valuable information is hidden in plain sight, like embedded credentials in source code or configuration files.
+
+Good hunting!
+
+~ The BlackCat Team
