@@ -31,6 +31,7 @@
         'Get-AppRolePermission',
         'Get-FederatedAppCredential',
         'Get-PrivilegedApp',
+        'Get-ServicePrincipalCredential',
         'Get-ServicePrincipalsPermission',
         'Get-ResourcePermission',
 
@@ -48,6 +49,7 @@
         'Read-SASToken',
         'Select-AzureContext',
         'Update-AzureServiceTag',
+        'Connect-ServicePrincipal',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
@@ -65,6 +67,7 @@
         'Set-FederatedIdentity',
         'Set-ManagedIdentityPermission',
         'Set-FunctionAppSecret',
+        'Set-ServicePrincipalCredential',
         'Set-UserCredential',
 
         # Reconnaissance
@@ -82,6 +85,7 @@
         # Resource Development
         'Add-EntraApplication',
         'Restore-DeletedIdentity',
+        'Connect-ServicePrincipal',
 
         # Other (functions not found in FileList)
         'Get-AzResourceSecretList',
@@ -115,6 +119,7 @@
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
+        'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
 
@@ -149,6 +154,7 @@
         'Public\Persistence\Set-FederatedIdentity.ps1',
         'Public\Persistence\Set-ManagedIdentityPermission.ps1',
         'Public\Persistence\Set-FunctionAppSecret.ps1',
+        'Public\Persistence\Set-ServicePrincipalCredential.ps1',
         'Public\Persistence\Set-UserCredential.ps1',
 
         # Reconnaissance
@@ -168,6 +174,7 @@
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
+        'Public\Resource Development\Connect-ServicePrincipal.ps1',
 
         # Module files
         'BlackCat.psd1',
