@@ -4,6 +4,28 @@
 
 # CHANGELOG
 
+## v0.13.5 [2025-06-17]
+
+_What's New_
+
+This update introduces several new functions for enhanced domain security assessment, Azure context management, and service tag lookups, plus improvements to existing functionality.
+
+_New Functions_
+
+* Added `Test-DomainRegistration` function for checking domain registration status using multiple methods (RDAP, WHOIS, DNS)
+* Added `Get-PublicBlobContent` function to download or list files from public Azure Blob Storage accounts, including soft-deleted blobs
+* Added `Find-AzureServiceTag` function to find and lookup Azure service tags by IP address, service name, or region with enhanced filtering
+* Added `Select-AzureContext` function for improved Azure context management with tab completion and user-friendly display
+* Added `Show-BlackCatCommands` function to display all available BlackCat functions with descriptions organized by category
+
+_Improvements_
+
+* Updated `subdomains.json` with expanded subdomain lists for enhanced reconnaissance capabilities, including new categories for security, media, education, infrastructure, and corporate subdomains
+* Enhanced domain registration checking with support for multiple RDAP services, rate limiting handling, and fallback mechanisms
+* Improved Azure service tag lookup with dynamic validation and better error handling
+* Added comprehensive parameter validation and tab completion support across new functions
+* Enhanced error handling and verbose logging throughout new functions
+
 ## v0.13.4 [2025-06-10]
 
 _What's New_
