@@ -1,1 +1,6 @@
 /Private/Reference/
+/WebApp/
+/Documentation/
+/Examples/
+*.ps1x
+*.html
