@@ -78,6 +78,7 @@
         'Get-StorageContainerList',
         'Invoke-AzBatch',
         'Invoke-MsGraph',
+        'Invoke-StealthDNSRecon',
         'Find-AzurePublicResource',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
@@ -165,6 +166,7 @@
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
         'Public\Reconnaissance\Invoke-MsGraph.ps1',
+        'Public\Reconnaissance\Invoke-StealthDNSRecon.ps1',
 
         # Anonymous Reconnaissance
         'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
