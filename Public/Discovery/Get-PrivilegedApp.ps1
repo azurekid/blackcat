@@ -110,12 +110,25 @@ function Get-PrivilegedApp {
                 }
 
                 if ($permissionObjects.Count -gt 0) {
-                    # Determine severity level based on permissions
-                    $severity = "Medium"
-                    if ($permissionObjects -contains "Directory.ReadWrite.All") { $severity = "Critical" }
-                    elseif ($permissionObjects -contains "RoleManagement.ReadWrite.Directory") { $severity = "High" }
-                    elseif ($permissionObjects -contains "Application.ReadWrite.All") { $severity = "Medium" }
-                    else { $severity = "Low" }
+                    # Determine severity level based on permissions (ordered by risk level)
+                    $severity = "Low"  # Default for any other risky permissions
+                    
+                    # Critical - Permissions that provide broad administrative access or bypass security controls
+                    if ($permissionObjects -contains "Directory.ReadWrite.All" -or
+                        $permissionObjects -contains "PrivilegedAccess.ReadWrite.AzureAD" -or
+                        $permissionObjects -contains "PrivilegedAccess.ReadWrite.AzureADGroup" -or
+                        $permissionObjects -contains "PrivilegedAccess.ReadWrite.AzureResources" -or
+                        $permissionObjects -contains "Policy.ReadWrite.ConditionalAccess") { 
+                        $severity = "Critical" 
+                    }
+                    # High - Permissions that can escalate privileges or manage credentials
+                    elseif ($permissionObjects -contains "RoleManagement.ReadWrite.Directory" -or
+                            $permissionObjects -contains "Application.ReadWrite.All" -or
+                            $permissionObjects -contains "GroupMember.ReadWrite.All" -or
+                            $permissionObjects -contains "Group.ReadWrite.All") { 
+                        $severity = "High" 
+                    }
+                    # Medium severity is now handled by the default "Low" since these are all high-risk permissions
 
                     $currentItem = [PSCustomObject]@{
                         DisplayName              = $_.DisplayName
@@ -223,8 +236,24 @@ function Get-PrivilegedApp {
             
             # Return results in requested format
             switch ($OutputFormat) {
-                "JSON" { return $result | ConvertTo-Json -Depth 3 }
-                "CSV" { return $result | ConvertTo-CSV }
+                "JSON" { 
+                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                    $jsonOutput = $result | ConvertTo-Json -Depth 3
+                    $jsonFilePath = "PrivilegedApps_$timestamp.json"
+                    $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
+                    Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    # File created, no console output needed
+                    return
+                }
+                "CSV" { 
+                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                    $csvOutput = $result | ConvertTo-CSV
+                    $csvFilePath = "PrivilegedApps_$timestamp.csv"
+                    $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
+                    Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    # File created, no console output needed
+                    return
+                }
                 "Object" { return $result }
                 "Table" { return $result | Format-Table -AutoSize }
             }
@@ -252,8 +281,8 @@ function Get-PrivilegedApp {
 .PARAMETER OutputFormat
     Optional. Specifies the output format for results. Valid values are:
     - Object: Returns PowerShell objects (default when piping)
-    - JSON: Returns results in JSON format
-    - CSV: Returns results in CSV format
+    - JSON: Creates timestamped JSON file (PrivilegedApps_TIMESTAMP.json) with no console output
+    - CSV: Creates timestamped CSV file (PrivilegedApps_TIMESTAMP.csv) with no console output
     - Table: Returns results in a formatted table (default)
     Aliases: output, o
 
@@ -297,11 +326,13 @@ function Get-PrivilegedApp {
 
 .EXAMPLE
     Get-PrivilegedApp -OutputFormat JSON
-    Returns all privileged applications in JSON format with owners automatically included.
+    Creates a timestamped JSON file (e.g., PrivilegedApps_20250629_143022.json) in the current directory.
+    No console output is displayed; only file creation confirmation message is shown.
 
 .EXAMPLE
     Get-PrivilegedApp -OutputFormat CSV -ThrottleLimit 200
-    Returns all privileged applications in CSV format using a throttle limit of 200.
+    Creates a timestamped CSV file (e.g., PrivilegedApps_20250629_143022.csv) in the current directory.
+    Uses a throttle limit of 200. No console output is displayed; only file creation confirmation message is shown.
 
 .EXAMPLE
     Get-PrivilegedApp -IncludeOwners -OutputFormat Table
@@ -315,15 +346,20 @@ function Get-PrivilegedApp {
     Requires: Microsoft Graph API access
     Requires: Appropriate permissions to read application information
 
-    The function checks for the following high-risk permissions:
+    The function checks for the following high-risk permissions and assigns severity levels:
+
+    CRITICAL severity permissions (broad administrative access/bypass security controls):
     - Directory.ReadWrite.All
     - PrivilegedAccess.ReadWrite.AzureAD
     - PrivilegedAccess.ReadWrite.AzureADGroup
     - PrivilegedAccess.ReadWrite.AzureResources
     - Policy.ReadWrite.ConditionalAccess
+
+    HIGH severity permissions (privilege escalation/credential management):
+    - RoleManagement.ReadWrite.Directory
+    - Application.ReadWrite.All
     - GroupMember.ReadWrite.All
     - Group.ReadWrite.All
-    - RoleManagement.ReadWrite.Directory
 
 #>
 }
