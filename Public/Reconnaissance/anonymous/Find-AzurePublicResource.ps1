@@ -1,135 +1,3 @@
-<#
-.SYNOPSIS
-    Finds publicly accessible Azure resources through DNS enumeration.
-
-.DESCRIPTION
-    The Find-AzurePublicResource function generates permutations of Azure resource names using a base name and an optional wordlist.
-    It constructs DNS names for various Azure services including Storage, Databases, Security, Compute, AI/ML, Integration, and other Azure services.
-    The function attempts to resolve these DNS names and returns successfully resolved resources with their type, IP addresses, and URIs.
-    
-    The function provides real-time feedback with emoji-decorated console output showing progress and discovered resources.
-    It supports multiple output formats and uses parallel processing for efficient DNS resolution.
-
-.PARAMETER Name
-    The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.
-    This will be used as the prefix for generating potential Azure resource names.
-
-.PARAMETER WordList
-    Optional. Path to a file containing additional words (one per line) to use for generating name permutations.
-    These words will be combined with the base name to create potential resource names.
-    Aliases: word-list, w
-
-.PARAMETER ThrottleLimit
-    Optional. The maximum number of concurrent DNS resolution operations. Default is 50.
-    Adjust based on system resources and network capacity.
-    Aliases: throttle-limit, t, threads
-
-.PARAMETER OutputFormat
-    Optional. Specifies the output format for results. Valid values are:
-    - Object: Returns PowerShell objects (default when piping)
-    - JSON: Returns results in JSON format
-    - CSV: Returns results in CSV format  
-    - Table: Returns results formatted as a table (default for console display)
-    Aliases: output, o
-
-.EXAMPLE
-    Find-AzurePublicResource -Name "contoso"
-
-    🎯 Analyzing Azure resources for: contoso
-      🌐 Generating Azure service DNS names...
-        🎯 Testing 84 DNS name candidates...
-      🔍 Starting DNS resolution with 50 concurrent threads...
-        ✅ contoso -> 20.40.228.128 [StorageBlob]
-        ✅ contoso001 -> 52.239.134.83 [SqlDatabase]
-    📊 Azure Resource Discovery Summary:
-       Total Resources Found: 2
-       StorageBlob: 1
-       SqlDatabase: 1
-
-    Performs a basic Azure resource discovery using the default session permutations.
-
-.EXAMPLE
-    Find-AzurePublicResource -Name "example" -WordList "./custom-words.txt" -ThrottleLimit 100
-
-    🎯 Analyzing Azure resources for: example
-      📄 Loading permutations from word list...
-        ✅ Loaded 500 permutations from './custom-words.txt'
-      📊 Loading session permutations...
-        ✅ Loaded total of 750 permutations
-      🌐 Generating Azure service DNS names...
-        🎯 Testing 63000 DNS name candidates...
-      🔍 Starting DNS resolution with 100 concurrent threads...
-        ✅ example-prod -> 13.107.42.14 [AppService]
-        ✅ example-api -> 20.118.139.24 [APIManagement]
-    📊 Azure Resource Discovery Summary:
-       Total Resources Found: 2
-       AppService: 1
-       APIManagement: 1
-
-    Uses a custom word list with 100 concurrent threads for more thorough discovery.
-
-.EXAMPLE
-    Find-AzurePublicResource -Name "corp" -OutputFormat JSON | ConvertFrom-Json | Where-Object { $_.ResourceType -eq "KeyVault" }
-
-    Searches for Azure resources and filters the JSON output to show only Key Vault resources.
-
-.EXAMPLE
-    $results = Find-AzurePublicResource -Name "company" -OutputFormat Object
-    $results | Where-Object { $_.Data -match "cloudapp.azure.com" } | Format-Table Domain, ResourceType, Data
-
-    Stores results as objects and filters for resources with Azure cloud app domains.
-
-.OUTPUTS
-    System.Management.Automation.PSCustomObject[]
-    Returns an array of PSCustomObjects with the following properties:
-    - Domain: The fully qualified domain name that was resolved
-    - RecordType: The DNS record type (typically "A")
-    - Data: The IP address(es) that the domain resolves to
-    - TTL: Time to live (null for this function)
-    - DNSProvider: The DNS resolution method used ("System.Net.Dns")
-    - ProviderType: The type of DNS provider ("System")
-    - ProviderRegion: The provider region ("Local")
-    - Reliability: Provider reliability (null for this function)
-    - Timestamp: When the DNS resolution was performed
-    - QueryMethod: The specific DNS query method ("GetHostEntry")
-    - ResourceName: The Azure resource name portion of the domain
-    - ResourceType: The identified Azure service type (e.g., "StorageBlob", "SqlDatabase")
-    - Uri: The HTTPS URI for the discovered resource
-    - HostName: The canonical hostname from DNS resolution
-    - IPAddress: The complete IPAddress objects from DNS resolution
-
-    The output format can be controlled using the OutputFormat parameter to return JSON, CSV, or formatted table data.
-
-.NOTES
-    REQUIREMENTS:
-    - Requires PowerShell 7+ for parallel processing functionality
-    - Network connectivity for DNS resolution
-    
-    AZURE SERVICE COVERAGE:
-    The function tests for the following Azure service types:
-    • Storage: Blob, File, Table, Queue, Data Lake Storage Gen2
-    • Databases: SQL Database, Cosmos DB, Redis Cache, MySQL, PostgreSQL, MariaDB  
-    • Security: Key Vault
-    • Compute & Containers: Container Registry, App Service, App Service Kudu
-    • AI/ML: Cognitive Services, Azure OpenAI, Azure Search, Machine Learning
-    • Integration: Service Bus, API Management, SignalR, Web PubSub
-    • Other: CDN, IoT Hub, Event Grid, Spring Apps, Synapse Analytics, Azure Maps, Azure Batch
-    
-    SECURITY CONSIDERATIONS:
-    - Useful for reconnaissance and security assessments of Azure environments
-    - Only DNS names that successfully resolve are returned as results
-    - DNS queries may be logged by DNS providers and target organizations
-    - Consider rate limiting and responsible disclosure when performing assessments
-    
-    PERFORMANCE:
-    - Uses thread-safe parallel processing for efficient DNS resolution
-    - Default throttle limit of 50 concurrent threads balances speed and resource usage
-    - Emoji-decorated console output provides real-time progress feedback
-
-.LINK
-    https://github.com/blackcatpythia/blackcat
-
-#>
 function Find-AzurePublicResource {
     [cmdletbinding()]
     param (
@@ -146,7 +14,7 @@ function Find-AzurePublicResource {
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Object", "JSON", "CSV", "Table")]
+        [ValidateSet("Object", "JSON", "CSV")]
         [Alias("output", "o")]
         [string]$OutputFormat
     )
@@ -358,24 +226,66 @@ function Find-AzurePublicResource {
             }
 
             # Return results in requested format
-            switch ($OutputFormat) {
-                "JSON" { return $results | ConvertTo-Json -Depth 3 }
-                "CSV" { return $results | ConvertTo-CSV }
-                "Object" { return $results }
-                "Table" { return $results | Format-Table -AutoSize }
-                default { 
-                    # Default to Object for pipeline scenarios, Table for console display
-                    if ($PSCmdlet.MyInvocation.PipelinePosition -eq $PSCmdlet.MyInvocation.PipelineLength) {
-                        return $results | Format-Table -AutoSize 
-                    } else {
-                        return $results
-                    }
+                switch ($OutputFormat) {
+                    "JSON" { return $results | ConvertTo-Json -Depth 3 }
+                    "CSV" { return $results | ConvertTo-CSV }
+                    "Object" { return $results }
+                    default  { return $results | Format-Table -AutoSize }
                 }
-            }
         }
         else {
             Write-Host "`n❌ No public Azure resources found" -ForegroundColor Red
             Write-Information "No public Azure resources found" -InformationAction Continue
         }
     }
+<#
+.SYNOPSIS
+    Finds publicly accessible Azure resources.
+
+.DESCRIPTION
+    The Find-AzurePublicResource function generates permutations of Azure resource names using a base name and an optional wordlist.
+    It constructs DNS names for various Azure services including Storage, Databases, Security, Compute, AI/ML, Integration, and other Azure services.
+    The function attempts to resolve these DNS names and returns successfully resolved resources with their type, IP addresses, and URIs.
+
+    The function provides real-time feedback with emoji-decorated console output showing progress and discovered resources.
+    It supports multiple output formats and uses parallel processing for efficient DNS resolution.
+
+.PARAMETER Name
+    The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.
+
+.PARAMETER WordList
+    Optional. Path to a file containing additional words (one per line) to use for generating name permutations.
+    These words will be combined with the base name to create potential resource names.
+    Aliases: word-list, w
+
+.PARAMETER ThrottleLimit
+    Optional. The maximum number of concurrent DNS resolution operations. Default is 50.
+    Adjust based on system resources and network capacity.
+    Aliases: throttle-limit, t, threads
+
+.PARAMETER OutputFormat
+    Optional. Specifies the output format for results. Valid values are:
+    - Object: Returns PowerShell objects (default when piping)
+    - JSON: Returns results in JSON format
+    - CSV: Returns results in CSV format
+    Aliases: output, o
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "contoso" -WordList "./wordlist.txt" -ThrottleLimit 100 -OutputFormat JSON
+
+    Searches for Azure resources using "contoso" with custom permutations from wordlist.txt,
+    using 100 concurrent threads, and returns results in JSON format.
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "example" -OutputFormat Table
+
+    Searches for Azure resources and displays results in a formatted table.
+
+
+
+.NOTES
+    - Requires PowerShell 7+ for parallel processing functionality
+    - Useful for reconnaissance and security assessments of Azure environments
+    - Only DNS names that successfully resolve are returned as results
+#>
 }
