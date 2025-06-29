@@ -43,7 +43,6 @@ function Get-AzResourceSecretList {
             Write-Host "  📊 Collecting Azure resources..." -ForegroundColor Cyan
             $allResources = @()
             $resourceTypes = @(
-                'Microsoft.KeyVault/vaults',
                 'Microsoft.Storage/storageAccounts',
                 'Microsoft.Web/sites',
                 'Microsoft.ServiceBus/namespaces',
@@ -67,7 +66,7 @@ function Get-AzResourceSecretList {
             
             foreach ($resourceType in $resourceTypes) {
                 try {
-                    $resources = Invoke-AzBatch -ResourceType $resourceType
+                    $resources = Invoke-AzBatch -ResourceType $resourceType -Silent
                     if ($resources) {
                         $allResources += $resources
                     }
@@ -129,127 +128,6 @@ function Get-AzResourceSecretList {
                     }
 
                 switch ($resourceType) {
-                    'microsoft.keyvault/vaults' {
-                        try {
-                            # Get Key Vault name from the resource
-                            $vaultName = $resource.name
-                            $vaultUri = "https://$vaultName.vault.azure.net"
-                            
-                            # Key Vault data plane requires different authentication scope
-                            # Try to get Key Vault specific token if available, otherwise use ARM token
-                            $keyVaultHeaders = $using:script:authHeader
-                            
-                            # Alternative approach: Use ARM API to list secrets (gets metadata) then try data plane for values
-                            Write-Verbose "Attempting to retrieve secrets from Key Vault: $vaultName"
-                            
-                            # First try: Use ARM API to get secret list (this usually works with existing token)
-                            $armSecretsUri = "$($using:baseUri)$($resource.id)/secrets?api-version=2023-07-01"
-                            $armSecrets = @()
-                            
-                            try {
-                                $armSecretsResponse = Invoke-RestMethod -Uri $armSecretsUri -Headers $using:script:authHeader -Method Get
-                                $armSecrets = $armSecretsResponse.value
-                                Write-Verbose "Retrieved $($armSecrets.Count) secrets from ARM API for $vaultName"
-                            }
-                            catch {
-                                Write-Verbose "ARM API failed for $vaultName, trying data plane: $($_.Exception.Message)"
-                            }
-                            
-                            # Second try: Use data plane API to get secret list
-                            $dataPlaneSecrets = @()
-                            try {
-                                $secretsUri = "$vaultUri/secrets?api-version=7.4"
-                                $dataPlaneResponse = Invoke-RestMethod -Uri $secretsUri -Headers $keyVaultHeaders -Method Get
-                                $dataPlaneSecrets = $dataPlaneResponse.value
-                                Write-Verbose "Retrieved $($dataPlaneSecrets.Count) secrets from data plane API for $vaultName"
-                            }
-                            catch {
-                                Write-Verbose "Data plane API failed for $vaultName`: $($_.Exception.Message)"
-                            }
-                            
-                            # Use whichever method returned results, prefer data plane for richer data
-                            $secretsToProcess = if ($dataPlaneSecrets.Count -gt 0) { $dataPlaneSecrets } else { $armSecrets }
-                            $useDataPlane = $dataPlaneSecrets.Count -gt 0
-                            
-                            Write-Verbose "Processing $($secretsToProcess.Count) secrets from $vaultName using $( if($useDataPlane) {'data plane'} else {'ARM'} ) API"
-                            
-                            # For each secret, try to get its current value
-                            $secretDetails = @()
-                            foreach ($secret in $secretsToProcess) {
-                                try {
-                                    $secretName = if ($secret.name) { $secret.name } else { $secret.id.Split('/')[-1] }
-                                    $secretId = if ($secret.id) { $secret.id } else { "$vaultUri/secrets/$secretName" }
-                                    
-                                    $secretDetail = [PSCustomObject]@{
-                                        name = $secretName
-                                        id = $secretId
-                                        value = "[METADATA_ONLY]"
-                                        contentType = $null
-                                        attributes = $secret.attributes
-                                        tags = $secret.tags
-                                        managed = $secret.managed
-                                        created = if ($secret.attributes.created) { 
-                                            if ($secret.attributes.created -is [string]) { $secret.attributes.created } 
-                                            else { [DateTimeOffset]::FromUnixTimeSeconds($secret.attributes.created).ToString('yyyy-MM-dd HH:mm:ss UTC') }
-                                        } else { $null }
-                                        updated = if ($secret.attributes.updated) { 
-                                            if ($secret.attributes.updated -is [string]) { $secret.attributes.updated } 
-                                            else { [DateTimeOffset]::FromUnixTimeSeconds($secret.attributes.updated).ToString('yyyy-MM-dd HH:mm:ss UTC') }
-                                        } else { $null }
-                                        enabled = $secret.attributes.enabled
-                                        recoveryLevel = $secret.attributes.recoveryLevel
-                                        error = $null
-                                    }
-                                    
-                                    # Try to get actual secret value using data plane API
-                                    if ($useDataPlane) {
-                                        try {
-                                            $secretValueUri = "$secretId/?api-version=7.4"
-                                            $secretValue = Invoke-RestMethod -Uri $secretValueUri -Headers $keyVaultHeaders -Method Get
-                                            $secretDetail.value = $secretValue.value
-                                            $secretDetail.contentType = $secretValue.contentType
-                                            Write-Verbose "Successfully retrieved secret value for $secretName from $vaultName"
-                                        }
-                                        catch {
-                                            $secretDetail.value = "[ACCESS_DENIED_OR_ERROR]"
-                                            $secretDetail.error = $_.Exception.Message
-                                            Write-Verbose "Could not retrieve secret value for $secretName from $vaultName`: $($_.Exception.Message)"
-                                            $secretObject.ProcessingErrors += "Secret value retrieval failed for ${secretName}: $($_.Exception.Message)"
-                                        }
-                                    }
-                                    else {
-                                        # ARM API doesn't provide values, but we have metadata
-                                        $secretDetail.value = "[ARM_API_METADATA_ONLY]"
-                                        Write-Verbose "ARM API used for $secretName - no secret value available"
-                                    }
-                                    
-                                    $secretDetails += $secretDetail
-                                }
-                                catch {
-                                    Write-Verbose "Error processing secret $($secret.name) from $vaultName`: $($_.Exception.Message)"
-                                    $secretObject.ProcessingErrors += "Secret processing failed for $($secret.name): $($_.Exception.Message)"
-                                }
-                            }
-                            
-                            $secretObject.Secrets = $secretDetails
-                            if ($secretDetails.Count -gt 0) {
-                                $secretObject.SecretTypes += "KeyVault Secrets"
-                                $secretObject.Severity = "Critical"  # Key Vault secrets are critical severity
-                                Write-Verbose "Found $($secretDetails.Count) secrets in Key Vault $vaultName"
-                            }
-                            else {
-                                Write-Verbose "No secrets found in Key Vault $vaultName"
-                            }
-                        }
-                        catch {
-                            Write-Verbose "Could not retrieve KeyVault secrets for $($resource.name): $($_.Exception.Message)"
-                            $secretObject.ProcessingErrors += "KeyVault secrets retrieval failed: $($_.Exception.Message)"
-                            
-                            # Even if we can't get secrets, we can still report that this is a Key Vault
-                            $secretObject.Severity = "Critical"
-                            $secretObject.SecretTypes += "KeyVault (Access Denied)"
-                        }
-                    }
                     'microsoft.storage/storageaccounts' {
                         try {
                             # Get storage account keys
