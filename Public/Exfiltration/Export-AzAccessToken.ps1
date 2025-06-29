@@ -41,76 +41,70 @@ function Export-AzAccessToken {
                 
                 $startTime = Get-Date
                 try {
+                    # Import required modules
+                    Import-Module Az.Accounts -Force
+
                     $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
-                    $tokenContent = ConvertFrom-JWT -Base64JWT ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
+                    $plainToken = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
 
-                    try {
-                        # Import required modules in the job context
-                        Import-Module Az.Accounts -Force
+                    # Basic JWT parsing without external dependencies
+                    $tokenParts = $plainToken.Split('.')
+                    if ($tokenParts.Count -ge 2) {
+                        try {
+                            # Decode the payload (second part of JWT)
+                            $payload = $tokenParts[1]
+                            # Add padding if needed
+                            while ($payload.Length % 4) { $payload += "=" }
+                            $payloadBytes = [System.Convert]::FromBase64String($payload)
+                            $payloadJson = [System.Text.Encoding]::UTF8.GetString($payloadBytes)
+                            $tokenContent = $payloadJson | ConvertFrom-Json
 
-                        $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceType -AsSecureString)
-                        $plainToken = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
-
-                        # Basic JWT parsing without external dependencies
-                        $tokenParts = $plainToken.Split('.')
-                        if ($tokenParts.Count -ge 2) {
-                            try {
-                                # Decode the payload (second part of JWT)
-                                $payload = $tokenParts[1]
-                                # Add padding if needed
-                                while ($payload.Length % 4) { $payload += "=" }
-                                $payloadBytes = [System.Convert]::FromBase64String($payload)
-                                $payloadJson = [System.Text.Encoding]::UTF8.GetString($payloadBytes)
-                                $tokenContent = $payloadJson | ConvertFrom-Json
-
-                                $tokenObject = [PSCustomObject]@{
-                                    Resource = $resourceType
-                                    UPN      = if ($tokenContent.upn) { $tokenContent.upn } else { "N/A" }
-                                    Audience = if ($tokenContent.aud) { $tokenContent.aud } else { "N/A" }
-                                    Roles    = if ($tokenContent.roles) { $tokenContent.roles } else { "N/A" }
-                                    Scope    = if ($tokenContent.scp) { $tokenContent.scp } else { "N/A" }
-                                    Tenant   = if ($tokenContent.tid) { $tokenContent.tid } else { "N/A" }
-                                    Token    = $plainToken
-                                    Status   = "Success"
-                                }
-                            }
-                            catch {
-                                # Fallback if JWT parsing fails
-                                $tokenObject = [PSCustomObject]@{
-                                    Resource = $resourceType
-                                    UPN      = "N/A"
-                                    Audience = "N/A"
-                                    Roles    = "N/A"
-                                    Scope    = "N/A"
-                                    Tenant   = "N/A"
-                                    Token    = $plainToken
-                                    Status   = "Success (Limited Parsing)"
-                                }
-                            }
-                        } else {
-                            # Invalid JWT format
                             $tokenObject = [PSCustomObject]@{
-                                Resource = $resourceType
+                                Resource = $resourceTypeName
+                                UPN      = if ($tokenContent.upn) { $tokenContent.upn } else { "N/A" }
+                                Audience = if ($tokenContent.aud) { $tokenContent.aud } else { "N/A" }
+                                Roles    = if ($tokenContent.roles) { $tokenContent.roles } else { "N/A" }
+                                Scope    = if ($tokenContent.scp) { $tokenContent.scp } else { "N/A" }
+                                Tenant   = if ($tokenContent.tid) { $tokenContent.tid } else { "N/A" }
+                                Token    = $plainToken
+                                Status   = "Success"
+                            }
+                        }
+                        catch {
+                            # Fallback if JWT parsing fails
+                            $tokenObject = [PSCustomObject]@{
+                                Resource = $resourceTypeName
                                 UPN      = "N/A"
                                 Audience = "N/A"
                                 Roles    = "N/A"
                                 Scope    = "N/A"
                                 Tenant   = "N/A"
                                 Token    = $plainToken
-                                Status   = "Success (No Parsing)"
+                                Status   = "Success (Limited Parsing)"
                             }
                         }
-
-                        return $tokenObject
+                    } else {
+                        # Invalid JWT format
+                        $tokenObject = [PSCustomObject]@{
+                            Resource = $resourceTypeName
+                            UPN      = "N/A"
+                            Audience = "N/A"
+                            Roles    = "N/A"
+                            Scope    = "N/A"
+                            Tenant   = "N/A"
+                            Token    = $plainToken
+                            Status   = "Success (No Parsing)"
+                        }
                     }
+
                     $tokens += $tokenObject
                     
                     $processingTime = (Get-Date) - $startTime
                     $processingSummary += [PSCustomObject]@{
                         Resource = $resourceTypeName
                         Status = "✅ Success"
-                        UPN = $tokenContent.UPN
-                        Tenant = $tokenContent.'Tenant ID'
+                        UPN = $tokenObject.UPN
+                        Tenant = $tokenObject.Tenant
                         ProcessingTime = "$([math]::Round($processingTime.TotalMilliseconds))ms"
                         Error = $null
                     }
