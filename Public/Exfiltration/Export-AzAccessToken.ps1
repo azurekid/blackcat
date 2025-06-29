@@ -44,14 +44,64 @@ function Export-AzAccessToken {
                     $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
                     $tokenContent = ConvertFrom-JWT -Base64JWT ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
 
-                    $tokenObject = [PSCustomObject]@{
-                        Resource = $resourceTypeName
-                        UPN      = $tokenContent.UPN
-                        Audience = $tokenContent.Audience
-                        Roles    = $tokenContent.Roles
-                        Scope    = $tokenContent.Scope
-                        Tenant   = $tokenContent.'Tenant ID'
-                        Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
+                    try {
+                        # Import required modules in the job context
+                        Import-Module Az.Accounts -Force
+
+                        $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceType -AsSecureString)
+                        $plainToken = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
+
+                        # Basic JWT parsing without external dependencies
+                        $tokenParts = $plainToken.Split('.')
+                        if ($tokenParts.Count -ge 2) {
+                            try {
+                                # Decode the payload (second part of JWT)
+                                $payload = $tokenParts[1]
+                                # Add padding if needed
+                                while ($payload.Length % 4) { $payload += "=" }
+                                $payloadBytes = [System.Convert]::FromBase64String($payload)
+                                $payloadJson = [System.Text.Encoding]::UTF8.GetString($payloadBytes)
+                                $tokenContent = $payloadJson | ConvertFrom-Json
+
+                                $tokenObject = [PSCustomObject]@{
+                                    Resource = $resourceType
+                                    UPN      = if ($tokenContent.upn) { $tokenContent.upn } else { "N/A" }
+                                    Audience = if ($tokenContent.aud) { $tokenContent.aud } else { "N/A" }
+                                    Roles    = if ($tokenContent.roles) { $tokenContent.roles } else { "N/A" }
+                                    Scope    = if ($tokenContent.scp) { $tokenContent.scp } else { "N/A" }
+                                    Tenant   = if ($tokenContent.tid) { $tokenContent.tid } else { "N/A" }
+                                    Token    = $plainToken
+                                    Status   = "Success"
+                                }
+                            }
+                            catch {
+                                # Fallback if JWT parsing fails
+                                $tokenObject = [PSCustomObject]@{
+                                    Resource = $resourceType
+                                    UPN      = "N/A"
+                                    Audience = "N/A"
+                                    Roles    = "N/A"
+                                    Scope    = "N/A"
+                                    Tenant   = "N/A"
+                                    Token    = $plainToken
+                                    Status   = "Success (Limited Parsing)"
+                                }
+                            }
+                        } else {
+                            # Invalid JWT format
+                            $tokenObject = [PSCustomObject]@{
+                                Resource = $resourceType
+                                UPN      = "N/A"
+                                Audience = "N/A"
+                                Roles    = "N/A"
+                                Scope    = "N/A"
+                                Tenant   = "N/A"
+                                Token    = $plainToken
+                                Status   = "Success (No Parsing)"
+                            }
+                        }
+
+                        return $tokenObject
                     }
                     $tokens += $tokenObject
                     
@@ -148,11 +198,11 @@ function Export-AzAccessToken {
         (https://us.onetimesecret.com) instead of being saved to a file. The function will return a URL to access the shared tokens.
 
     .EXAMPLE
-        Export-AzAccessToken -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
+        Export-AzAccessToken-Parallel -ResourceTypeNames @("MSGraph", "ResourceManager") -OutputFile "AccessTokens.json"
         Exports access tokens for "MSGraph" and "ResourceManager" resource types and saves them to "AccessTokens.json".
 
     .EXAMPLE
-        Export-AzAccessToken -Publish
+        Export-AzAccessToken-Parallel -Publish
         Exports access tokens for all default resource types and publishes them to a secure sharing service.
         Returns a URL to access the shared tokens.
 
