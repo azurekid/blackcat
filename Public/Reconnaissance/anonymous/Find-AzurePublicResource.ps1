@@ -1,40 +1,3 @@
-<#
-.SYNOPSIS
-    Finds publicly accessible Azure resources by generating and resolving possible DNS names.
-
-.DESCRIPTION
-    The Find-AzurePublicResource function generates permutations of Azure resource names using a base name and an optional wordlist.
-    It constructs DNS names for various Azure services (e.g., Storage, CosmosDB, KeyVault, AppService) and attempts to resolve them.
-    Successfully resolved DNS names are returned with their resource type and URI, indicating potentially public Azure resources.
-
-.PARAMETER Name
-    The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.
-
-.PARAMETER WordList
-    Optional. Path to a file containing additional words (one per line) to use for generating name permutations.
-
-.PARAMETER ThrottleLimit
-    Optional. The maximum number of concurrent DNS resolution operations. Default is 50.
-
-.PARAMETER AsJson
-    Returns results in JSON format.
-    Aliases: json, raw
-
-.PARAMETER Detailed
-    Returns results in detailed table format.
-    Aliases: table, list
-
-.EXAMPLE
-    Find-AzurePublicResource -Name "mycompany" -WordList "./words.txt" -ThrottleLimit 100
-
-    Searches for public Azure resources using "mycompany" as the base name, with permutations from "words.txt", and up to 100 concurrent lookups.
-
-.NOTES
-    - Requires PowerShell 7+ for parallel processing.
-    - Useful for reconnaissance and security assessments of Azure environments.
-    - Only DNS names that resolve are returned as results.
-
-#>
 function Find-AzurePublicResource {
     [cmdletbinding()]
     param (
@@ -51,12 +14,9 @@ function Find-AzurePublicResource {
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
-        [Alias('json', 'raw')]
-        [switch]$AsJson,
-
-        [Parameter(Mandatory = $false)]
-        [Alias('table', 'list')]
-        [switch]$Detailed
+        [ValidateSet("Object", "JSON", "CSV")]
+        [Alias("output", "o")]
+        [string]$OutputFormat
     )
 
     begin {
@@ -64,14 +24,24 @@ function Find-AzurePublicResource {
     }
 
     process {
+        Write-Host "🎯 Analyzing Azure resources for: $Name" -ForegroundColor Green
+        
         try {
             if ($WordList) {
+                Write-Host "  📄 Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
-                Write-Verbose "Loaded $($permutations.Count) permutations from '$WordList'"
+                Write-Host "    ✅ Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Green
+            } else {
+                $permutations = [System.Collections.Generic.HashSet[string]]::new()
             }
 
-            $permutations += $sessionVariables.permutations
-            Write-Verbose "Loaded $($permutations.Count) permutations from session"
+            if ($sessionVariables.permutations) {
+                Write-Host "  📊 Loading session permutations..." -ForegroundColor Cyan
+                $permutations += $sessionVariables.permutations
+                Write-Host "    ✅ Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
+            }
+
+            Write-Host "  🌐 Generating Azure service DNS names..." -ForegroundColor Yellow
 
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
@@ -131,9 +101,13 @@ function Find-AzurePublicResource {
             }
 
             $totalDns = $dnsNames.Count
-            Write-Verbose "Starting DNS resolution for $totalDns names..."
+            Write-Host "    🎯 Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
+            Write-Host "  🔍 Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
             $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+            
+            # Create a thread-safe collection to track found resources for immediate display
+            $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 
             $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 function Get-ResourceType {
@@ -190,22 +164,46 @@ function Find-AzurePublicResource {
                 try {
                     $validDnsNames = $using:validDnsNames
                     $results = $using:results
+                    $foundResources = $using:foundResources
                     $dnsResult = [System.Net.Dns]::GetHostEntry($_)
                     if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
                         $resourceType = Get-ResourceType -dnsName $_
+                        $ipAddresses = $dnsResult.AddressList.IPAddressToString -join ", "
+                        $resourceName = $_.Split('.')[0]
 
-                        # $resourceType = Get-ResourceType -dnsName $_
+                        # Create the result object
                         $obj = [PSCustomObject]@{
-                            ResourceName = $_.Split('.')[0]
+                            Domain       = $_
+                            RecordType   = "A"
+                            Data         = $ipAddresses
+                            TTL          = $null
+                            DNSProvider  = "System.Net.Dns"
+                            ProviderType = "System"
+                            ProviderRegion = "Local"
+                            Reliability  = $null
+                            Timestamp    = Get-Date
+                            QueryMethod  = "GetHostEntry"
+                            ResourceName = $resourceName
                             ResourceType = $resourceType
                             Uri          = "https://$_"
                             HostName     = $dnsResult.HostName
                             IPAddress    = $dnsResult.AddressList
                         }
                         $results.Add($obj)
+                        
+                        # Add to found resources for immediate display
+                        $foundMessage = "      ✅ $resourceName -> $ipAddresses [$resourceType]"
+                        $foundResources.Add($foundMessage)
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
+                }
+            }
+            
+            # Display found resources immediately after parallel processing
+            if ($foundResources.Count -gt 0) {
+                foreach ($message in $foundResources) {
+                    Write-Host $message -ForegroundColor Green
                 }
             }
         }
@@ -216,19 +214,78 @@ function Find-AzurePublicResource {
     
     end {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
+        
         if ($results -and $results.Count -gt 0) {
-            if ($AsJson) {
-                return ($results | ConvertTo-Json -Depth 4)
+            Write-Host "`n📊 Azure Resource Discovery Summary:" -ForegroundColor Magenta
+            Write-Host "   Total Resources Found: $($results.Count)" -ForegroundColor Yellow
+            
+            # Group by resource type for summary
+            $resourceTypeCounts = $results | Group-Object ResourceType | Sort-Object Count -Descending
+            foreach ($group in $resourceTypeCounts) {
+                Write-Host "   $($group.Name): $($group.Count)" -ForegroundColor White
             }
-            elseif ($Detailed) {
-                return ($results | Format-Table -AutoSize)
-            }
-            else {
-                return $results | Select-Object ResourceName, ResourceType, Uri
-            }
+
+            # Return results in requested format
+                switch ($OutputFormat) {
+                    "JSON" { return $results | ConvertTo-Json -Depth 3 }
+                    "CSV" { return $results | ConvertTo-CSV }
+                    "Object" { return $results }
+                    default  { return $results | Format-Table -AutoSize }
+                }
         }
         else {
+            Write-Host "`n❌ No public Azure resources found" -ForegroundColor Red
             Write-Information "No public Azure resources found" -InformationAction Continue
         }
     }
+<#
+.SYNOPSIS
+    Finds publicly accessible Azure resources.
+
+.DESCRIPTION
+    The Find-AzurePublicResource function generates permutations of Azure resource names using a base name and an optional wordlist.
+    It constructs DNS names for various Azure services including Storage, Databases, Security, Compute, AI/ML, Integration, and other Azure services.
+    The function attempts to resolve these DNS names and returns successfully resolved resources with their type, IP addresses, and URIs.
+
+    The function provides real-time feedback with emoji-decorated console output showing progress and discovered resources.
+    It supports multiple output formats and uses parallel processing for efficient DNS resolution.
+
+.PARAMETER Name
+    The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.
+
+.PARAMETER WordList
+    Optional. Path to a file containing additional words (one per line) to use for generating name permutations.
+    These words will be combined with the base name to create potential resource names.
+    Aliases: word-list, w
+
+.PARAMETER ThrottleLimit
+    Optional. The maximum number of concurrent DNS resolution operations. Default is 50.
+    Adjust based on system resources and network capacity.
+    Aliases: throttle-limit, t, threads
+
+.PARAMETER OutputFormat
+    Optional. Specifies the output format for results. Valid values are:
+    - Object: Returns PowerShell objects (default when piping)
+    - JSON: Returns results in JSON format
+    - CSV: Returns results in CSV format
+    Aliases: output, o
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "contoso" -WordList "./wordlist.txt" -ThrottleLimit 100 -OutputFormat JSON
+
+    Searches for Azure resources using "contoso" with custom permutations from wordlist.txt,
+    using 100 concurrent threads, and returns results in JSON format.
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "example" -OutputFormat Table
+
+    Searches for Azure resources and displays results in a formatted table.
+
+
+
+.NOTES
+    - Requires PowerShell 7+ for parallel processing functionality
+    - Useful for reconnaissance and security assessments of Azure environments
+    - Only DNS names that successfully resolve are returned as results
+#>
 }
