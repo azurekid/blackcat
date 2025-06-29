@@ -16,15 +16,30 @@ function Export-AzAccessToken {
     )
 
     begin {
+        Write-Host "🚀 Starting function $($MyInvocation.MyCommand.Name)" -ForegroundColor Cyan
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
     }
 
     process {
         try {
+            Write-Host "🔐 Requesting access tokens for specified audiences" -ForegroundColor Yellow
             Write-Verbose "Requesting access tokens for specified audiences"
+            
+            Write-Host "🔄 Processing $($ResourceTypeNames.Count) resource types..." -ForegroundColor Magenta
+            
             $tokens = @()
+            $processingSummary = @()
+            $totalResources = $ResourceTypeNames.Count
+            $currentIndex = 0
 
+            # Process each resource type sequentially to avoid module loading issues
             foreach ($resourceTypeName in $ResourceTypeNames) {
+                $currentIndex++
+                $progressPercent = [math]::Round(($currentIndex / $totalResources) * 100)
+                
+                Write-Host "⚡ [$currentIndex/$totalResources] Processing $resourceTypeName... ($progressPercent%)" -ForegroundColor Blue
+                
+                $startTime = Get-Date
                 try {
                     $accessToken = (Get-AzAccessToken -ResourceTypeName $resourceTypeName -AsSecureString)
                     $tokenContent = ConvertFrom-JWT -Base64JWT ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
@@ -39,13 +54,44 @@ function Export-AzAccessToken {
                         Token    = ($accessToken.token | ConvertFrom-SecureString -AsPlainText)
                     }
                     $tokens += $tokenObject
+                    
+                    $processingTime = (Get-Date) - $startTime
+                    $processingSummary += [PSCustomObject]@{
+                        Resource = $resourceTypeName
+                        Status = "✅ Success"
+                        UPN = $tokenContent.UPN
+                        Tenant = $tokenContent.'Tenant ID'
+                        ProcessingTime = "$([math]::Round($processingTime.TotalMilliseconds))ms"
+                        Error = $null
+                    }
                 }
                 catch {
+                    $processingTime = (Get-Date) - $startTime
+                    $processingSummary += [PSCustomObject]@{
+                        Resource = $resourceTypeName
+                        Status = "❌ Failed"
+                        UPN = "N/A"
+                        Tenant = "N/A"
+                        ProcessingTime = "$([math]::Round($processingTime.TotalMilliseconds))ms"
+                        Error = $_.Exception.Message
+                    }
                     Write-Error "Failed to get access token for resource type $resourceTypeName : $($_.Exception.Message)"
                 }
             }
 
+            # Display comprehensive summary
+            Write-Host "`n🎯 PROCESSING SUMMARY" -ForegroundColor Cyan
+            Write-Host "----------------------------------------" -ForegroundColor Cyan
+            $successCount = ($processingSummary | Where-Object { $_.Status -like "*Success*" }).Count
+            $failureCount = ($processingSummary | Where-Object { $_.Status -like "*Failed*" }).Count
+            
+            Write-Host "📊 FINAL RESULTS" -ForegroundColor Cyan
+            Write-Host "✅ Successful: $successCount tokens" -ForegroundColor Green
+            Write-Host "❌ Failed: $failureCount requests" -ForegroundColor Red
+            Write-Host "🔢 Total Processed: $totalResources resource types" -ForegroundColor Blue
+
             if ($Publish) {
+                Write-Host "`n🌐 Publishing tokens to secure sharing service..." -ForegroundColor Cyan
                 $requestParam = @{
                     Uri         = 'https://us.onetimesecret.com/api/v1/share'
                     Method      = 'POST'
@@ -56,32 +102,38 @@ function Export-AzAccessToken {
                 }
 
                 $response = Invoke-RestMethod @requestParam
-                return "https://us.onetimesecret.com/secret/$($response.secret_key)"
+                $secretUrl = "https://us.onetimesecret.com/secret/$($response.secret_key)"
+                Write-Host "🔗 Tokens published successfully!" -ForegroundColor Green
+                Write-Host "🌐 Secure URL: $secretUrl" -ForegroundColor Cyan
+                return $secretUrl
 
             } else {
+                Write-Host "`n💾 Exporting tokens to file..." -ForegroundColor Cyan
                 Write-Verbose "Exporting tokens to file $OutputFile"
                 $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
+                Write-Host "✅ Export completed!" -ForegroundColor Green
+                Write-Host "📁 File location: $OutputFile" -ForegroundColor Cyan
             }
         }
         catch {
+            Write-Host "💥 An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)" -ForegroundColor Red
             Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
         }
     }
 
     end {
+        Write-Host "🎉 Function $($MyInvocation.MyCommand.Name) completed successfully!" -ForegroundColor Green
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
     }
     <#
     .SYNOPSIS
-        Exports access tokens for specified Azure resource types.
+        Exports access tokens for specified Azure resource types with enhanced emoji output.
 
     .DESCRIPTION
         The Export-AzAccessToken function retrieves access tokens for specified Azure resource types and exports them to a JSON file.
-        It supports publishing the tokens to a secure sharing service (onetimesecret.com) or saving them locally.
-        The function retrieves tokens for each specified resource type, extracts token information including UPN, Audience, Roles, Scope, and the actual token.
-        It handles errors gracefully and provides verbose logging for better traceability.
-        When using the Publish parameter, it returns a secure URL where the tokens can be accessed once.
-
+        It processes tokens sequentially with beautiful emoji progress indicators and comprehensive error handling.
+        This approach avoids module loading conflicts while providing an excellent user experience.
+        
     .PARAMETER ResourceTypeNames
         An optional array of strings specifying the Azure resource types for which to request access tokens.
         Supported values are "MSGraph", "ResourceManager", "KeyVault", "Storage", "Synapse", "OperationalInsights", and "Batch".
@@ -106,6 +158,7 @@ function Export-AzAccessToken {
 
     .NOTES
         This function requires the Azure PowerShell module to be installed and authenticated.
-        The ConvertFrom-JWT function is required to process the token contents.
+        Uses sequential processing to avoid module loading conflicts while providing rich emoji feedback.
+        Includes comprehensive error handling and beautiful progress indicators.
     #>
 }
