@@ -35,12 +35,18 @@ function Get-RoleAssignment {
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat = "Object"
+        [string]$OutputFormat = "Table"
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        
+        # Only use MSGraph authentication if CurrentUser is specified
+        if ($CurrentUser) {
+            $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        } else {
+            $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        }
 
         Write-Host "🎯 Starting Azure RBAC Role Assignment Analysis..." -ForegroundColor Green
         
@@ -65,14 +71,22 @@ function Get-RoleAssignment {
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
-        $randomUserAgent = $sessionVariables.userAgent
+        $randomUserAgent = $script:SessionVariables.userAgent
     }
 
     process {
         try {
             Write-Host "🎯 Retrieving all subscriptions for the current user context..." -ForegroundColor Green
             $baseUri = 'https://management.azure.com'
-            $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+            
+            if ($SubscriptionId) {
+                # Request specific subscription
+                $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
+            } else {
+                # Request all subscriptions
+                $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+            }
+            
             $requestParam = @{
                 Headers = $script:authHeader
                 Uri     = $subscriptionsUri
@@ -80,10 +94,13 @@ function Get-RoleAssignment {
             }
 
             if ($SubscriptionId) {
-                $requestParam.Uri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
+                # Single subscription response
+                $subscriptionResponse = Invoke-RestMethod @requestParam
+                $subscriptions = @($subscriptionResponse.subscriptionId)
+            } else {
+                # Multiple subscriptions response
+                $subscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
             }
-
-            $subscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
             Write-Host "  📊 Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
 
         }
@@ -95,7 +112,8 @@ function Get-RoleAssignment {
         try {
             if ($CurrentUser) {
                 Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
-                $ObjectId = (Get-CurrentUser).Id
+                $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                $ObjectId = $userObject.id
                 Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
             }
 
@@ -232,12 +250,31 @@ function Get-RoleAssignment {
 
         Write-Host "✅ Role assignment analysis completed successfully!" -ForegroundColor Green
         
+        # Convert ConcurrentBag to array for output formatting
+        $result = @($roleAssignmentsList)
+        
         # Return results in requested format
         switch ($OutputFormat) {
-            "JSON" { return $roleAssignmentsList | ConvertTo-Json -Depth 3 }
-            "CSV" { return $roleAssignmentsList | ConvertTo-Csv }
-            "Table" { return $roleAssignmentsList | Format-Table -AutoSize }
-            "Object" { return $roleAssignmentsList }
+            "JSON" {
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $jsonOutput = $result | ConvertTo-Json -Depth 3
+                $jsonFilePath = "RoleAssignments_$timestamp.json"
+                $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
+                Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                # File created, no console output needed
+                return
+            }
+            "CSV" {
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $csvOutput = $result | ConvertTo-Csv -NoTypeInformation
+                $csvFilePath = "RoleAssignments_$timestamp.csv"
+                $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
+                Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                # File created, no console output needed
+                return
+            }
+            "Object" { return $result }
+            "Table" { return $result | Format-Table -AutoSize }
         }
     }
     <#
