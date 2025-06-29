@@ -82,6 +82,7 @@
         'Find-AzurePublicResource',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
+        'Find-DnsRecords',
 
         # Resource Development
         'Add-EntraApplication',
@@ -166,12 +167,13 @@
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
         'Public\Reconnaissance\Invoke-MsGraph.ps1',
-        'Public\Reconnaissance\Invoke-StealthDNSRecon.ps1',
+
 
         # Anonymous Reconnaissance
         'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
         'Public\Reconnaissance\anonymous\Find-PublicStorageContainer.ps1',
         'Public\Reconnaissance\anonymous\Find-SubDomain.ps1',
+        'Public\Reconnaissance\anonymous\Find-DnsRecords.ps1',
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
