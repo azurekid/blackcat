@@ -11,6 +11,9 @@ function Invoke-AzBatch {
         [Alias('resource-name', 'ResourceName')]
         [string]$Name,
 
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [switch]$Silent,
+
         [Parameter(Mandatory = $false)]
         [string]$filter
     )
@@ -89,7 +92,7 @@ function Invoke-AzBatch {
 
             } while ($skipToken)
 
-            if ($allResources.Count -eq 0) {
+            if ($allResources.Count -eq 0 -and -not $Silent) {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No resources found" -Severity 'Information'
             }
             else {
