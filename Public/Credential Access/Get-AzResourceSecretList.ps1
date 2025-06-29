@@ -5,10 +5,10 @@ function Get-AzResourceSecretList {
         [Alias('throttle-limit')]
         [int]$ThrottleLimit = 100,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat = "Table"
+        [string]$OutputFormat = "JSON"
     )
 
     begin {
