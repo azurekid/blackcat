@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.13.4'
+    ModuleVersion     = '0.20.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -21,7 +21,6 @@
     # Description of the functionality provided by this module
     Description       = 'Helper module to validate Azure Security'
 
-    # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport = @(
         # Credential Access
         'Get-KeyVaultSecret',
@@ -185,7 +184,6 @@
         'BlackCat.psm1'
     )
 
-    # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
     PrivateData       = @{
 
         PSData = @{
