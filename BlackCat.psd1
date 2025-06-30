@@ -33,6 +33,7 @@
         'Get-ServicePrincipalCredential',
         'Get-ServicePrincipalsPermission',
         'Get-ResourcePermission',
+        'Get-RoleAssignment',
 
         # Exfiltration
         'Export-AzAccessToken',
@@ -48,15 +49,12 @@
         'Read-SASToken',
         'Select-AzureContext',
         'Update-AzureServiceTag',
-        'Connect-ServicePrincipal',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
 
         # Initial Access
-        'Test-DnsTwistDomain',
         'Test-DomainRegistration',
-        'Get-DnsTwinsDomains',
 
         # Persistence
         'Add-StorageAccountSasToken',
@@ -77,7 +75,6 @@
         'Get-StorageContainerList',
         'Invoke-AzBatch',
         'Invoke-MsGraph',
-        'Invoke-StealthDNSRecon',
         'Find-AzurePublicResource',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
@@ -123,6 +120,7 @@
         'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
+        'Public\Discovery\Get-RoleAssignment.ps1',
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
@@ -143,9 +141,7 @@
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
 
         # Initial Access
-        'Public\Initial Access\Test-DnsTwistDomain.ps1',
         'Public\Initial Access\Test-DomainRegistration.ps1',
-        'Public\Initial Access\Get-DnsTwinsDomains.ps1',
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
