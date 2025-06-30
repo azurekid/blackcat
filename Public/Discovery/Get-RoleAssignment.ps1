@@ -30,23 +30,63 @@ function Get-RoleAssignment {
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('throttle-limit')]
-        [int]$ThrottleLimit = 10
+        [int]$ThrottleLimit = 10,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Object", "JSON", "CSV", "Table")]
+        [Alias("output", "o")]
+        [string]$OutputFormat = "Table"
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        
+        # Only use MSGraph authentication if CurrentUser is specified
+        if ($CurrentUser) {
+            $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        } else {
+            $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        }
+
+        Write-Host "🎯 Starting Azure RBAC Role Assignment Analysis..." -ForegroundColor Green
+        
+        if ($CurrentUser) {
+            Write-Host "  👤 Mode: Current User Analysis" -ForegroundColor Cyan
+        }
+        if ($PrincipalType) {
+            Write-Host "  🎭 Filter: Principal Type = $PrincipalType" -ForegroundColor Cyan
+        }
+        if ($ObjectId) {
+            Write-Host "  🆔 Filter: Object ID = $ObjectId" -ForegroundColor Cyan
+        }
+        if ($SubscriptionId) {
+            Write-Host "  🔒 Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+        }
+        if ($IsCustom) {
+            Write-Host "  🛠️ Filter: Custom Roles Only" -ForegroundColor Cyan
+        }
+        if ($ExcludeCustom) {
+            Write-Host "  🚫 Filter: Excluding Custom Role Details" -ForegroundColor Cyan
+        }
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
-        $randomUserAgent = $sessionVariables.userAgent
+        $randomUserAgent = $script:SessionVariables.userAgent
     }
 
     process {
         try {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Retrieving all subscriptions for the current user context" -Severity 'Information'
+            Write-Host "🎯 Retrieving all subscriptions for the current user context..." -ForegroundColor Green
             $baseUri = 'https://management.azure.com'
-            $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+            
+            if ($SubscriptionId) {
+                # Request specific subscription
+                $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
+            } else {
+                # Request all subscriptions
+                $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+            }
+            
             $requestParam = @{
                 Headers = $script:authHeader
                 Uri     = $subscriptionsUri
@@ -54,31 +94,39 @@ function Get-RoleAssignment {
             }
 
             if ($SubscriptionId) {
-                $requestParam.Uri += '&$filter={0}' -f "subscriptionId eq '$SubscriptionId'"
+                # Single subscription response
+                $subscriptionResponse = Invoke-RestMethod @requestParam
+                $subscriptions = @($subscriptionResponse.subscriptionId)
+            } else {
+                # Multiple subscriptions response
+                $subscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
             }
-
-            $subscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
+            Write-Host "  📊 Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
 
         }
         catch {
+            Write-Host "❌ Error retrieving subscriptions: $($_.Exception.Message)" -ForegroundColor Red
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
         try {
             if ($CurrentUser) {
-                Write-Verbose "Retrieving current user's object Id"
-                $ObjectId = (Get-CurrentUser).Id
+                Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
+                $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                $ObjectId = $userObject.id
+                Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
             }
 
             if ($ObjectId) {
-                Write-Verbose "Retrieving groups for user: $ObjectId"
+                Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
                 $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
+                Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
             }
             else {
                 $Groups = @()
             }
 
-            Write-Verbose  "Retrieving role assignments for $($subscriptions.Count) subscriptions"
+            Write-Host "  🔍 Analyzing role assignments across $($subscriptions.Count) subscriptions with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
             $subscriptions | ForEach-Object -Parallel {
                 try {
                     $baseUri             = $using:baseUri
@@ -93,7 +141,7 @@ function Get-RoleAssignment {
                     $ExcludeCustom       = $using:ExcludeCustom
                     $subscriptionId      = $_
 
-                    Write-Verbose "Retrieving role assignments for subscription: $subscriptionId"
+                    Write-Verbose "🔍 Processing subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
 
                     $principalIds = @()
@@ -148,7 +196,7 @@ function Get-RoleAssignment {
                                 }
 
                                 if (-not $ExcludeCustom) {
-                                    Write-Verbose "Retrieving custom role definition for subscription: $subscriptionId"
+                                    Write-Verbose "🔍 Retrieving custom role definition for subscription: $subscriptionId"
                                     $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
                                 }
 
@@ -165,26 +213,69 @@ function Get-RoleAssignment {
 
                                 if (-not $IsCustom -or $roleAssignmentObject.IsCustom) {
                                     $roleAssignmentsList.Add($roleAssignmentObject)
+                                    Write-Verbose "✅ Found: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
                                 }
                             }
                         }
                     }
                 }
                 catch {
-                    Write-Information "$($MyInvocation.MyCommand.Name): Error processing subscription '$_'" -InformationAction Continue
+                    Write-Information "❌ Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
                 }
             } -ThrottleLimit $ThrottleLimit
         }
         catch {
+            Write-Host "❌ Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
         if ($roleAssignmentsList.Count -eq 0) {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) "No role assignments found for the specified criteria." -severity 'Information'
+            Write-Host "⚠️ No role assignments found for the specified criteria" -ForegroundColor Yellow
+        } else {
+            Write-Host "`n📊 Role Assignment Discovery Summary:" -ForegroundColor Magenta
+            Write-Host "   Total Role Assignments Found: $($roleAssignmentsList.Count)" -ForegroundColor Green
+            
+            # Group by principal type for summary
+            $principalTypeSummary = $roleAssignmentsList | Group-Object PrincipalType
+            foreach ($group in $principalTypeSummary) {
+                Write-Host "   $($group.Name): $($group.Count)" -ForegroundColor Cyan
+            }
+            
+            # Show custom role count if any
+            $customRoles = $roleAssignmentsList | Where-Object { $_.IsCustom -eq $true }
+            if ($customRoles.Count -gt 0) {
+                Write-Host "   Custom Roles: $($customRoles.Count)" -ForegroundColor Yellow
+            }
         }
 
-        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Completed" -Severity 'Information'
-        return $roleAssignmentsList
+        Write-Host "✅ Role assignment analysis completed successfully!" -ForegroundColor Green
+        
+        # Convert ConcurrentBag to array for output formatting
+        $result = @($roleAssignmentsList)
+        
+        # Return results in requested format
+        switch ($OutputFormat) {
+            "JSON" {
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $jsonOutput = $result | ConvertTo-Json -Depth 3
+                $jsonFilePath = "RoleAssignments_$timestamp.json"
+                $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
+                Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                # File created, no console output needed
+                return
+            }
+            "CSV" {
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $csvOutput = $result | ConvertTo-Csv -NoTypeInformation
+                $csvFilePath = "RoleAssignments_$timestamp.csv"
+                $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
+                Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                # File created, no console output needed
+                return
+            }
+            "Object" { return $result }
+            "Table" { return $result | Format-Table -AutoSize }
+        }
     }
     <#
     .SYNOPSIS
@@ -219,6 +310,14 @@ function Get-RoleAssignment {
     .PARAMETER ThrottleLimit
         Specifies the maximum number of concurrent operations. The default value is 10. Adjust this value to balance performance and API rate limits.
 
+    .PARAMETER OutputFormat
+        Specifies the output format for results. Valid values are:
+        - Object: Returns PowerShell objects (default)
+        - JSON: Returns results in JSON format
+        - CSV: Returns results in CSV format
+        - Table: Returns results in formatted table
+        Aliases: output, o
+
     .OUTPUTS
         Returns a collection of custom objects with the following properties:
         - PrincipalType: The type of Azure AD principal (e.g., User, Group, ServicePrincipal).
@@ -242,6 +341,14 @@ function Get-RoleAssignment {
     .EXAMPLE
         Get-RoleAssignment -SubscriptionId '00000000-0000-0000-0000-000000000000' -ThrottleLimit 20
         Retrieves all role assignments in the specified subscription with an increased throttle limit for concurrent operations.
+
+    .EXAMPLE
+        Get-RoleAssignment -CurrentUser -OutputFormat JSON
+        Retrieves all role assignments for the currently authenticated user and returns results in JSON format.
+
+    .EXAMPLE
+        Get-RoleAssignment -PrincipalType Group -OutputFormat Table
+        Lists all role assignments granted to Azure AD groups and displays results in a formatted table.
 
     .NOTES
         - Requires appropriate Azure RBAC permissions to read role assignments at the queried scope.
