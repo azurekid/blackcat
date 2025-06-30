@@ -62,8 +62,15 @@ function Invoke-BlackCat {
             if ($ResourceTypeName -eq "MSGraph") {
                 try {
                     $script:graphToken = Get-AzAccessToken -ResourceTypeName 'MSGraph'
+                    
+                    # Handle both SecureString and plain text tokens for compatibility
+                    $tokenValue = $script:graphToken.Token
+                    if ($tokenValue -is [System.Security.SecureString]) {
+                        $tokenValue = $tokenValue | ConvertFrom-SecureString -AsPlainText
+                    }
+                    
                     $script:graphHeader = @{
-                        'Authorization' = 'Bearer ' + ($script:graphToken).Token
+                        'Authorization' = 'Bearer ' + $tokenValue
                     }
                 }
                 catch {
@@ -80,8 +87,15 @@ function Invoke-BlackCat {
             if ($ResourceTypeName -eq "KeyVault") {
                 try {
                     $script:keyVaultToken = Get-AzAccessToken -ResourceTypeName 'KeyVault'
+                    
+                    # Handle both SecureString and plain text tokens for compatibility
+                    $tokenValue = $script:keyVaultToken.Token
+                    if ($tokenValue -is [System.Security.SecureString]) {
+                        $tokenValue = $tokenValue | ConvertFrom-SecureString -AsPlainText
+                    }
+                    
                     $script:keyVaultHeader = @{
-                        'Authorization' = 'Bearer ' + ($script:keyVaultToken).Token
+                        'Authorization' = 'Bearer ' + $tokenValue
                     }
                 }
                 catch {

@@ -58,9 +58,15 @@ function New-AuthHeader {
 
                 $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
 
+                # Handle both SecureString and plain text tokens for compatibility
+                $tokenValue = $token.Token
+                if ($tokenValue -is [System.Security.SecureString]) {
+                    $tokenValue = $tokenValue | ConvertFrom-SecureString -AsPlainText
+                }
+
                 # Create and return the authentication header
                 $authHeader = @{
-                    'Authorization' = "Bearer $($token.Token)"
+                    'Authorization' = "Bearer $tokenValue"
                     'Content-Type'  = 'application/json'
                 }
 
