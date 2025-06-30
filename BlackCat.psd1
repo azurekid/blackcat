@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.20.0'
+    ModuleVersion     = '0.20.1'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -108,6 +108,7 @@
         'Private\Invoke-SplitJWT.ps1',
         'Private\Write-Message.ps1',
         'Private\Get-AllPages.ps1',
+        'Private\ConvertFrom-AzAccessToken',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
