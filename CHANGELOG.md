@@ -108,6 +108,15 @@ _Technical Enhancements_
 * Enhanced subdomain enumeration with category-based filtering and throttling
 * Improved Azure resource discovery with expanded service domain mapping
 
+_Bug Fixes_
+
+* **Azure Token Compatibility**: Fixed authentication failures caused by newer Az.Accounts module versions returning SecureString tokens instead of plain strings
+  - Added `ConvertFrom-AzAccessToken` helper function to handle both old (string) and new (SecureString) token formats
+  - Updated `Invoke-BlackCat` and `New-AuthHeader` functions to use the new token conversion utility
+  - Ensures backwards compatibility across all Az.Accounts module versions
+  - Properly handles memory cleanup for SecureString tokens to prevent memory leaks
+  - Resolves authentication issues with `Invoke-MsGraph` and other functions that depend on these core authentication functions
+
 _Migration Guide_
 
 **For users upgrading from versions 0.13.4 and earlier:**
