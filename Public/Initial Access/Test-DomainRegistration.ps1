@@ -11,11 +11,11 @@ function Test-DomainRegistration {
     
     # Add some verification to ensure the domain is a valid format
     if (-not $Domain -or -not ($Domain -match '^[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}$')) {
-        Write-Warning "Invalid domain format: $Domain"
+        Write-Warning "❌ Invalid domain format: $Domain"
         return [PSCustomObject]@{
             Status  = "Invalid"
             Domain  = $Domain
-            Message = "Invalid domain format"
+            Message = "❌ Invalid domain format"
         }
     }
     
@@ -30,7 +30,7 @@ function Test-DomainRegistration {
                     Status    = "Registered"
                     Domain    = $DomainName
                     Registrar = "Unknown (DNS lookup only)"
-                    Message   = "Domain resolves in DNS"
+                    Message   = "✅ Domain resolves in DNS"
                 }
             }
         }
@@ -38,7 +38,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status  = "Available"
                 Domain  = $DomainName
-                Message = "Domain does not resolve in DNS"
+                Message = "🆓 Domain does not resolve in DNS"
             }
         }
     }
@@ -89,18 +89,18 @@ function Test-DomainRegistration {
                             # Calculate retry delay with exponential backoff and jitter
                             $jitter = Get-Random -Minimum 100 -Maximum 500
                             $retryDelayMs = $retryDelayMs * 2 + $jitter
-                            Write-Verbose "Rate limited for domain $Domain, retry $retryCount after $($retryDelayMs)ms"
+                            Write-Verbose "⏳ Rate limited for domain $Domain, retry $retryCount after $($retryDelayMs)ms"
                             Start-Sleep -Milliseconds $retryDelayMs
                         }
                         else {
                             # Try the next service or fail if this was the last one
-                            Write-Verbose "Rate limit exceeded for $rdapService, trying next service"
+                            Write-Verbose "⚠️ Rate limit exceeded for $rdapService, trying next service"
                             break
                         }
                     }
                     else {
                         # For other errors, try the next service
-                        Write-Verbose "Error with $rdapService $($_.Exception.Message)"
+                        Write-Verbose "❌ Error with $rdapService $($_.Exception.Message)"
                         break
                     }
                 }
@@ -114,7 +114,7 @@ function Test-DomainRegistration {
         
         # If we've exhausted all RDAP options, try DNS as last resort
         if (-not $success -and $Method -eq "all") {
-            Write-Verbose "All RDAP services failed, falling back to DNS check for $Domain"
+            Write-Verbose "🔄 All RDAP services failed, falling back to DNS check for $Domain"
             return Test-DomainViaDNS -DomainName $Domain
         }
         
@@ -159,6 +159,7 @@ function Test-DomainRegistration {
                     Expires     = $expiryDate
                     LastUpdated = $lastUpdateDate
                     NameServers = $nameServers -join ", "
+                    Message     = "✅ Domain is registered"
                 }
             }
             catch {
@@ -167,7 +168,7 @@ function Test-DomainRegistration {
                     Status      = "Registered"
                     Domain      = $Domain
                     Registrar   = "Unknown (Parser Error)"
-                    Message     = "Error parsing domain data: $($_.Exception.Message)"
+                    Message     = "⚠️ Error parsing domain data: $($_.Exception.Message)"
                 }
             }
         }
@@ -176,7 +177,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status   = "Unknown"
                 Domain   = $Domain
-                Message  = "Unexpected response format"
+                Message  = "❓ Unexpected response format"
             }
         }
     }
@@ -187,7 +188,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status  = "Available"
                 Domain  = $Domain
-                Message = "Domain appears to be available for registration"
+                Message = "🆓 Domain appears to be available for registration"
             }
         }
         elseif ($_.Exception.Response -and $_.Exception.Response.StatusCode.value__ -eq 429) {
@@ -195,7 +196,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status  = "RateLimited"
                 Domain  = $Domain
-                Message = "Rate limited by API service when checking domain"
+                Message = "⏳ Rate limited by API service when checking domain"
             }
         }
         elseif ($_.Exception.Message -match "timed out|timeout") {
@@ -203,7 +204,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status  = "Timeout"
                 Domain  = $Domain
-                Message = "Request timed out when checking domain registration"
+                Message = "⏰ Request timed out when checking domain registration"
             }
         }
         else {
@@ -211,7 +212,7 @@ function Test-DomainRegistration {
             return [PSCustomObject]@{
                 Status  = "Error"
                 Domain  = $Domain
-                Message = "Error checking domain: $($_.Exception.Message)"
+                Message = "❌ Error checking domain: $($_.Exception.Message)"
             }
         }
     }

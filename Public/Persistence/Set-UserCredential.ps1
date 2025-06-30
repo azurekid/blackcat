@@ -26,7 +26,7 @@ function Set-UserCredential {
     }
 
     process {
-        # try {
+        try {
             # Construct query based on parameter set
             switch ($PSCmdlet.ParameterSetName) {
                 'ObjectId' {
@@ -57,43 +57,18 @@ function Set-UserCredential {
                         ContentType     = 'application/json'
                         UseBasicParsing = $true
                     }
-                    Write-Output "requestParameters:" $requestParameters
 
                     Invoke-RestMethod @requestParameters
                 } else {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No password provided. Skipping password update." -Severity 'Error'
+                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No password provided. Skipping password update." -Severity 'Warning'
                 }
 
-            #     {
-            #         $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf"
-            #         $roles = Invoke-MsGraph -relativeUrl "users/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"
-            #         $currentItem = [PSCustomObject]@{
-            #             DisplayName       = $item.displayName
-            #             ObjectId          = $item.id
-            #             UserPrincipalName = $item.userPrincipalName
-            #             JobTitle          = $item.jobTitle
-            #             Department        = $item.department
-            #             GroupMemberships  = $groups.displayName
-            #             Roles             = $roles.displayName
-            #             Mail              = $item.mail
-            #             AccountEnabled    = $item.accountEnabled
-            #             IsPrivileged      = $False
-            #         }
-            #     }
+                $userInfo = Get-EntraInformation -ObjectId $response.id
 
-            #     foreach ($role in $roles) {
-            #         $privileged = ($roleDetails | Where-Object { $_.displayName -eq $role.displayName }).IsPrivileged
-            #         if ($privileged -eq $true) {
-            #             $currentItem.IsPrivileged = $true
-            #         }
-            #     }
-
-            #     ($userInfo).Add($currentItem)
-
-            # return $userInfo
-        # }
-        # catch {
-        #     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
-        # }
+            return $userInfo
+        }
+        catch {
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+        }
     }
 }
