@@ -45,7 +45,8 @@ running_from_codespace:
         3. The pwsh terminal already has the BlackCat module activated
 ```
 
-![alt text](/.github/media/loaded.png)
+![image](https://github.com/user-attachments/assets/e27528a2-00bc-4796-91c6-6d2e666e9c0c)
+
 
 ### Installing from PSGallery
 
