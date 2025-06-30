@@ -4,6 +4,134 @@
 
 # CHANGELOG
 
+## v0.20.0 [2025-06-30]
+
+**Major Release**
+
+This major release represents a significant evolution of the BlackCat module with extensive enhancements to reconnaissance capabilities, new Azure service management functions, and substantial improvements to DNS analysis functionality. This version includes breaking changes and major feature additions that justify the version jump to 0.20.0.
+
+_What's New_
+
+**Enhanced DNS Reconnaissance Framework:**
+* Completely redesigned `Find-DnsRecords` function with advanced DNS-over-HTTPS (DoH) support using multiple global providers
+* Added support for 15+ DNS providers including Cloudflare, Google, Quad9, OpenDNS, and regional providers
+* Implemented intelligent provider rotation and load balancing with reliability scoring
+* Added comprehensive subdomain enumeration with categories (common, security, infrastructure, corporate, etc.)
+* Enhanced CNAME detection with DNSSEC support and proxied CNAME resolution
+* Added deep subdomain search capabilities with throttling controls
+* Implemented detailed statistics and performance metrics
+
+**Advanced Azure Service Tag Management:**
+* Enhanced `Find-AzureServiceTag` function with significant improvements over the legacy `Get-ServiceTag`
+* Implemented multiple IP address processing with pipeline support
+* Added dynamic validation for service names and regions against loaded data
+* Enhanced output formats including JSON, detailed tables, and structured objects
+* Improved CIDR filtering and performance optimization for faster searches
+* Added comprehensive parameter aliases for better CLI experience
+
+**New Helper Functions:**
+* Added `Update-AzureServiceTag` function for dynamic service tag updates from Microsoft APIs
+* Enhanced `Select-AzureContext` function with improved Azure context management and tab completion
+* Added `Show-BlackCatCommands` function to display all available BlackCat functions organized by MITRE ATT&CK categories
+
+**Anonymous Reconnaissance Enhancements:**
+* Improved `Get-PublicBlobContent` function with better parameter validation and error handling
+* Added comprehensive test coverage for blob content functionality
+* Enhanced URL parsing and validation with strict regex patterns
+* Added `Find-SubDomain` function for automated subdomain enumeration with multiple category support
+* Enhanced `Find-AzurePublicResource` function with additional Azure service domains and resource type mappings
+* Added `Find-PublicStorageContainer` function for discovering publicly accessible Azure Storage containers
+
+**Domain Security & Validation:**
+* Added `Test-DomainRegistration` function for comprehensive domain validation and registration status checking
+* Implemented support for multiple validation methods (RDAP, WHOIS, DNS)
+* Added retry logic and rate limiting for RDAP service calls
+* Enhanced domain validation with improved error handling and logging
+
+**Function Renaming & Consolidation:**
+* Renamed `Get-AccessTokens` to `Export-AzAccessToken` for better PowerShell naming conventions
+* Renamed `Switch-Context` to `Select-AzureContext` for consistency with Azure cmdlets
+* Renamed `Get-Functions` to `Show-BlackCatCommands` for clearer functionality indication
+* Consolidated and removed deprecated functions for streamlined codebase
+
+_Improvements_
+
+**Performance & Reliability:**
+* Implemented intelligent rate limiting and provider fallback mechanisms
+* Added CIDR prefix filtering for faster IP address matching
+* Enhanced error handling with graceful degradation
+* Optimized memory usage for large-scale operations
+
+**User Experience:**
+* Added extensive Linux-friendly aliases throughout the module
+* Improved parameter naming consistency across functions
+* Enhanced verbose logging and debugging capabilities
+* Added comprehensive help documentation and examples
+
+**Module Organization & Structure:**
+* Reorganized module manifest with categorized function exports (Credential Access, Discovery, Reconnaissance, etc.)
+* Updated file list structure for better maintainability and organization
+* Enhanced module version management and dependency handling
+* Improved session variable management for subdomains and service tags
+
+**Code Quality & Cleanup:**
+* Removed deprecated functions: `Get-Functions`, `Get-PublicResourceList`, `Get-PublicStorageAccountList`, `Invoke-EnumSubDomains`
+* Streamlined codebase by removing redundant functionality
+* Enhanced function documentation and help examples
+* Improved parameter aliases throughout the module for better usability
+
+**Backward Compatibility:**
+* Maintained aliases for renamed functions to ensure existing scripts continue working
+* Preserved original functionality while adding enhancements
+* Compatible output formats with additional properties
+
+_Breaking Changes_
+
+* `Get-ServiceTag` function has been superseded by `Find-AzureServiceTag` (alias maintained for backward compatibility)
+* `Get-AccessTokens` renamed to `Export-AzAccessToken` (improved functionality and naming)
+* `Switch-Context` renamed to `Select-AzureContext` (enhanced context management)
+* `Get-Functions` renamed to `Show-BlackCatCommands` (better categorization and display)
+* `Get-AzBlobContent` renamed to `Get-PublicBlobContent` (clearer functionality scope)
+* Removed deprecated functions: `Get-PublicResourceList`, `Get-PublicStorageAccountList`, `Invoke-EnumSubDomains`
+* Some function parameters have been renamed for consistency (aliases provided where possible)
+* Enhanced validation may reject previously accepted invalid inputs (improved security)
+* Module manifest structure reorganized (functions now categorized by MITRE ATT&CK tactics)
+
+_Technical Enhancements_
+
+* Integration with BlackCat session variables for user agent rotation
+* Dynamic class-based parameter validation with `IValidateSetValuesGenerator`
+* Enhanced pipeline processing capabilities across multiple functions
+* Improved cross-platform PowerShell compatibility (Windows, Linux, macOS)
+* Advanced DNS-over-HTTPS implementation with provider diversity and failover
+* Intelligent service tag caching and dynamic updates from Microsoft APIs
+* Enhanced subdomain enumeration with category-based filtering and throttling
+* Improved Azure resource discovery with expanded service domain mapping
+
+_Migration Guide_
+
+**For users upgrading from versions 0.13.4 and earlier:**
+
+1. **Function Renaming**: Update any scripts using renamed functions or use the provided aliases
+2. **Parameter Changes**: Review parameter usage - aliases are provided for most changes
+3. **New Functionality**: Take advantage of enhanced DNS reconnaissance and service tag features
+4. **Testing**: Leverage the new comprehensive test coverage for validation
+5. **Configuration**: Review module manifest changes if using custom imports
+
+**Recommended immediate actions:**
+```powershell
+# Update function calls
+Export-AzAccessToken  # instead of Get-AccessTokens
+Select-AzureContext   # instead of Switch-Context
+Show-BlackCatCommands # instead of Get-Functions
+Find-AzureServiceTag  # instead of Get-ServiceTag
+
+# New powerful features to explore
+Find-DnsRecords -Domain "target.com" -EnumerateSubdomains
+Find-SubDomain -Domain "target.com" -Category "all"
+Test-DomainRegistration -Domain "suspicious.com"
+```
+
 ## v0.13.5 [2025-06-17]
 
 _What's New_
