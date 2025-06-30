@@ -108,6 +108,7 @@
         'Private\Invoke-SplitJWT.ps1',
         'Private\Write-Message.ps1',
         'Private\Get-AllPages.ps1',
+        'Private\ConvertFrom-AzAccessToken',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
