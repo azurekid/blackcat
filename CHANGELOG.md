@@ -4,6 +4,17 @@
 
 # CHANGELOG
 
+## v0.20.1 [2025-06-30]
+
+_Bug Fixes_
+
+* **Azure Token Compatibility**: Fixed authentication failures caused by newer Az.Accounts module versions returning SecureString tokens instead of plain strings
+  - Added `ConvertFrom-AzAccessToken` helper function to handle both old (string) and new (SecureString) token formats
+  - Updated `Invoke-BlackCat` and `New-AuthHeader` functions to use the new token conversion utility
+  - Ensures backwards compatibility across all Az.Accounts module versions
+  - Properly handles memory cleanup for SecureString tokens to prevent memory leaks
+  - Resolves authentication issues with `Invoke-MsGraph` and other functions that depend on these core authentication functions
+
 ## v0.20.0 [2025-06-30]
 
 **Major Release**
