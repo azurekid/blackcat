@@ -62,8 +62,13 @@ function Invoke-BlackCat {
             if ($ResourceTypeName -eq "MSGraph") {
                 try {
                     $script:graphToken = Get-AzAccessToken -ResourceTypeName 'MSGraph'
+                    $tokenValue = ConvertFrom-AzAccessToken -Token $script:graphToken.Token
+                    
+                    if ([string]::IsNullOrEmpty($tokenValue)) {
+                        throw "Failed to retrieve valid MSGraph token"
+                    }
                     $script:graphHeader = @{
-                        'Authorization' = 'Bearer ' + ($script:graphToken).Token
+                        'Authorization' = 'Bearer ' + $tokenValue
                     }
                 }
                 catch {
@@ -80,8 +85,13 @@ function Invoke-BlackCat {
             if ($ResourceTypeName -eq "KeyVault") {
                 try {
                     $script:keyVaultToken = Get-AzAccessToken -ResourceTypeName 'KeyVault'
+                    $tokenValue = ConvertFrom-AzAccessToken -Token $script:keyVaultToken.Token
+                    
+                    if ([string]::IsNullOrEmpty($tokenValue)) {
+                        throw "Failed to retrieve valid KeyVault token"
+                    }
                     $script:keyVaultHeader = @{
-                        'Authorization' = 'Bearer ' + ($script:keyVaultToken).Token
+                        'Authorization' = 'Bearer ' + $tokenValue
                     }
                 }
                 catch {

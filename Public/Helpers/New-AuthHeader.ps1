@@ -57,10 +57,15 @@ function New-AuthHeader {
                 }
 
                 $token = Get-AzAccessToken -ResourceUrl $endpoints[$EndpointType]
+                $tokenValue = ConvertFrom-AzAccessToken -Token $token.Token
+                
+                if ([string]::IsNullOrEmpty($tokenValue)) {
+                    throw "Failed to retrieve valid access token for $EndpointType"
+                }
 
                 # Create and return the authentication header
                 $authHeader = @{
-                    'Authorization' = "Bearer $($token.Token)"
+                    'Authorization' = "Bearer $tokenValue"
                     'Content-Type'  = 'application/json'
                 }
 
