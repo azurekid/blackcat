@@ -95,18 +95,15 @@ function Find-PublicStorageContainer {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         Write-Host "🎯 Analyzing Azure Storage for: $StorageAccountName ($Type)" -ForegroundColor Green
 
-        # Create thread-safe collections
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
         $userAgent = ($sessionVariables.userAgents.agents | Get-Random).value
         $result = New-Object System.Collections.ArrayList
         
-        # Create a thread-safe collection to track found containers for immediate display
         $foundContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
         try {
-            # Read word list efficiently
             if ($WordList) {
                 Write-Host "  📄 Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
@@ -116,7 +113,6 @@ function Find-PublicStorageContainer {
             $permutations += $sessionVariables.permutations
             Write-Host "  📊 Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
 
-            # Generate DNS names more efficiently
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($item in $permutations) {
                 [void] $dnsNames.Add(('{0}{1}.{2}.core.windows.net' -f $StorageAccountName, $($item), $type))
@@ -128,7 +124,6 @@ function Find-PublicStorageContainer {
             Write-Host "    🎯 Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
             Write-Host "  🔍 Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
-            # Parallel DNS resolution with improved error handling and progress
             $dnsNames | ForEach-Object -Parallel {
                 try {
                     $validDnsNames = $using:validDnsNames
@@ -140,44 +135,45 @@ function Find-PublicStorageContainer {
                     }
                 }
                 catch [System.Net.Sockets.SocketException] {
-                    # DNS resolution failed - this is expected for non-existent storage accounts
                 }
             } -ThrottleLimit $ThrottleLimit
 
-            # Generate and test URIs in parallel
             if ($validDnsNames.Count -gt 0) {
                 Write-Host "    ✅ Found $($validDnsNames.Count) valid storage accounts" -ForegroundColor Green
                 $totalContainers = $validDnsNames.Count * $permutations.Count
                 Write-Host "  🔍 Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
 
                 $validDnsNames | ForEach-Object -Parallel {
-                    $dns             = $_
-                    $permutations    = $using:permutations
-                    $result          = $using:result
-                    $includeEmpty    = $using:IncludeEmpty
+                    $dns = $_
+                    $permutations = $using:permutations
+                    $result = $using:result
+                    $includeEmpty = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
-                    $userAgent       = $using:userAgent
+                    $userAgent = $using:userAgent
                     $foundContainers = $using:foundContainers
 
                     $permutations | ForEach-Object -Parallel {
-                        $dns             = $using:dns
-                        $result          = $using:result
-                        $includeEmpty    = $using:IncludeEmpty
+                        $dns = $using:dns
+                        $result = $using:result
+                        $includeEmpty = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
-                        $userAgent       = $using:userAgent
+                        $userAgent = $using:userAgent
                         $foundContainers = $using:foundContainers
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
                         $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
-                            if ($includeEmpty -or $response.Content -match '<Blob>') {
+                            $hasContent = $response.Content -match '<Blob>'
+                            $shouldProcess = $includeEmpty -or $hasContent
+                            
+                            if ($shouldProcess) {
                                 $currentItem = [PSCustomObject]@{
                                     "StorageAccountName" = $dns.split('.')[0]
                                     "Container"          = $_
-                                    "FileCount" = (Select-String -InputObject $response.Content -Pattern "/Name" -AllMatches).Matches.Count
+                                    "FileCount"          = (Select-String -InputObject $response.Content -Pattern "/Name" -AllMatches).Matches.Count
                                 }
-                                if ($response.Content -match '<Blob>') {
+                                if ($hasContent) {
                                     $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $false
                                     $foundMessage = "      ✅ $($dns.split('.')[0])/$_ -> $($currentItem.FileCount) files [$(if($currentItem.IsEmpty){'Empty'}else{'HasContent'})]"
                                 }
@@ -189,26 +185,39 @@ function Find-PublicStorageContainer {
                                 
                                 # Add to found containers for immediate display
                                 $foundContainers.Add($foundMessage)
-
                             }
 
-                            if ($IncludeMetadata) {
+                            if ($shouldProcess -and $IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
                                 $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
+                                $metadataText = ""
+                                
                                 $metaResponse.Headers.GetEnumerator() | Where-Object { $_.Key -like 'x-ms-meta-*' } | ForEach-Object {
-                                    $metaHeaders[$_.Key] = $_.Value
-                                    if ($metaHeaders) {$currentItem | Add-Member -NotePropertyName Metadata -NotePropertyValue $metaHeaders -Force}
+                                    $cleanKey = $_.Key -replace 'x-ms-meta-', ''
+                                    $metaHeaders[$cleanKey] = $_.Value
+                                    $metadataText += "$cleanKey=$($_.Value); "
+                                }
+                                
+                                if ($metaHeaders.Count -gt 0) {
+                                    $metadataText = $metadataText.TrimEnd('; ')
+                                    
+                                    $currentItem | Add-Member -NotePropertyName MetadataText -NotePropertyValue $metadataText -Force
+                                    $currentItem | Add-Member -NotePropertyName Metadata -NotePropertyValue $metaHeaders -Force
+                                    
+                                    $metadataMessage = "$foundMessage [Metadata: $metadataText]"
+                                    $foundContainers.Add($metadataMessage)
                                 }
                             }
 
-                            [void] $result.Add($currentItem)
+                            if ($shouldProcess) {
+                                [void] $result.Add($currentItem)
+                            }
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
                 
-                # Display found containers immediately after parallel processing
                 if ($foundContainers.Count -gt 0) {
                     foreach ($message in $foundContainers) {
                         Write-Host $message -ForegroundColor Green
@@ -232,11 +241,11 @@ function Find-PublicStorageContainer {
         if (-not($result) -or $result.Count -eq 0) {
             Write-Host "`n❌ No public storage containers found" -ForegroundColor Red
             Write-Information -MessageData "No public storage account containers found" -InformationAction Continue
-        } else {
+        }
+        else {
             Write-Host "`n📊 Azure Storage Container Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Containers Found: $($result.Count)" -ForegroundColor Yellow
             
-            # Group by storage account for summary
             $accountGroups = $result | Group-Object StorageAccountName | Sort-Object Count -Descending
             foreach ($group in $accountGroups) {
                 $emptyCount = ($group.Group | Where-Object { $_.IsEmpty }).Count
@@ -244,7 +253,6 @@ function Find-PublicStorageContainer {
                 Write-Host "   $($group.Name): $($group.Count) containers ($nonEmptyCount with content, $emptyCount empty)" -ForegroundColor White
             }
 
-            # Return results in requested format
             switch ($OutputFormat) {
                 "JSON" { return $result | ConvertTo-Json -Depth 3 }
                 "CSV" { return $result | ConvertTo-CSV }
