@@ -4,6 +4,26 @@
 
 # CHANGELOG
 
+## v0.20.2 [2025-07-08]
+
+_Improvements_
+
+**Enhanced Storage Container Discovery:**
+* **Significant refactoring of `Find-PublicStorageContainer` function** for improved efficiency and error handling
+  - Optimized DNS resolution process with better concurrent thread management
+  - Enhanced container enumeration with improved parallel processing
+  - Added more robust error handling for DNS resolution failures
+  - Improved metadata handling with cleaner key-value formatting
+  - Enhanced output formatting with better display of found containers and metadata
+  - Optimized memory usage and performance for large-scale container discovery operations
+  - Better handling of empty containers and content detection logic
+  - Improved summary reporting with detailed statistics per storage account
+
+**Code Quality & Cleanup:**
+* Removed unnecessary system files (.DS_Store) from repository
+* Streamlined code structure in storage container discovery functions
+* Enhanced inline documentation and code readability
+
 ## v0.20.1 [2025-06-30]
 
 _Bug Fixes_
