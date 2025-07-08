@@ -5,6 +5,5 @@
 /Tests/
 *.ps1x
 *.html
-*.ps1
 *.json
 *.csv
