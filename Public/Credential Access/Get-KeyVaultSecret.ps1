@@ -34,6 +34,9 @@ function Get-KeyVaultSecret {
             VaultsWithSecrets = 0
             TotalSecrets = 0
             ProcessingErrors = 0
+            AccessDeniedKeyVaultPolicy = 0
+            AccessDeniedRBACPolicy = 0
+            VaultNotFound = 0
         }
     }
 
@@ -68,9 +71,15 @@ function Get-KeyVaultSecret {
                     }
                     catch {
                         if ($_.Exception.Message -match "NotFound") {
-                            Write-Host "    ❌ Key Vault not found: $_" -ForegroundColor Red
+                            [System.Threading.Interlocked]::Increment([ref]$using:stats.VaultNotFound)
+                        } elseif ($_.Exception.Message -match "Forbidden") {
+                            if ($_.Exception.Message -match "access policy") {
+                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedKeyVaultPolicy)
+                            } else {
+                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedRBACPolicy)
+                            }
                         } else {
-                            Write-Host "    ❌ Error accessing vault $_`: $($_.Exception.Message)" -ForegroundColor Red
+                            [System.Threading.Interlocked]::Increment([ref]$using:stats.ProcessingErrors)
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
@@ -106,10 +115,14 @@ function Get-KeyVaultSecret {
                     }
                     catch {
                         if ($_.Exception.Message -match "Forbidden") {
-                            Write-Host "      🚫 Insufficient permissions for secret: [$($currentUri.Split('/')[4])] in $vault" -ForegroundColor Yellow
+                            if ($_.Exception.Message -match "access policy") {
+                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedKeyVaultPolicy)
+                            } else {
+                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedRBACPolicy)
+                            }
                         }
                         else {
-                            Write-Host "      ❌ Error retrieving secret: $($_.Exception.Message)" -ForegroundColor Red
+                            [System.Threading.Interlocked]::Increment([ref]$using:stats.ProcessingErrors)
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
@@ -175,6 +188,26 @@ function Get-KeyVaultSecret {
         Write-Host "   Total Key Vaults Analyzed: $($stats.TotalVaults)" -ForegroundColor White
         Write-Host "   Key Vaults with Secrets: $($stats.VaultsWithSecrets)" -ForegroundColor Yellow
         Write-Host "   Total Secrets Retrieved: $($stats.TotalSecrets)" -ForegroundColor Green
+        
+        # Access denied summary
+        if ($stats.AccessDeniedKeyVaultPolicy -gt 0 -or $stats.AccessDeniedRBACPolicy -gt 0) {
+            Write-Host "   Access Denied Summary:" -ForegroundColor Red
+            if ($stats.AccessDeniedKeyVaultPolicy -gt 0) {
+                Write-Host "     - KeyVault Policy: $($stats.AccessDeniedKeyVaultPolicy)" -ForegroundColor Yellow
+            }
+            if ($stats.AccessDeniedRBACPolicy -gt 0) {
+                Write-Host "     - RBAC Policy: $($stats.AccessDeniedRBACPolicy)" -ForegroundColor Yellow
+            }
+        }
+        
+        # Other errors summary
+        if ($stats.VaultNotFound -gt 0) {
+            Write-Host "   Vaults Not Found: $($stats.VaultNotFound)" -ForegroundColor Red
+        }
+        if ($stats.ProcessingErrors -gt 0) {
+            Write-Host "   Processing Errors: $($stats.ProcessingErrors)" -ForegroundColor Red
+        }
+        
         Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
 
         Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
