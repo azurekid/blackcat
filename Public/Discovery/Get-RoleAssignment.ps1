@@ -39,7 +39,23 @@ function Get-RoleAssignment {
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('include-eligible', 'eligible')]
-        [switch]$IncludeEligible
+        [switch]$IncludeEligible,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('skip-cache')]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('cache-expiration')]
+        [int]$CacheExpirationMinutes = 60,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('max-cache-size')]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('compress-cache')]
+        [switch]$CompressCache
     )
 
     begin {
@@ -83,33 +99,86 @@ function Get-RoleAssignment {
     }
 
     process {
+        # Create cache key based on function parameters
+        $cacheKeyParams = @{
+            CurrentUser = $CurrentUser.ToString()
+            PrincipalType = $PrincipalType
+            ObjectId = $ObjectId
+            SubscriptionId = $SubscriptionId
+            IsCustom = $IsCustom.ToString()
+            ExcludeCustom = $ExcludeCustom.ToString()
+            IncludeEligible = $IncludeEligible.ToString()
+        }
+        $cacheKey = ConvertTo-CacheKey -BaseIdentifier "Get-RoleAssignment" -Parameters $cacheKeyParams
+
+        # Try to get cached results first
+        if (-not $SkipCache) {
+            $cachedResults = Get-BlackCatCache -Key $cacheKey -CacheType 'MSGraph'
+            if ($null -ne $cachedResults) {
+                Write-Host "📋 Retrieved role assignments from cache" -ForegroundColor Green
+                
+                # Return cached results in requested format
+                switch ($OutputFormat) {
+                    "JSON" {
+                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                        $jsonOutput = $cachedResults | ConvertTo-Json -Depth 3
+                        $jsonFilePath = "RoleAssignments_$timestamp.json"
+                        $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
+                        Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                        return
+                    }
+                    "CSV" {
+                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                        $csvOutput = $cachedResults | ConvertTo-Csv -NoTypeInformation
+                        $csvFilePath = "RoleAssignments_$timestamp.csv"
+                        $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
+                        Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                        return
+                    }
+                    "Object" { return $cachedResults }
+                    "Table" { return $cachedResults | Format-Table -AutoSize }
+                }
+            }
+        }
+
         try {
-            Write-Host "🎯 Retrieving all subscriptions for the current user context..." -ForegroundColor Green
-            $baseUri = 'https://management.azure.com'
-            
-            if ($SubscriptionId) {
-                # Request specific subscription
-                $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
-            } else {
-                # Request all subscriptions
-                $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+            # Cache subscription retrieval separately for better performance
+            $subscriptionCacheKey = ConvertTo-CacheKey -BaseIdentifier "Get-RoleAssignment-Subscriptions" -Parameters @{
+                SubscriptionId = $SubscriptionId
             }
             
-            $requestParam = @{
-                Headers = $script:authHeader
-                Uri     = $subscriptionsUri
-                Method  = 'GET'
+            $subscriptionOperation = {
+                Write-Host "🎯 Retrieving all subscriptions for the current user context..." -ForegroundColor Green
+                $baseUri = 'https://management.azure.com'
+                
+                if ($SubscriptionId) {
+                    # Request specific subscription
+                    $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
+                } else {
+                    # Request all subscriptions
+                    $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
+                }
+                
+                $requestParam = @{
+                    Headers = $script:authHeader
+                    Uri     = $subscriptionsUri
+                    Method  = 'GET'
+                }
+
+                if ($SubscriptionId) {
+                    # Single subscription response
+                    $subscriptionResponse = Invoke-RestMethod @requestParam
+                    $retrievedSubscriptions = @($subscriptionResponse.subscriptionId)
+                } else {
+                    # Multiple subscriptions response
+                    $retrievedSubscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
+                }
+                
+                Write-Host "  📊 Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
+                return $retrievedSubscriptions
             }
 
-            if ($SubscriptionId) {
-                # Single subscription response
-                $subscriptionResponse = Invoke-RestMethod @requestParam
-                $subscriptions = @($subscriptionResponse.subscriptionId)
-            } else {
-                # Multiple subscriptions response
-                $subscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
-            }
-            Write-Host "  📊 Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
+            $subscriptions = Invoke-CacheableOperation -CacheKey $subscriptionCacheKey -CacheType 'MSGraph' -Operation $subscriptionOperation -SkipCache $SkipCache -CacheExpirationMinutes $CacheExpirationMinutes -MaxCacheSize $MaxCacheSize -CompressCache $CompressCache -OperationName "subscription retrieval"
 
         }
         catch {
@@ -117,25 +186,34 @@ function Get-RoleAssignment {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
-        try {
-            if ($CurrentUser) {
-                Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
-                $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
-                $ObjectId = $userObject.id
-                Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
-            }
+        # Main role assignment processing wrapped in cacheable operation
+        $roleAssignmentOperation = {
+            param($CurrentUserFlag, $ObjectIdParam, $SubscriptionsParam, $PrincipalTypeParam, $IsCustomParam, $ExcludeCustomParam, $IncludeEligibleParam, $ThrottleLimitParam)
+            
+            $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
+            $randomUserAgent = $script:SessionVariables.userAgent
+            $baseUri = 'https://management.azure.com'
 
-            if ($ObjectId) {
-                Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
-                $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
-                Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
-            }
-            else {
-                $Groups = @()
-            }
+            try {
+                $ObjectId = $ObjectIdParam
+                if ($CurrentUserFlag) {
+                    Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
+                    $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                    $ObjectId = $userObject.id
+                    Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
+                }
 
-            Write-Host "  🔍 Analyzing role assignments across $($subscriptions.Count) subscriptions with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
-            $subscriptions | ForEach-Object -Parallel {
+                if ($ObjectId) {
+                    Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
+                    $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
+                    Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                }
+                else {
+                    $Groups = @()
+                }
+
+                Write-Host "  🔍 Analyzing role assignments across $($SubscriptionsParam.Count) subscriptions with $ThrottleLimitParam concurrent threads..." -ForegroundColor Cyan
+                $SubscriptionsParam | ForEach-Object -Parallel {
                 try {
                     $baseUri             = $using:baseUri
                     $authHeader          = $using:script:authHeader
@@ -230,14 +308,13 @@ function Get-RoleAssignment {
                 }
                 catch {
                     Write-Information "❌ Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
-                }
-            } -ThrottleLimit $ThrottleLimit
+                }                } -ThrottleLimit $ThrottleLimitParam
 
             # Process PIM eligible role assignments if requested
-            if ($IncludeEligible) {
+            if ($IncludeEligibleParam) {
                 Write-Host "  🔐 Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
                 
-                $subscriptions | ForEach-Object -Parallel {
+                $SubscriptionsParam | ForEach-Object -Parallel {
                     try {
                         $baseUri             = $using:baseUri
                         $authHeader          = $using:script:authHeader
@@ -353,37 +430,47 @@ function Get-RoleAssignment {
                     catch {
                         Write-Information "❌ Error processing PIM eligible assignments for subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
                     }
-                } -ThrottleLimit $ThrottleLimit
+                } -ThrottleLimit $ThrottleLimitParam
+            }
+            
+            # Convert ConcurrentBag to array for return
+            return @($roleAssignmentsList)
+            }
+            catch {
+                Write-Host "❌ Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+                return @()
             }
         }
-        catch {
-            Write-Host "❌ Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
-        }
 
-        if ($roleAssignmentsList.Count -eq 0) {
+        # Execute the role assignment operation with caching
+        $result = Invoke-CacheableOperation -CacheKey $cacheKey -CacheType 'MSGraph' -Operation { 
+            & $roleAssignmentOperation $CurrentUser $ObjectId $subscriptions $PrincipalType $IsCustom $ExcludeCustom $IncludeEligible $ThrottleLimit 
+        } -SkipCache $SkipCache -CacheExpirationMinutes $CacheExpirationMinutes -MaxCacheSize $MaxCacheSize -CompressCache $CompressCache -OperationName "role assignment retrieval"
+
+        if ($result.Count -eq 0) {
             Write-Host "⚠️ No role assignments found for the specified criteria" -ForegroundColor Yellow
         } else {
             $duration = (Get-Date) - $startTime
             Write-Host "`n📊 Role Assignment Discovery Summary:" -ForegroundColor Magenta
-            Write-Host "   Total Role Assignments Found: $($roleAssignmentsList.Count)" -ForegroundColor Green
+            Write-Host "   Total Role Assignments Found: $($result.Count)" -ForegroundColor Green
             
             # Show active vs eligible assignment breakdown if IncludeEligible was used
             if ($IncludeEligible) {
-                $activeAssignments = $roleAssignmentsList | Where-Object { $_.IsEligible -eq $false }
-                $eligibleAssignments = $roleAssignmentsList | Where-Object { $_.IsEligible -eq $true }
+                $activeAssignments = $result | Where-Object { $_.IsEligible -eq $false }
+                $eligibleAssignments = $result | Where-Object { $_.IsEligible -eq $true }
                 Write-Host "   Active Assignments: $($activeAssignments.Count)" -ForegroundColor Green
                 Write-Host "   Eligible (PIM) Assignments: $($eligibleAssignments.Count)" -ForegroundColor Cyan
             }
             
             # Group by principal type for summary
-            $principalTypeSummary = $roleAssignmentsList | Group-Object PrincipalType
+            $principalTypeSummary = $result | Group-Object PrincipalType
             foreach ($group in $principalTypeSummary) {
                 Write-Host "   $($group.Name): $($group.Count)" -ForegroundColor Cyan
             }
             
             # Show custom role count if any
-            $customRoles = $roleAssignmentsList | Where-Object { $_.IsCustom -eq $true }
+            $customRoles = $result | Where-Object { $_.IsCustom -eq $true }
             if ($customRoles.Count -gt 0) {
                 Write-Host "   Custom Roles: $($customRoles.Count)" -ForegroundColor Yellow
             }
@@ -392,9 +479,6 @@ function Get-RoleAssignment {
         }
 
         Write-Host "✅ Role assignment analysis completed successfully!" -ForegroundColor Green
-        
-        # Convert ConcurrentBag to array for output formatting
-        $result = @($roleAssignmentsList)
         
         # Return results in requested format
         switch ($OutputFormat) {
@@ -466,6 +550,24 @@ function Get-RoleAssignment {
         Eligible assignments are roles that can be activated on-demand through Azure PIM.
         Aliases: include-eligible, eligible
 
+    .PARAMETER SkipCache
+        Bypasses the cache and forces a fresh retrieval of role assignments. Use this when you need the most current data.
+        Aliases: skip-cache
+
+    .PARAMETER CacheExpirationMinutes
+        Specifies how long cached results should be considered valid, in minutes. Default is 60 minutes.
+        Cached data older than this will be automatically refreshed on the next request.
+        Aliases: cache-expiration
+
+    .PARAMETER MaxCacheSize
+        Specifies the maximum number of cache entries to maintain. Default is 100.
+        When the limit is reached, the least recently used entries are removed.
+        Aliases: max-cache-size
+
+    .PARAMETER CompressCache
+        Enables compression for cached data to reduce memory usage. Recommended for large role assignment datasets.
+        Aliases: compress-cache
+
     .OUTPUTS
         Returns a collection of custom objects with the following properties:
         - PrincipalType: The type of Azure AD principal (e.g., User, Group, ServicePrincipal).
@@ -512,9 +614,24 @@ function Get-RoleAssignment {
         Get-RoleAssignment -PrincipalType ServicePrincipal -IncludeEligible -OutputFormat JSON
         Retrieves all active and PIM eligible role assignments for service principals and exports to JSON.
 
+    .EXAMPLE
+        Get-RoleAssignment -CurrentUser -SkipCache
+        Retrieves all role assignments for the currently authenticated user, bypassing the cache to get fresh data.
+
+    .EXAMPLE
+        Get-RoleAssignment -PrincipalType Group -CacheExpirationMinutes 30 -CompressCache
+        Retrieves role assignments for groups with a 30-minute cache expiration and compression enabled.
+
+    .EXAMPLE
+        Get-RoleAssignment -SubscriptionId '00000000-0000-0000-0000-000000000000' -MaxCacheSize 200
+        Retrieves role assignments for a specific subscription with an increased cache size limit.
+
     .NOTES
         - Requires appropriate Azure RBAC permissions to read role assignments at the queried scope.
         - Be mindful of API rate limits when adjusting the `ThrottleLimit` parameter.
         - The function uses parallel processing to improve performance when querying multiple subscriptions.
+        - Results are automatically cached for improved performance. Use -SkipCache to force fresh data retrieval.
+        - Cache expiration is set to 60 minutes by default but can be customized with -CacheExpirationMinutes.
+        - Large datasets can be compressed in cache using -CompressCache to reduce memory usage.
     #>
 }

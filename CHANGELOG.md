@@ -1,8 +1,53 @@
-[![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjUsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
+[![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjIsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
 
 ![logo](/.github/media/cateye.png?raw=true)
 
 # CHANGELOG
+
+## v0.21.0 [2025-07-09] 🚀 Major Cache Analytics Release
+
+_New Features & Major Enhancements_
+
+**Revolutionary Cache Analytics System:**
+* **Completely redesigned `Get-BlackCatCacheStats` function with enterprise-grade analytics**
+  - 🎯 **Advanced Filtering Engine**: 15 new parameters including FilterExpired, FilterValid, FilterCompressed, FilterLarge, MinSize, MaxAge
+  - 📊 **Sophisticated Analytics**: Performance metrics, trend analysis, distribution histograms, and predictive insights
+  - 🔍 **Enhanced Sorting**: 6 sorting options (Timestamp, Size, Key, ExpirationTime, Age, TTL) for comprehensive data organization
+  - 📈 **Trend Analysis**: Growth rate calculations, peak usage patterns, cache freshness metrics, and usage predictions
+  - 📊 **Distribution Histograms**: Visual size and age distribution analysis with ASCII bar charts and statistical breakdowns
+  - 💾 **Multi-Format Export**: 6 output formats (Summary, Table, List, JSON, CSV, XML) with automatic file export capabilities
+  - 🎨 **Enhanced Visual Dashboard**: Color-coded metrics, emoji indicators, comprehensive performance visualization
+  - 🧠 **Intelligent Recommendations**: Context-aware optimization suggestions, memory usage analysis, compression recommendations
+  - 🔧 **Performance Optimization**: Hit rate analysis, cache utilization metrics, memory density calculations
+  - 📋 **Programmatic Interface**: Quiet mode for automated scripts, structured data objects for integration
+  - ⚡ **Advanced Performance Metrics**: Hit rates, cache utilization, memory efficiency, compression ratios, turnover rates
+  - 🚀 **Predictive Analysis**: Cache growth predictions, usage pattern analysis, maintenance recommendations
+
+* **Enhanced Cache Management Functions:**
+  - **Universal Cache System**: Implemented LRU (Least Recently Used) eviction, compression support, configurable expiration
+  - **Memory Management**: Advanced memory optimization with size-based eviction and compression ratios
+  - **Cache Integration**: Seamless integration with core functions (Invoke-MSGraph, Invoke-AzBatch, Get-RoleAssignment)
+  - **Parameter Standardization**: Consistent cache parameters across all functions (SkipCache, CacheExpirationMinutes, MaxCacheSize, CompressCache)
+
+**Core Function Cache Integration:**
+* **Enhanced `Get-RoleAssignment` function with comprehensive cache support**
+  - Added full cache parameter support: `-SkipCache`, `-CacheExpirationMinutes`, `-MaxCacheSize`, `-CompressCache`
+  - Implemented intelligent cache key generation based on subscription, filters, and PIM settings
+  - Added cache-aware processing with automatic cache management and cleanup
+  - Enhanced performance for repeated role assignment queries across multiple subscriptions
+  - Maintains full compatibility with all existing functionality including PIM eligible assignments
+
+* **Enhanced `Invoke-MSGraph` and `Invoke-AzBatch` functions with advanced caching**
+  - Updated cache integration with new parameter support and LRU management
+  - Improved cache key generation for better cache hit rates
+  - Enhanced memory management with compression support
+  - Optimized performance for large-scale API operations
+
+**Module Architecture Improvements:**
+* **Modular Function Organization**: Split multi-function files into individual function files for better module compatibility
+* **Enhanced Module Loading**: Updated BlackCat.psd1 manifest with comprehensive function exports and file listings
+* **Function Export Standardization**: All cache management functions properly exported and available after module import
+* **Documentation Updates**: Comprehensive documentation for all new cache features and advanced analytics
 
 ## v0.20.6 [2025-07-09]
 
@@ -76,6 +121,13 @@ _Improvements_
   - Graceful handling of batch vs. non-batch requests with consistent retry behavior
   - Prevents unnecessary retries for authorization failures while maintaining resilience for transient errors
   - Maintains backward compatibility with existing Graph API call patterns
+  - Added `OutputFormat` parameter with support for Object, JSON, CSV, and Table formats
+  - JSON and CSV outputs are automatically saved to timestamped files (MSGraphResult_YYYYMMDD_HHMMSS.json/csv)
+  - Table format provides formatted output using Format-Table -AutoSize for improved readability
+  - Object format maintains default behavior returning raw PowerShell objects
+  - Includes parameter aliases ("output", "o") for convenient command-line usage
+  - Enhanced function documentation with comprehensive parameter descriptions and usage examples
+  - Maintains full compatibility with all existing functionality including batch processing and retry logic
 
 ## v0.20.5 [2025-07-09]
 
