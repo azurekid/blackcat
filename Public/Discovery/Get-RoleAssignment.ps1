@@ -35,7 +35,11 @@ function Get-RoleAssignment {
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat = "Table"
+        [string]$OutputFormat = "Table",
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
+        [Alias('include-eligible', 'eligible')]
+        [switch]$IncludeEligible
     )
 
     begin {
@@ -48,6 +52,7 @@ function Get-RoleAssignment {
             $MyInvocation.MyCommand.Name | Invoke-BlackCat
         }
 
+        $startTime = Get-Date
         Write-Host "🎯 Starting Azure RBAC Role Assignment Analysis..." -ForegroundColor Green
         
         if ($CurrentUser) {
@@ -67,6 +72,9 @@ function Get-RoleAssignment {
         }
         if ($ExcludeCustom) {
             Write-Host "  🚫 Filter: Excluding Custom Role Details" -ForegroundColor Cyan
+        }
+        if ($IncludeEligible) {
+            Write-Host "  🔐 Include: PIM Eligible Role Assignments" -ForegroundColor Cyan
         }
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
@@ -181,6 +189,7 @@ function Get-RoleAssignment {
                                 Scope         = $roleAssignment.properties.scope
                                 RoleId        = $roleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
                                 IsCustom      = $false
+                                IsEligible    = $false
                             }
 
                             $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
@@ -223,6 +232,129 @@ function Get-RoleAssignment {
                     Write-Information "❌ Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
                 }
             } -ThrottleLimit $ThrottleLimit
+
+            # Process PIM eligible role assignments if requested
+            if ($IncludeEligible) {
+                Write-Host "  🔐 Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
+                
+                $subscriptions | ForEach-Object -Parallel {
+                    try {
+                        $baseUri             = $using:baseUri
+                        $authHeader          = $using:script:authHeader
+                        $userAgent           = $using:randomUserAgent
+                        $roleAssignmentsList = $using:roleAssignmentsList
+                        $ObjectId            = $using:ObjectId
+                        $Groups              = $using:Groups
+                        $azureRoles          = $using:script:SessionVariables.AzureRoles
+                        $PrincipalType       = $using:PrincipalType
+                        $IsCustom            = $using:IsCustom
+                        $ExcludeCustom       = $using:ExcludeCustom
+                        $subscriptionId      = $_
+
+                        Write-Verbose "🔐 Processing PIM eligible assignments for subscription: $subscriptionId"
+                        
+                        # Query PIM eligible role assignments
+                        $pimUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
+                        
+                        $principalIds = @()
+                        if ($ObjectId) {
+                            $principalIds += $ObjectId
+                        }
+                        if ($Groups.length -gt 0) {
+                            $principalIds += $Groups
+                        }
+
+                        $pimRequestParam = @{
+                            Headers   = $authHeader
+                            Method    = 'GET'
+                            Uri       = $pimUri
+                            UserAgent = $userAgent
+                        }
+
+                        $pimResponse = @()
+                        if ($principalIds) {
+                            foreach ($principalId in $principalIds) {
+                                $pimRequestParam.Uri = "$pimUri&`$filter=principalId eq '$principalId'"
+                                try {
+                                    $pimResponse += (Invoke-RestMethod @pimRequestParam).value
+                                }
+                                catch {
+                                    Write-Verbose "⚠️ No PIM eligible assignments found for principal $principalId in subscription $subscriptionId"
+                                }
+                            }
+                        } else {
+                            try {
+                                $pimResponse += @(Invoke-RestMethod @pimRequestParam).value
+                            }
+                            catch {
+                                Write-Verbose "⚠️ No PIM eligible assignments found in subscription $subscriptionId or insufficient permissions"
+                            }
+                        }
+
+                        if ($PrincipalType) {
+                            $pimResponse = $pimResponse | Where-Object { $_.properties.principalType -eq $PrincipalType }
+                        }
+
+                        foreach ($eligibleAssignment in $pimResponse) {
+                            if ($eligibleAssignment.properties.principalType) {
+                                $roleAssignmentObject = [PSCustomObject]@{
+                                    PrincipalType = $eligibleAssignment.properties.principalType
+                                    PrincipalId   = $eligibleAssignment.properties.principalId
+                                    Scope         = $eligibleAssignment.properties.scope
+                                    RoleId        = $eligibleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
+                                    IsCustom      = $false
+                                    IsEligible    = $true
+                                    StartDateTime = $eligibleAssignment.properties.startDateTime
+                                    EndDateTime   = $eligibleAssignment.properties.endDateTime
+                                    Status        = $eligibleAssignment.properties.status
+                                }
+
+                                $roleId = ($eligibleAssignment.properties.roleDefinitionId -split '/')[-1]
+                                $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
+
+                                if (-not($roleName)) {
+                                    $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions/$($roleId)?api-version=2022-05-01-preview"
+                                    $roleDefinitionsRequestParam = @{
+                                        Headers = $authHeader
+                                        Uri     = $roleDefinitionsUri
+                                        Method  = 'GET'
+                                        UserAgent = $userAgent
+                                    }
+
+                                    if (-not $ExcludeCustom) {
+                                        Write-Verbose "🔍 Retrieving custom role definition for PIM assignment in subscription: $subscriptionId"
+                                        try {
+                                            $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                        }
+                                        catch {
+                                            $roleName = "Unknown Role"
+                                        }
+                                    }
+
+                                    $roleAssignmentObject.IsCustom = $true
+                                }
+
+                                if ($roleName) {
+                                    $memberObject = @{
+                                        MemberType = 'NoteProperty'
+                                        Name       = 'RoleName'
+                                        Value      = $roleName
+                                    }
+                                    $roleAssignmentObject | Add-Member @memberObject
+
+                                    if (-not $IsCustom -or $roleAssignmentObject.IsCustom) {
+                                        $roleAssignmentsList.Add($roleAssignmentObject)
+                                        Write-Verbose "✅ Found PIM Eligible: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Information "❌ Error processing PIM eligible assignments for subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
+                    }
+                } -ThrottleLimit $ThrottleLimit
+            }
         }
         catch {
             Write-Host "❌ Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
@@ -232,8 +364,17 @@ function Get-RoleAssignment {
         if ($roleAssignmentsList.Count -eq 0) {
             Write-Host "⚠️ No role assignments found for the specified criteria" -ForegroundColor Yellow
         } else {
+            $duration = (Get-Date) - $startTime
             Write-Host "`n📊 Role Assignment Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Role Assignments Found: $($roleAssignmentsList.Count)" -ForegroundColor Green
+            
+            # Show active vs eligible assignment breakdown if IncludeEligible was used
+            if ($IncludeEligible) {
+                $activeAssignments = $roleAssignmentsList | Where-Object { $_.IsEligible -eq $false }
+                $eligibleAssignments = $roleAssignmentsList | Where-Object { $_.IsEligible -eq $true }
+                Write-Host "   Active Assignments: $($activeAssignments.Count)" -ForegroundColor Green
+                Write-Host "   Eligible (PIM) Assignments: $($eligibleAssignments.Count)" -ForegroundColor Cyan
+            }
             
             # Group by principal type for summary
             $principalTypeSummary = $roleAssignmentsList | Group-Object PrincipalType
@@ -246,6 +387,8 @@ function Get-RoleAssignment {
             if ($customRoles.Count -gt 0) {
                 Write-Host "   Custom Roles: $($customRoles.Count)" -ForegroundColor Yellow
             }
+            
+            Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
         }
 
         Write-Host "✅ Role assignment analysis completed successfully!" -ForegroundColor Green
@@ -318,6 +461,11 @@ function Get-RoleAssignment {
         - Table: Returns results in formatted table
         Aliases: output, o
 
+    .PARAMETER IncludeEligible
+        Includes PIM (Privileged Identity Management) eligible role assignments in addition to active assignments. 
+        Eligible assignments are roles that can be activated on-demand through Azure PIM.
+        Aliases: include-eligible, eligible
+
     .OUTPUTS
         Returns a collection of custom objects with the following properties:
         - PrincipalType: The type of Azure AD principal (e.g., User, Group, ServicePrincipal).
@@ -325,6 +473,12 @@ function Get-RoleAssignment {
         - RoleName: The display name of the RBAC role.
         - Scope: The resource scope of the role assignment.
         - IsCustom: Indicates whether the role is a custom role.
+        - IsEligible: Indicates whether this is a PIM eligible assignment (requires activation).
+        
+        For PIM eligible assignments (when IncludeEligible is used), additional properties include:
+        - StartDateTime: When the eligible assignment begins.
+        - EndDateTime: When the eligible assignment expires.
+        - Status: The current status of the eligible assignment.
 
     .EXAMPLE
         Get-RoleAssignment -CurrentUser
@@ -349,6 +503,14 @@ function Get-RoleAssignment {
     .EXAMPLE
         Get-RoleAssignment -PrincipalType Group -OutputFormat Table
         Lists all role assignments granted to Azure AD groups and displays results in a formatted table.
+
+    .EXAMPLE
+        Get-RoleAssignment -CurrentUser -IncludeEligible
+        Retrieves both active and PIM eligible role assignments for the currently authenticated user.
+
+    .EXAMPLE
+        Get-RoleAssignment -PrincipalType ServicePrincipal -IncludeEligible -OutputFormat JSON
+        Retrieves all active and PIM eligible role assignments for service principals and exports to JSON.
 
     .NOTES
         - Requires appropriate Azure RBAC permissions to read role assignments at the queried scope.

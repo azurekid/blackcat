@@ -31,6 +31,52 @@ _Improvements_
   - Added detailed error categorization and summary (RBAC denied, permission denied, not found, bad request, etc.)
   - Added verbose/debug output for error messages and HTTP status codes
 
+**Role Assignment Discovery Enhancements:**
+* **Enhanced `Get-RoleAssignment` function with duration tracking and improved performance monitoring**
+  - Added comprehensive duration tracking from start to completion of role assignment analysis
+  - Enhanced summary statistics to include execution time in seconds with precise formatting
+  - Provides users with valuable timing information for performance optimization
+  - Duration tracking works consistently across all output formats (Table, JSON, CSV, Object)
+  - Helps users understand performance characteristics when dealing with multiple subscriptions or large result sets
+
+* **Added PIM (Privileged Identity Management) eligible role assignment support**
+  - Added `-IncludeEligible` parameter (aliases: `include-eligible`, `eligible`) to query PIM eligible assignments
+  - Integrated Microsoft.Authorization/roleEligibilityScheduleInstances API for comprehensive PIM discovery
+  - Enhanced role assignment objects with `IsEligible` property to distinguish active vs. eligible assignments
+  - Added PIM-specific properties: `StartDateTime`, `EndDateTime`, and `Status` for eligible assignments
+  - Improved summary statistics with breakdown of active vs. eligible assignment counts
+  - Maintains full compatibility with all existing filtering options (PrincipalType, ObjectId, etc.)
+  - Uses parallel processing for optimal performance when querying eligible assignments across subscriptions
+  - Enhanced error handling for scenarios where PIM might not be available or accessible
+  - Updated comprehensive help documentation with PIM-related examples and parameter descriptions
+
+**Entra ID Information Discovery Enhancements:**
+* **Enhanced `Get-EntraInformation` function with automatic object type detection**
+  - Added intelligent automatic fallback for ObjectId queries
+  - When querying by ObjectId without the -Group switch, automatically attempts group query if user query fails
+  - Eliminates need to manually specify -Group switch when uncertain about object type
+  - Enhanced verbose logging to track query attempts and results
+  - Improved error handling with detailed error message classification
+  - Distinguishes between "resource not found" errors vs. permission/access errors
+  - Only attempts automatic group fallback for genuine "not found" scenarios
+  - Provides specific error messages when ObjectId doesn't exist in Azure AD
+  - Enhanced error pattern matching to catch various forms of "does not exist" messages
+  - Updated help documentation with examples demonstrating automatic fallback behavior
+  - Maintains backward compatibility with existing explicit -Group parameter usage
+
+**Microsoft Graph API Core Enhancements:**
+* **Enhanced `Invoke-MsGraph` function with robust retry logic and throttling management**
+  - Added configurable retry mechanism with `-MaxRetries` parameter (default: 3 attempts)
+  - Implemented intelligent exponential backoff with `-RetryDelaySeconds` parameter (default: 5 seconds)
+  - Enhanced throttling detection and automatic retry handling for HTTP 429 responses
+  - Added support for Microsoft Graph "Retry-After" header compliance
+  - Improved error handling with specific detection for unauthorized (401) errors
+  - Enhanced verbose logging for API calls and retry attempts
+  - Robust error message extraction from Graph API JSON error responses
+  - Graceful handling of batch vs. non-batch requests with consistent retry behavior
+  - Prevents unnecessary retries for authorization failures while maintaining resilience for transient errors
+  - Maintains backward compatibility with existing Graph API call patterns
+
 ## v0.20.5 [2025-07-09]
 
 _Bug Fixes & Improvements_
