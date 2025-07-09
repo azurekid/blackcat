@@ -4,6 +4,33 @@
 
 # CHANGELOG
 
+## v0.20.6 [2025-07-09]
+
+_Improvements_
+
+**App Role Permission Discovery Enhancements:**
+* **Enhanced `Get-AppRolePermission` function with emoji output and improved user experience**
+  - Added emoji-enhanced progress indicators and status messages for better visual feedback
+  - Implemented color-coded output for easy identification of results (✅ success, ❌ errors, 🔍 search)
+  - Enhanced search feedback showing permission details (📋 Permission, 🏷️ Type, 🆔 App Role ID)
+  - Improved error handling with clear visual indicators for not found scenarios
+  - Added detailed function documentation highlighting the enhanced output capabilities
+  - Maintains full compatibility with pipeline input and all existing functionality
+
+**Storage Account Key Retrieval Enhancements:**
+* **Enhanced `Get-StorageAccountKey` function with comprehensive output and statistics**
+  - Added emoji-enhanced progress indicators and colored output similar to Get-KeyVaultSecret
+  - Implemented comprehensive summary statistics including access denial tracking
+  - Enhanced error categorization for RBAC vs. permission based access denials
+  - **FIXED**: Corrected error handling to use RBAC terminology instead of Key Vault "access policy" references
+  - Storage Accounts use Role-Based Access Control (RBAC) for management operations like listKeys, not access policies
+  - Updated error patterns to specifically detect Azure RBAC role assignment and permission errors
+  - Improved accuracy of error classification for Storage Account access scenarios
+  - Added parallel processing with ConcurrentBag for thread-safe result and error aggregation
+  - Implemented OutputFormat parameter (Object, JSON, CSV, Table) with file output for JSON/CSV
+  - Added detailed error categorization and summary (RBAC denied, permission denied, not found, bad request, etc.)
+  - Added verbose/debug output for error messages and HTTP status codes
+
 ## v0.20.5 [2025-07-09]
 
 _Bug Fixes & Improvements_
