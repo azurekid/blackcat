@@ -28,15 +28,17 @@ function Get-KeyVaultSecret {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
         $result  = New-Object System.Collections.ArrayList
+
+        # Initialize counters with explicit 0 values for tracking
         $stats = @{
             StartTime = Get-Date
             TotalVaults = 0
             VaultsWithSecrets = 0
             TotalSecrets = 0
             ProcessingErrors = 0
-            AccessDeniedKeyVaultPolicy = 0
-            AccessDeniedRBACPolicy = 0
-            VaultNotFound = 0
+            ForbiddenByPolicy = 0
+            InsufficientPermissions = 0
+            TotalAccessDenied = 0
         }
     }
 
@@ -47,86 +49,142 @@ function Get-KeyVaultSecret {
                 param($VaultNames, $ThrottleLimit, $AuthHeader)
 
                 $secretUris = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
-
-                $VaultNames | ForEach-Object -Parallel {
-                    $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $_
+                
+                $policyForbidden = 0
+                $permissionForbidden = 0
+                $generalErrors = 0
+                
+                foreach ($vaultName in $VaultNames) {
+                    $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $vaultName
 
                     $requestParam = @{
-                        Headers = $using:AuthHeader
+                        Headers = $AuthHeader
                         Uri     = $uri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
+                        UserAgent = $sessionVariables.userAgent
                     }
 
                     try {
                         $apiResponse = Invoke-RestMethod @requestParam
                         if ($apiResponse.value.Count -gt 0) {
-                            Write-Host "    ✅ Found $($apiResponse.value.Count) secrets in vault: $_" -ForegroundColor Green
+                            Write-Host "    ✅ Found $($apiResponse.value.Count) secrets in vault: $vaultName" -ForegroundColor Green
                             foreach ($value in $apiResponse.value) {
-                                ($using:secretUris).Add($value)
+                                $secretUris.Add($value)
                             }
                         } else {
-                            Write-Host "    ℹ️ No secrets found in vault: $_" -ForegroundColor Gray
+                            Write-Host "    ℹ️ No secrets found in vault: $vaultName" -ForegroundColor Gray
                         }
                     }
                     catch {
-                        if ($_.Exception.Message -match "NotFound") {
-                            [System.Threading.Interlocked]::Increment([ref]$using:stats.VaultNotFound)
-                        } elseif ($_.Exception.Message -match "Forbidden") {
-                            if ($_.Exception.Message -match "access policy") {
-                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedKeyVaultPolicy)
+                        $errorMsg = $_.Exception.Message
+                        Write-Verbose "Full vault access error: $errorMsg"
+                        
+                        if ($errorMsg -match "NotFound") {
+                            Write-Host "    ❌ Key Vault not found: $vaultName" -ForegroundColor Red
+                            $generalErrors++
+                        } 
+                        elseif ($errorMsg -match "Forbidden|AccessDenied|Unauthorized") {
+                            # Check for policy-related errors
+                            if (($errorMsg -match "ForbiddenByPolicy") -or
+                                ($errorMsg -match "[Pp]olicy") -or 
+                                ($errorMsg -match "RBAC") -or
+                                ($errorMsg -match "AccessPolicy")) {
+                                
+                                Write-Host "    🚫 Access forbidden by policy for vault: $vaultName" -ForegroundColor Red
+                                $policyForbidden++
+                                Write-Verbose "Vault policy counter incremented to $policyForbidden"
                             } else {
-                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedRBACPolicy)
+                                Write-Host "    🔒 Insufficient permissions for vault: $vaultName" -ForegroundColor Yellow
+                                $permissionForbidden++
+                                Write-Verbose "Vault permission counter incremented to $permissionForbidden"
                             }
-                        } else {
-                            [System.Threading.Interlocked]::Increment([ref]$using:stats.ProcessingErrors)
+                        }
+                        else {
+                            Write-Host "    ❌ Error accessing vault $vaultName`: $errorMsg" -ForegroundColor Red
+                            $generalErrors++
+                            Write-Verbose "Vault error counter incremented to $generalErrors"
                         }
                     }
-                } -ThrottleLimit $ThrottleLimit
-
-                return $secretUris
+                }
+                
+                return @{
+                    SecretUris = $secretUris
+                    PolicyForbidden = $policyForbidden
+                    PermissionForbidden = $permissionForbidden
+                    GeneralErrors = $generalErrors
+                }
             }
 
             function Get-KeyVaultSecretValue {
                 param($SecretUris, $ThrottleLimit, $AuthHeader)
 
-                $secretValues = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
+                $secretValues = New-Object System.Collections.ArrayList
+                $policyForbiddenCount = 0
+                $permissionForbiddenCount = 0
+                $generalErrorCount = 0
 
-                $SecretUris.id | ForEach-Object -Parallel {
-                    $currentUri = $_
+                foreach ($uri in $SecretUris.id) {
+                    $currentUri = $uri
                     $vault = $currentUri.split('.')[0].Split('https://')[1]
+                    $secretName = $currentUri.Split('/')[4]
 
                     $requestParam = @{
-                        Headers = $using:AuthHeader
+                        Headers = $AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $currentUri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
+                        UserAgent = $sessionVariables.userAgent
                     }
 
                     try {
                         $secretResponse = Invoke-RestMethod @requestParam
                         $currentItem = [PSCustomObject]@{
                             "KeyVaultName" = $vault
-                            "SecretName"   = "$($currentUri.Split('/')[4])"
+                            "SecretName"   = $secretName
                             "Value"        = $secretResponse.value
                         }
-                        ($using:secretValues).Add($currentItem)
+                        $secretValues.Add($currentItem) | Out-Null
                     }
                     catch {
-                        if ($_.Exception.Message -match "Forbidden") {
-                            if ($_.Exception.Message -match "access policy") {
-                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedKeyVaultPolicy)
+                        Write-Verbose "Exception message: $($_.Exception.Message)"
+                        $errorMsg = $_.Exception.Message
+                        
+                        Write-Verbose "Full error message: $errorMsg"
+                        
+                        if ($errorMsg -match "Forbidden|AccessDenied|Unauthorized") {
+                            if (($errorMsg -match "ForbiddenByPolicy") -or
+                                ($errorMsg -match "[Pp]olicy") -or 
+                                ($errorMsg -match "RBAC") -or
+                                ($errorMsg -match "AccessPolicy")) {
+                                    
+                                Write-Host "      🚫 Access forbidden by policy for secret: [$secretName] in $vault" -ForegroundColor Red
+                                $policyForbiddenCount++
+                                Write-Verbose "Policy counter incremented to $policyForbiddenCount"
                             } else {
-                                [System.Threading.Interlocked]::Increment([ref]$using:stats.AccessDeniedRBACPolicy)
+                                Write-Host "      🔒 Insufficient permissions for secret: [$secretName] in $vault" -ForegroundColor Yellow
+                                $permissionForbiddenCount++
+                                Write-Verbose "Permission counter incremented to $permissionForbiddenCount"
                             }
                         }
                         else {
-                            [System.Threading.Interlocked]::Increment([ref]$using:stats.ProcessingErrors)
+                            Write-Host "      ❌ Error retrieving secret: $errorMsg" -ForegroundColor Red
+                            $generalErrorCount++
+                            Write-Verbose "Error counter incremented to $generalErrorCount"
                         }
                     }
-                } -ThrottleLimit $ThrottleLimit
+                }
 
-                return $secretValues
+                Write-Verbose "Counter values before return:"
+                Write-Verbose "  Policy forbidden count: $policyForbiddenCount"
+                Write-Verbose "  Permission forbidden count: $permissionForbiddenCount"
+                Write-Verbose "  General error count: $generalErrorCount"
+                Write-Host "  🔐 Found $($secretValues.Count) accessible secrets, $policyForbiddenCount policy denials, $permissionForbiddenCount permission denials" -ForegroundColor Cyan
+                
+                return @{
+                    SecretValues = $secretValues
+                    ForbiddenByPolicyCount = $policyForbiddenCount
+                    InsufficientPermissionsCount = $permissionForbiddenCount
+                    GeneralErrorCount = $generalErrorCount
+                }
             }
 
             Write-Host "🎯 Analyzing Key Vault secrets..." -ForegroundColor Green
@@ -148,14 +206,25 @@ function Get-KeyVaultSecret {
 
             Write-Host "  🔍 Discovering secrets in $($vaults.Count) Key Vault(s)..." -ForegroundColor Yellow
 
-            # Execute the functions
             $requestParam = @{
                 VaultNames    = $vaults.name
                 ThrottleLimit = $ThrottleLimit
                 AuthHeader    = $script:keyVaultHeader
             }
 
-            $uris = Get-KeyVaultSecretUris @requestParam
+            $urisResult = Get-KeyVaultSecretUris @requestParam
+            $uris = $urisResult.SecretUris
+            
+            # Update stats with vault-level errors
+            $stats.ForbiddenByPolicy = $urisResult.PolicyForbidden
+            $stats.InsufficientPermissions = $urisResult.PermissionForbidden
+            $stats.ProcessingErrors = $urisResult.GeneralErrors
+            $stats.TotalAccessDenied = $stats.ForbiddenByPolicy + $stats.InsufficientPermissions
+            
+            Write-Verbose "Stats after vault processing:"
+            Write-Verbose "  ForbiddenByPolicy: $($stats.ForbiddenByPolicy)"
+            Write-Verbose "  InsufficientPermissions: $($stats.InsufficientPermissions)"
+            Write-Verbose "  TotalAccessDenied: $($stats.TotalAccessDenied)"
 
             if ($uris.Count -gt 0) {
                 Write-Host "  🔐 Retrieving $($uris.Count) secret value(s)..." -ForegroundColor Yellow
@@ -166,10 +235,23 @@ function Get-KeyVaultSecret {
                     SecretUris = $uris
                 }
 
-                $secretValues = @(Get-KeyVaultSecretValue @requestParam)
+                $secretResult = Get-KeyVaultSecretValue @requestParam
+                $secretValues = @($secretResult.SecretValues)
                 $result.AddRange($secretValues)
                 $stats.TotalSecrets = $secretValues.Count
                 $stats.VaultsWithSecrets = ($secretValues | Group-Object KeyVaultName).Count
+                
+                # Debug output for counter values from secretResult
+                Write-Verbose "Stats from secretResult:"
+                Write-Verbose "  ForbiddenByPolicyCount: $($secretResult.ForbiddenByPolicyCount)"
+                Write-Verbose "  InsufficientPermissionsCount: $($secretResult.InsufficientPermissionsCount)"
+                Write-Verbose "  GeneralErrorCount: $($secretResult.GeneralErrorCount)"
+                
+                # Add to the existing counts from vault-level errors
+                $stats.ForbiddenByPolicy += $secretResult.ForbiddenByPolicyCount
+                $stats.InsufficientPermissions += $secretResult.InsufficientPermissionsCount
+                $stats.ProcessingErrors += $secretResult.GeneralErrorCount
+                $stats.TotalAccessDenied = $stats.ForbiddenByPolicy + $stats.InsufficientPermissions
             }
             else {
                 Write-Host "  ℹ️ No secrets found in Key Vault(s): $($vaults.name -join ', ')" -ForegroundColor Gray
@@ -188,31 +270,19 @@ function Get-KeyVaultSecret {
         Write-Host "   Key Vaults with Secrets: $($stats.VaultsWithSecrets)" -ForegroundColor Yellow
         Write-Host "   Total Secrets Retrieved: $($stats.TotalSecrets)" -ForegroundColor Green
         
-        # Access denied summary
-        if ($stats.AccessDeniedKeyVaultPolicy -gt 0 -or $stats.AccessDeniedRBACPolicy -gt 0) {
-            Write-Host "   Access Denied Summary:" -ForegroundColor Red
-            if ($stats.AccessDeniedKeyVaultPolicy -gt 0) {
-                Write-Host "     - KeyVault Policy: $($stats.AccessDeniedKeyVaultPolicy)" -ForegroundColor Yellow
-            }
-            if ($stats.AccessDeniedRBACPolicy -gt 0) {
-                Write-Host "     - RBAC Policy: $($stats.AccessDeniedRBACPolicy)" -ForegroundColor Yellow
-            }
-        }
+        Write-Host "   Access Summary:" -ForegroundColor Cyan
+        Write-Host "     • Secrets Forbidden by Policy: $($stats.ForbiddenByPolicy)" -ForegroundColor Red 
+        Write-Host "     • Insufficient Permissions: $($stats.InsufficientPermissions)" -ForegroundColor Yellow
+        Write-Host "     • Total Access Denied: $($stats.TotalAccessDenied)" -ForegroundColor Red
         
-        # Other errors summary
-        if ($stats.VaultNotFound -gt 0) {
-            Write-Host "   Vaults Not Found: $($stats.VaultNotFound)" -ForegroundColor Red
-        }
         if ($stats.ProcessingErrors -gt 0) {
             Write-Host "   Processing Errors: $($stats.ProcessingErrors)" -ForegroundColor Red
         }
-        
         Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
 
         Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
 
         if (!$result -or $result.Count -eq 0) {
-            # Handle case when no secrets found based on output format
             switch ($OutputFormat) {
                 "JSON" {
                     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -240,7 +310,6 @@ function Get-KeyVaultSecret {
                 }
             }
         } else {
-            # Return results in requested format
             switch ($OutputFormat) {
                 "JSON" {
                     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
