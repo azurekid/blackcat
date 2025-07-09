@@ -4,6 +4,20 @@
 
 # CHANGELOG
 
+## v0.20.3 [2025-07-09]
+
+_Bug Fixes_
+
+**Key Vault Secret Discovery Improvements:**
+* **Fixed `Get-KeyVaultSecret` function's access summary statistics**
+  - Corrected counting logic for "Secrets Forbidden by Policy" in the summary output
+  - Enhanced error detection to properly categorize and count policy vs. permission errors
+  - Improved error pattern matching for various Azure Key Vault access denied scenarios
+  - Changed from parallel to sequential processing for more reliable access tracking
+  - Added improved debug and verbose output for troubleshooting access issues
+  - Fixed access summary always showing 0 counts even when access was denied
+  - Enhanced fault tolerance and readability of summary statistics
+
 ## v0.20.2 [2025-07-08]
 
 _Improvements_
