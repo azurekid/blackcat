@@ -88,15 +88,12 @@ function Get-KeyVaultSecret {
                                 ($errorMsg -match "RBAC") -or
                                 ($errorMsg -match "AccessPolicy")) {
                                 
-                                Write-Host "    🚫 Access forbidden by policy for vault: $vaultName" -ForegroundColor Red
                                 ($using:policyForbiddenBag).Add(1)
                             } else {
-                                Write-Host "    🔒 Insufficient permissions for vault: $vaultName" -ForegroundColor Yellow
                                 ($using:permissionForbiddenBag).Add(1)
                             }
                         }
                         else {
-                            Write-Host "    ❌ Error accessing vault $vaultName`: $errorMsg" -ForegroundColor Red
                             ($using:generalErrorsBag).Add(1)
                         }
                     }
@@ -156,15 +153,12 @@ function Get-KeyVaultSecret {
                                 ($errorMsg -match "RBAC") -or
                                 ($errorMsg -match "AccessPolicy")) {
                                     
-                                Write-Host "      🚫 Access forbidden by policy for secret: [$secretName] in $vault" -ForegroundColor Red
                                 ($using:policyForbiddenBag).Add(1)
                             } else {
-                                Write-Host "      🔒 Insufficient permissions for secret: [$secretName] in $vault" -ForegroundColor Yellow
                                 ($using:permissionForbiddenBag).Add(1)
                             }
                         }
                         else {
-                            Write-Host "      ❌ Error retrieving secret: $errorMsg" -ForegroundColor Red
                             ($using:generalErrorBag).Add(1)
                         }
                     }
@@ -174,12 +168,6 @@ function Get-KeyVaultSecret {
                 $policyForbiddenCount = $policyForbiddenBag.Count
                 $permissionForbiddenCount = $permissionForbiddenBag.Count
                 $generalErrorCount = $generalErrorBag.Count
-
-                Write-Verbose "Counter values before return:"
-                Write-Verbose "  Policy forbidden count: $policyForbiddenCount"
-                Write-Verbose "  Permission forbidden count: $permissionForbiddenCount"
-                Write-Verbose "  General error count: $generalErrorCount"
-                Write-Host "  🔐 Found $($secretValues.Count) accessible secrets, $policyForbiddenCount policy denials, $permissionForbiddenCount permission denials" -ForegroundColor Cyan
                 
                 return @{
                     SecretValues = $secretValues
