@@ -87,7 +87,6 @@ function Get-KeyVaultSecret {
                 return $secretUris
             }
 
-            # Second function: Get secret values
             function Get-KeyVaultSecretValue {
                 param($SecretUris, $ThrottleLimit, $AuthHeader)
 
