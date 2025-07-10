@@ -36,14 +36,11 @@ function Invoke-MsGraph {
     }
 
     process {
-        # Generate cache key for this request
         $cacheParams = @{
             NoBatch = $NoBatch.IsPresent
-            # OutputFormat = $OutputFormat
         }
         $cacheKey = ConvertTo-CacheKey -BaseIdentifier $relativeUrl -Parameters $cacheParams
         
-        # Check cache first (unless skipping cache)
         if (-not $SkipCache) {
             try {
                 $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'MSGraph'
@@ -61,7 +58,6 @@ function Invoke-MsGraph {
             }
             catch {
                 Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh API call."
-                # Continue to make fresh API call if cache retrieval fails
             }
         }
 
@@ -112,7 +108,6 @@ function Invoke-MsGraph {
                     return $null
                 }
 
-                # Handle empty or null response
                 if ($null -eq $initialResponse) {
                     Write-Verbose "No data returned from API call to: $relativeUrl"
                     return $null
@@ -122,20 +117,18 @@ function Invoke-MsGraph {
                     if ($NoBatch) {
                         $result = $initialResponse
                     } else {
-                        # Check for throttling headers
                         if ($initialResponse.Headers."Retry-After") {
                             $retryAfter = [int]$initialResponse.Headers."Retry-After"
                             Write-Warning "Throttled!  Waiting $($retryAfter) seconds before retrying."
                             Start-Sleep -Seconds $retryAfter
                             $retries++ # Increment retries, important to track
-                            continue  # Skip the rest of the loop and retry
+                            continue   # Skip the rest of the loop and retry
                         }
 
                         $allItems = Get-AllPages -ProcessLink $initialResponse
                         $result = $allItems
                     }
 
-                    # Handle empty result
                     if ($null -eq $result -or ($result -is [array] -and $result.Count -eq 0)) {
                         Write-Verbose "No data found for: $relativeUrl"
                         return $null
@@ -146,7 +139,6 @@ function Invoke-MsGraph {
                     return $null
                 }
 
-                # Cache the result before formatting (unless skipping cache or result is null)
                 if (-not $SkipCache -and $null -ne $result) {
                     try {
                         Set-BlackCatCache -Key $cacheKey -Data $result -ExpirationMinutes $CacheExpirationMinutes -CacheType 'MSGraph' -MaxCacheSize $MaxCacheSize -CompressData:$CompressCache
@@ -157,7 +149,6 @@ function Invoke-MsGraph {
                     }
                 }
 
-                # Handle null result before formatting
                 if ($null -eq $result) {
                     Write-Verbose "No data to format for: $relativeUrl"
                     return $null
@@ -181,11 +172,11 @@ function Invoke-MsGraph {
                 }
                 elseif ($_.Exception.Message -contains "*401") {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Unauthorized access to the Graph API." -Severity 'Error'
-                    break # No point in retrying if unauthorized
+                    break
                 }
                 else {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
-                    break # Break out of the retry loop for other errors
+                    break
                 }
             }
         } while ($retries -lt $MaxRetries)
