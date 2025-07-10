@@ -42,7 +42,6 @@ function Invoke-AzBatch {
     }
 
     process {
-        # Generate cache key for this request
         $cacheParams = @{
             ResourceType = $ResourceType
             Name = $Name
@@ -52,7 +51,6 @@ function Invoke-AzBatch {
         $baseIdentifier = "azbatch"
         $cacheKey = ConvertTo-CacheKey -BaseIdentifier $baseIdentifier -Parameters $cacheParams
 
-        # Check cache first (unless skipping cache)
         if (-not $SkipCache) {
             try {
                 $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'AzBatch'
@@ -63,7 +61,6 @@ function Invoke-AzBatch {
             }
             catch {
                 Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh API call."
-                # Continue to make fresh API call if cache retrieval fails
             }
         }
 
@@ -134,7 +131,6 @@ function Invoke-AzBatch {
 
             } while ($skipToken)
 
-            # Handle empty results
             if ($allResources.Count -eq 0) {
                 if (-not $Silent) {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No resources found" -Severity 'Information'
@@ -142,7 +138,6 @@ function Invoke-AzBatch {
                 return $null
             }
 
-            # Cache the result before returning (unless skipping cache)
             if (-not $SkipCache -and $null -ne $allResources) {
                 try {
                     Set-BlackCatCache -Key $cacheKey -Data $allResources -ExpirationMinutes $CacheExpirationMinutes -CacheType 'AzBatch' -MaxCacheSize $MaxCacheSize -CompressData:$CompressCache
