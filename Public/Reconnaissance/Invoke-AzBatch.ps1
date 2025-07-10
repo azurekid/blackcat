@@ -27,7 +27,12 @@ function Invoke-AzBatch {
         [int]$MaxCacheSize = 100,
 
         [Parameter(Mandatory = $false)]
-        [switch]$CompressCache
+        [switch]$CompressCache,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Object', 'JSON', 'CSV', 'Table')]
+        [Alias('output', 'o')]
+        [string]$OutputFormat = 'Object'
     )
 
     begin {
@@ -46,7 +51,7 @@ function Invoke-AzBatch {
         }
         $baseIdentifier = "azbatch"
         $cacheKey = ConvertTo-CacheKey -BaseIdentifier $baseIdentifier -Parameters $cacheParams
-        
+
         # Check cache first (unless skipping cache)
         if (-not $SkipCache) {
             try {
@@ -148,7 +153,14 @@ function Invoke-AzBatch {
                 }
             }
 
-            return $allResources
+            $formatParam = @{
+                Data          = $allResources
+                OutputFormat  = $OutputFormat
+                FunctionName  = $MyInvocation.MyCommand.Name
+                FilePrefix    = 'AzBatch'
+                Silent        = $Silent.IsPresent
+            }
+            return Format-BlackCatOutput @formatParam
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -191,6 +203,14 @@ function Invoke-AzBatch {
     .PARAMETER CompressCache
         When specified, compresses cache data to reduce memory usage.
         Recommended for large environments with many resources.
+
+    .PARAMETER OutputFormat
+        Specifies the output format for the results. Valid values are:
+        - Object: Returns PowerShell objects (default)
+        - JSON: Exports results to a timestamped JSON file and displays file path
+        - CSV: Exports results to a timestamped CSV file and displays file path
+        - Table: Displays results in a formatted table and returns objects
+        Default is 'Object'. Supports aliases 'output' and 'o'.
 
     .EXAMPLE
         Invoke-AzBatch -ResourceType "Microsoft.Storage/storageAccounts"

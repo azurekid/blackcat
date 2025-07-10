@@ -39,7 +39,7 @@ function Invoke-MsGraph {
         # Generate cache key for this request
         $cacheParams = @{
             NoBatch = $NoBatch.IsPresent
-            OutputFormat = $OutputFormat
+            # OutputFormat = $OutputFormat
         }
         $cacheKey = ConvertTo-CacheKey -BaseIdentifier $relativeUrl -Parameters $cacheParams
         
@@ -50,44 +50,13 @@ function Invoke-MsGraph {
                 if ($null -ne $cachedResult) {
                     Write-Verbose "Retrieved result from cache for: $relativeUrl"
                     
-                    # Apply output formatting to cached result
-                    try {
-                        switch ($OutputFormat) {
-                            "JSON" {
-                                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                                $jsonOutput = $cachedResult | ConvertTo-Json -Depth 3
-                                $jsonFilePath = "MSGraphResult_$timestamp.json"
-                                $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                                Write-Host "💾 JSON output saved to: $jsonFilePath (from cache)" -ForegroundColor Green
-                                return
-                            }
-                            "CSV" {
-                                if ($cachedResult -is [array] -and $cachedResult.Count -gt 0) {
-                                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                                    $csvOutput = $cachedResult | ConvertTo-Csv -NoTypeInformation
-                                    $csvFilePath = "MSGraphResult_$timestamp.csv"
-                                    $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                                    Write-Host "📊 CSV output saved to: $csvFilePath (from cache)" -ForegroundColor Green
-                                } else {
-                                    Write-Warning "Cannot export cached data to CSV: No data or single object returned"
-                                    return $cachedResult
-                                }
-                                return
-                            }
-                            "Object" { return $cachedResult }
-                            "Table" { 
-                                if ($cachedResult -is [array] -and $cachedResult.Count -gt 0) {
-                                    return $cachedResult | Format-Table -AutoSize 
-                                } else {
-                                    return $cachedResult
-                                }
-                            }
-                        }
+                    $formatParam = @{
+                        Data         = $cachedResult
+                        OutputFormat = $OutputFormat
+                        FunctionName = $MyInvocation.MyCommand.Name
+                        FilePrefix   = 'MSGraph'
                     }
-                    catch {
-                        Write-Verbose "Error formatting cached result: $($_.Exception.Message). Proceeding with fresh API call."
-                        # Continue to make fresh API call if cache formatting fails
-                    }
+                    return Format-BlackCatOutput @formatParam
                 }
             }
             catch {
@@ -194,46 +163,13 @@ function Invoke-MsGraph {
                     return $null
                 }
 
-                # Apply output formatting
-                try {
-                    switch ($OutputFormat) {
-                        "JSON" {
-                            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                            $jsonOutput = $result | ConvertTo-Json -Depth 3
-                            $jsonFilePath = "MSGraphResult_$timestamp.json"
-                            $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                            Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
-                            return
-                        }
-                        "CSV" {
-                            if ($result -is [array] -and $result.Count -gt 0) {
-                                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                                $csvOutput = $result | ConvertTo-Csv -NoTypeInformation
-                                $csvFilePath = "MSGraphResult_$timestamp.csv"
-                                $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                                Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
-                            } else {
-                                Write-Warning "Cannot export to CSV: No data or single object returned"
-                                return $result
-                            }
-                            return
-                        }
-                        "Object" { return $result }
-                        "Table" { 
-                            if ($result -is [array] -and $result.Count -gt 0) {
-                                return $result | Format-Table -AutoSize 
-                            } else {
-                                return $result
-                            }
-                        }
-                    }
+                $formatParam = @{
+                    Data         = $result
+                    OutputFormat = $OutputFormat
+                    FunctionName = $MyInvocation.MyCommand.Name
+                    FilePrefix   = 'MSGraph'
                 }
-                catch {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Error formatting output: $($_.Exception.Message)" -Severity 'Warning'
-                    return $result
-                }
-
-                return $result
+                return Format-BlackCatOutput @formatParam
 
             }
             catch {
