@@ -1,60 +1,3 @@
-<#
-.SYNOPSIS
-    Finds publicly accessible Azure Storage containers for a given storage account name and type.
-
-.DESCRIPTION
-    The Find-PublicStorageContainer function attempts to discover public Azure Storage containers (blob, file, queue, table, or dfs) by generating permutations of storage account names and checking their DNS resolution and accessibility.
-    It supports parallel processing for both DNS resolution and container enumeration, and can optionally include empty containers and container metadata in the results.
-
-.PARAMETER StorageAccountName
-    The base name of the Azure Storage account to check. Permutations will be generated based on this value.
-
-.PARAMETER Type
-    The type of Azure Storage service to check. Valid values are 'blob', 'file', 'queue', 'table', or 'dfs'. Defaults to 'blob'.
-
-.PARAMETER WordList
-    Path to a file containing additional words or permutations to use when generating storage account names.
-
-.PARAMETER ThrottleLimit
-    The maximum number of parallel operations to run during DNS resolution and container checks. Defaults to 50.
-
-.PARAMETER IncludeEmpty
-    Switch to include empty containers in the results. By default, only containers with blobs/files are included.
-
-.PARAMETER IncludeMetadata
-    Switch to include container metadata in the results by making an additional metadata request for each discovered container.
-
-.PARAMETER OutputFormat
-    Optional. Specifies the output format for results. Valid values are:
-    - Object: Returns PowerShell objects (default when piping)
-    - JSON: Returns results in JSON format
-    - CSV: Returns results in CSV format
-    Aliases: output, o
-
-.OUTPUTS
-    System.Collections.ArrayList
-    Returns an array list of PSCustomObject items, each representing a discovered public storage container with properties such as StorageAccountName, Container, FileCount, IsEmpty, Uri, and optionally Metadata.
-
-.EXAMPLE
-    Find-PublicStorageContainer -StorageAccountName "examplestorage" -Type "blob" -WordList "permutations.txt" -IncludeEmpty -IncludeMetadata
-
-    Attempts to find public blob containers for the storage account "examplestorage" using permutations from "permutations.txt", including empty containers and their metadata.
-
-.EXAMPLE
-    Find-PublicStorageContainer -StorageAccountName "contoso" -Type "blob" -OutputFormat JSON
-
-    Searches for public blob containers using "contoso" as the base name and returns results in JSON format.
-
-.EXAMPLE
-    Find-PublicStorageContainer -StorageAccountName "company" -Type "file" -ThrottleLimit 100 -OutputFormat CSV
-
-    Searches for public file storage containers using 100 concurrent threads and returns results in CSV format.
-
-.NOTES
-    - Requires appropriate permissions to perform DNS resolution and HTTP requests.
-    - Uses parallel processing for improved performance; adjust ThrottleLimit based on system resources.
-    - Designed for reconnaissance and security assessment purposes.
-#>
 function Find-PublicStorageContainer {
     [cmdletbinding()]
     [OutputType([System.Collections.ArrayList])] # Updated OutputType
@@ -173,18 +116,43 @@ function Find-PublicStorageContainer {
                                     "Container"          = $_
                                     "FileCount"          = (Select-String -InputObject $response.Content -Pattern "/Name" -AllMatches).Matches.Count
                                 }
-                                if ($hasContent) {
-                                    $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $false
-                                    $foundMessage = "      ✅ $($dns.split('.')[0])/$_ -> $($currentItem.FileCount) files [$(if($currentItem.IsEmpty){'Empty'}else{'HasContent'})]"
-                                }
-                                else {
-                                    $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $true
-                                    $foundMessage = "      📁 $($dns.split('.')[0])/$_ -> Empty container"
-                                }
-                                $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
                                 
-                                # Add to found containers for immediate display
-                                $foundContainers.Add($foundMessage)
+                                $subfolders = @()
+                                $subfolderDetails = @{}
+                                if ($response.Content -match '<Blob>') {
+                                    $blobNames = [regex]::Matches($response.Content, '<Name>(.*?)</Name>') | ForEach-Object { $_.Groups[1].Value }
+                                    $subfolders = $blobNames | Where-Object { $_ -like '*/*' } | ForEach-Object { 
+                                        ($_ -split '/')[0] 
+                                    } | Sort-Object -Unique
+                                    
+                                    foreach ($subfolder in $subfolders) {
+                                        $filesInSubfolder = ($blobNames | Where-Object { $_ -like "$subfolder/*" }).Count
+                                        $subfolderDetails[$subfolder] = $filesInSubfolder
+                                    }
+                                }
+
+
+                                    # Normal processing - show all containers
+                                    if ($subfolders.Count -gt 0) {
+                                        $currentItem | Add-Member -NotePropertyName Subfolders -NotePropertyValue $subfolders
+                                        $currentItem | Add-Member -NotePropertyName SubfolderCount -NotePropertyValue $subfolders.Count
+                                        $currentItem | Add-Member -NotePropertyName SubfolderDetails -NotePropertyValue $subfolderDetails
+                                        
+                                        $fileCounts = $subfolders | ForEach-Object { $subfolderDetails[$_] }
+                                        $foundMessage = "      📁 $($dns.split('.')[0])/$_ -> $($currentItem.FileCount) files, $($subfolders.Count) subfolders: $($fileCounts -join ', ')"
+                                    } else {
+                                        if ($hasContent) {
+                                            $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $false
+                                            $foundMessage = "      ✅ $($dns.split('.')[0])/$_ -> $($currentItem.FileCount) files [$(if($currentItem.IsEmpty){'Empty'}else{'HasContent'})]"
+                                        }
+                                        else {
+                                            $currentItem | Add-Member -NotePropertyName IsEmpty -NotePropertyValue $true
+                                            $foundMessage = "      📁 $($dns.split('.')[0])/$_ -> Empty container"
+                                        }
+                                    }
+                                    $currentItem | Add-Member -NotePropertyName Uri -NotePropertyValue $uri
+                                    $foundContainers.Add($foundMessage)
+                                    [void] $result.Add($currentItem)
                             }
 
                             if ($shouldProcess -and $IncludeMetadata) {
@@ -211,9 +179,6 @@ function Find-PublicStorageContainer {
                                 }
                             }
 
-                            if ($shouldProcess) {
-                                [void] $result.Add($currentItem)
-                            }
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
@@ -261,4 +226,61 @@ function Find-PublicStorageContainer {
             }
         }
     }
+<#
+.SYNOPSIS
+    Finds publicly accessible Azure Storage containers for a given storage account name and type.
+
+.DESCRIPTION
+    The Find-PublicStorageContainer function attempts to discover public Azure Storage containers (blob, file, queue, table, or dfs) by generating permutations of storage account names and checking their DNS resolution and accessibility.
+    It supports parallel processing for both DNS resolution and container enumeration, and can optionally include empty containers and container metadata in the results.
+
+.PARAMETER StorageAccountName
+    The base name of the Azure Storage account to check. Permutations will be generated based on this value.
+
+.PARAMETER Type
+    The type of Azure Storage service to check. Valid values are 'blob', 'file', 'queue', 'table', or 'dfs'. Defaults to 'blob'.
+
+.PARAMETER WordList
+    Path to a file containing additional words or permutations to use when generating storage account names.
+
+.PARAMETER ThrottleLimit
+    The maximum number of parallel operations to run during DNS resolution and container checks. Defaults to 50.
+
+.PARAMETER IncludeEmpty
+    Switch to include empty containers in the results. By default, only containers with blobs/files are included.
+
+.PARAMETER IncludeMetadata
+    Switch to include container metadata in the results by making an additional metadata request for each discovered container.
+
+.PARAMETER OutputFormat
+    Optional. Specifies the output format for results. Valid values are:
+    - Object: Returns PowerShell objects (default when piping)
+    - JSON: Returns results in JSON format
+    - CSV: Returns results in CSV format
+    Aliases: output, o
+
+.OUTPUTS
+    System.Collections.ArrayList
+    Returns an array list of PSCustomObject items, each representing a discovered public storage container with properties such as StorageAccountName, Container, FileCount, IsEmpty, Uri, and optionally Metadata.
+
+.EXAMPLE
+    Find-PublicStorageContainer -StorageAccountName "examplestorage" -Type "blob" -WordList "permutations.txt" -IncludeEmpty -IncludeMetadata
+
+    Attempts to find public blob containers for the storage account "examplestorage" using permutations from "permutations.txt", including empty containers and their metadata.
+
+.EXAMPLE
+    Find-PublicStorageContainer -StorageAccountName "contoso" -Type "blob" -OutputFormat JSON
+
+    Searches for public blob containers using "contoso" as the base name and returns results in JSON format.
+
+.EXAMPLE
+    Find-PublicStorageContainer -StorageAccountName "company" -Type "file" -ThrottleLimit 100 -OutputFormat CSV
+
+    Searches for public file storage containers using 100 concurrent threads and returns results in CSV format.
+
+.NOTES
+    - Requires appropriate permissions to perform DNS resolution and HTTP requests.
+    - Uses parallel processing for improved performance; adjust ThrottleLimit based on system resources.
+    - Designed for reconnaissance and security assessment purposes.
+#>
 }
