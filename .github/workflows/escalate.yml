@@ -61,13 +61,13 @@ jobs:
           $validAudiences = @('api://AzureADTokenExchange','fb60f99c-7a34-4190-8149-302f77469936')
           if($p2.aud -notin $validAudiences){ throw "Unexpected UAMI aud: $($p2.aud)" }
 
-          # C) On-behalf-of to App token using JWT bearer grant (supported by AAD)
+          # C) App token via client_credentials using UAMI token as client_assertion (App FIC trusts UAMI)
           $kvp2 = @{
-            client_id           = $env:APP_CLIENT_ID
-            grant_type          = 'urn:ietf:params:oauth:grant-type:jwt-bearer'
-            assertion           = $UamiToken
-            requested_token_use = 'on_behalf_of'
-            scope               = 'https://graph.microsoft.com/.default'
+            client_id             = $env:APP_CLIENT_ID
+            grant_type            = 'client_credentials'
+            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            client_assertion      = $UamiToken
+            scope                 = 'https://graph.microsoft.com/.default'
           }
           $body2 = ($kvp2.GetEnumerator() | ForEach-Object {
             '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value)
