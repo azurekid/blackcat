@@ -58,7 +58,8 @@ jobs:
           $parts = $UamiToken.Split('.')
           $p2 = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($parts[1].Replace('-','+').Replace('_','/').PadRight((([math]::Ceiling($parts[1].Length/4))*4),'='))) | ConvertFrom-Json
           Write-Host "UAMI aud: $($p2.aud)"
-          if($p2.aud -ne 'api://AzureADTokenExchange'){ throw "Unexpected UAMI aud: $($p2.aud)" }
+          $validAudiences = @('api://AzureADTokenExchange','fb60f99c-7a34-4190-8149-302f77469936')
+          if($p2.aud -notin $validAudiences){ throw "Unexpected UAMI aud: $($p2.aud)" }
 
           # C) Token exchange to App token (application roles)
           $kvp2 = @{
