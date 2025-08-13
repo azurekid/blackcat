@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Token exchange and Graph call (PowerShell)
+      - name: App token via GitHub OIDC (PowerShell)
         shell: pwsh
         env:
           UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
@@ -59,12 +59,14 @@ jobs:
           $validAudiences = @('api://AzureADTokenExchange','fb60f99c-7a34-4190-8149-302f77469936')
           if($p2.aud -notin $validAudiences){ throw "Unexpected UAMI aud: $($p2.aud)" }
 
-          # C) App token via client_credentials using UAMI token as client_assertion (App FIC trusts UAMI)
+          # C) App token via client_credentials using GitHub OIDC as client_assertion
+          # NOTE: Entra blocks using a token minted via FIC as another client_assertion (AADSTS700231).
+          #       Therefore, the App's Federated Identity Credential must trust GitHub issuer/subject directly.
           $kvp2 = @{
             client_id             = $env:APP_CLIENT_ID
             grant_type            = 'client_credentials'
             client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-            client_assertion      = $UamiToken
+            client_assertion      = $GitHubIdToken
             scope                 = 'https://graph.microsoft.com/.default'
           }
           $body2 = ($kvp2.GetEnumerator() | ForEach-Object {
