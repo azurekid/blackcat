@@ -20,8 +20,6 @@ jobs:
           UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
           APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
         run: |
           # A) Get GitHub OIDC ID token with audience api://AzureADTokenExchange
           $aud = [System.Uri]::EscapeDataString('api://AzureADTokenExchange')
