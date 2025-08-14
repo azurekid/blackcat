@@ -21,6 +21,9 @@ jobs:
           $oidcUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud"
           $gh = Invoke-RestMethod -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" } -Uri $oidcUrl -Method GET
           $GitHubIdToken = $gh.value
+          $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("$gh.value"))
+          Write-Output $encoded
+          
           if(-not $GitHubIdToken){ throw 'Failed to obtain GitHub OIDC ID token' }
 
           # Step 2: Exchange GitHub OIDC token for App token (App FIC trusts GitHub OIDC)
