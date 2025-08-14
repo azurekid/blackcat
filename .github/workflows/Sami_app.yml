@@ -1,0 +1,57 @@
+name: UAMI App Escalation (No-CLI)
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  escalate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: App token via GitHub OIDC (PowerShell)
+        shell: pwsh
+        env:
+          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+        run: |
+          # Get GitHub OIDC ID token with audience api://AzureADTokenExchange
+          $aud = [System.Uri]::EscapeDataString('api://AzureADTokenExchange')
+          $oidcUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud"
+          $gh = Invoke-RestMethod -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" } -Uri $oidcUrl -Method GET
+          $GitHubIdToken = $gh.value
+          if(-not $GitHubIdToken){ throw 'Failed to obtain GitHub OIDC ID token' }
+          # Optional: also mint a UAMI token (aud check only)
+          $kvp1 = @{
+            client_id             = $env:UAMI_CLIENT_ID
+            grant_type            = 'client_credentials'
+            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            client_assertion      = $GitHubIdToken
+            scope                 = 'api://AzureADTokenExchange/.default'
+          }
+          $body1 = ($kvp1.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
+          $uamiResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body1
+          $UamiToken = $uamiResp.access_token
+          if($UamiToken){ $p2 = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($UamiToken.Split('.'))[1].Replace('-','+').Replace('_','/').PadRight((([math]::Ceiling((($UamiToken.Split('.'))[1].Length)/4))*4),'='))) | ConvertFrom-Json; Write-Host "UAMI aud: $($p2.aud)" }
+
+          # App token via client_credentials using GitHub OIDC as client_assertion
+          $kvp2 = @{
+            client_id             = $env:APP_CLIENT_ID
+            grant_type            = 'client_credentials'
+            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            client_assertion      = $GitHubIdToken
+            scope                 = 'https://graph.microsoft.com/.default'
+          }
+          $body2 = ($kvp2.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
+          $tokenResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body2
+          $appToken = $tokenResp.access_token
+          if(-not $appToken){ throw 'App token request failed' }
+          Write-Host ("App token (first 30 chars): {0}" -f $appToken.Substring(0,30))
+
+          Write-Host 'Graph: list 5 users (UPNs)'
+          $users = Invoke-RestMethod -Headers @{Authorization = "Bearer $appToken"} -Uri 'https://graph.microsoft.com/v1.0/users?$top=5'
+          $users.value.userPrincipalName | ForEach-Object { Write-Host "  $_" }
+
+          Write-Host 'Done.'
