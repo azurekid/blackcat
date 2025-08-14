@@ -16,7 +16,7 @@ jobs:
         shell: pwsh
         env:
           TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
         run: |
           try {
             # Request an OIDC token with the specific audience
