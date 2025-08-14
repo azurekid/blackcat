@@ -1,47 +1,60 @@
-name: UAMI App Escalation (Two-Hop)
+name: Connect to Entra using OIDC
+
 on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
+  id-token: write # Required for OIDC
   contents: read
 
 jobs:
-  escalate:
+  connect-entra:
     runs-on: ubuntu-latest
+    environment: production
     steps:
-      - name: App token via GitHub OIDC (PowerShell)
+      - name: Get OIDC token and authenticate to Microsoft Graph
         shell: pwsh
         env:
-          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         run: |
-          # Step 1: Get GitHub OIDC ID token with audience api://AzureADTokenExchange
-          $aud = [System.Uri]::EscapeDataString('api://AzureADTokenExchange')
-          $oidcUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud"
-          $gh = Invoke-RestMethod -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" } -Uri $oidcUrl -Method GET
-          $GitHubIdToken = $gh.value
-          $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("$gh.value"))
-          Write-Output $encoded
-          
-          if(-not $GitHubIdToken){ throw 'Failed to obtain GitHub OIDC ID token' }
-
-          # Step 2: Exchange GitHub OIDC token for App token (App FIC trusts GitHub OIDC)
-          $kvp = @{
-            client_id             = $env:APP_CLIENT_ID
-            grant_type            = 'client_credentials'
-            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-            client_assertion      = $GitHubIdToken
-            scope                 = 'https://graph.microsoft.com/.default'
+          try {
+            # Request an OIDC token with the specific audience
+            $oidcRequestUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+            Write-Host "Requesting token from: $oidcRequestUrl"
+            
+            $oidcResponse = Invoke-RestMethod -Uri $oidcRequestUrl -Headers @{Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"}
+            $oidcToken = $oidcResponse.value
+            
+            # Exchange OIDC token for Graph access token
+            $tokenEndpoint = "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token"
+            $tokenParams = @{
+              client_id = $env:CLIENT_ID
+              client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+              client_assertion = $oidcToken
+              scope = "https://graph.microsoft.com/.default"
+              grant_type = "client_credentials"
+            }
+            
+            Write-Host "Requesting access token from: $tokenEndpoint"
+            $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenEndpoint -Body $tokenParams -ContentType "application/x-www-form-urlencoded"
+            Write-Host "Successfully obtained access token"
+            
+            # Covert access token to Base64
+            $Base64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("$tokenResponse.access_token"))
+            Write-Host $Base64
+            
+            # Convert access token to SecureString
+            $secureAccessToken = ConvertTo-SecureString $tokenResponse.access_token -AsPlainText -Force
+            
+            # Connect to Microsoft Graph using the token as SecureString
+            Connect-Entra -AccessToken $secureAccessToken
+            
+            # Test the connection with a Graph query
+            Get-EntraGroup -Top 5
           }
-          $body = ($kvp.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
-          $tokenResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body
-          $appToken = $tokenResp.access_token
-          if(-not $appToken){ throw 'App token request failed' }
-          Write-Host ("App token (first 30 chars): {0}" -f $appToken.Substring(0,30))
-
-          Write-Host 'Graph: list 5 users (UPNs)'
-          $users = Invoke-RestMethod -Headers @{Authorization = "Bearer $appToken"} -Uri 'https://graph.microsoft.com/v1.0/users?$top=5'
-          $users.value.userPrincipalName | ForEach-Object { Write-Host "  $_" }
-
-          Write-Host 'Done.'
+          catch {
+            Write-Error "Authentication failed: $_"
+            Write-Host "Error details: $($_.Exception | Format-List -Force | Out-String)"
+            exit 1
+          }
