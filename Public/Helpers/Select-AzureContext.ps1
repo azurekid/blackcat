@@ -54,8 +54,13 @@ function Select-AzureContext {
                     $userName = $_.Account.Id.Split('@')[0]
                     $subscriptionName = $_.Subscription.Name -replace '^\s+', ''
                     
-                    $isCurrent = ($_.Id -eq $currentContext.Id)
-                    $currentMarker = if ($isCurrent) { "* " } else { "  " }
+                    # More robust current context comparison
+                    $isCurrent = ($currentContext -and 
+                                  $_.Account.Id -eq $currentContext.Account.Id -and 
+                                  $_.Subscription.Id -eq $currentContext.Subscription.Id -and
+                                  $_.Tenant.Id -eq $currentContext.Tenant.Id)
+                    
+                    $currentMarker = if ($isCurrent) { "*" } else { " " }
                     
                     [PSCustomObject]@{
                         ' '          = $currentMarker
