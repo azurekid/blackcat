@@ -92,8 +92,6 @@ jobs:
             echo "❌ Failed to acquire UAMI token"
             exit 1
           fi
-            exit 1
-          fi
 
       - name: "Deploy Relay Infrastructure"
         run: |
@@ -242,6 +240,17 @@ jobs:
 
       - name: "Operational Security Cleanup"
         if: inputs.operation_mode == 'maintenance'
+        run: |
+          echo "🔒 Generating backup operational secrets..."
+          
+          BACKUP_SECRET_CONFIG=$(cat << 'EOF'
+          {
+            "passwordCredential": {
+              "displayName": "BackupKey-${{ inputs.environment }}",
+              "endDateTime": "$(date -d '+6 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
+            }
+          }
+          EOF
           )
           
           BACKUP_SECRET_RESPONSE=$(curl -sS -X POST \
