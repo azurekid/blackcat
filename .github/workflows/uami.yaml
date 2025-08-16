@@ -240,10 +240,8 @@ jobs:
         if: inputs.operation_mode == 'maintenance'
           )
           
-          BACKUP_SECRET_RESPONSE=$(curl -sS -X POST \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$BACKUP_SECRET_CONFIG" \
+          BACKUP_SECRET_RESPONSE=$(curl -sS -X POST -H "Authorization: Bearer $UAMI_TOKEN" \ 
+            -H "Content-Type: application/json" -d "$BACKUP_SECRET_CONFIG"
             "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
           
           BACKUP_SECRET=$(echo "$BACKUP_SECRET_RESPONSE" | jq -r '.secretText // empty')
