@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write
+  id-token: write  # Needed to request OIDC token from GitHub
   contents: read
 
 env:
@@ -14,6 +14,7 @@ env:
   UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}
   APP_CLIENT_ID:  ${{ secrets.AZURE_APP_CLIENT_ID }}
   GRAPH_SCOPE: "https://graph.microsoft.com/.default"
+  UAMI_AUDIENCE: "api://AzureADTokenExchange"  # Must match UAMI federated credential
 
 jobs:
   run:
@@ -23,13 +24,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ---- Hop 1: GitHub OIDC -> UAMI ----
+      # ---- Step 1: Explicitly request OIDC token for UAMI audience ----
+      - name: Request OIDC token
+        id: oidc
+        uses: actions/oidc-token@v1
+        with:
+          audience: ${{ env.UAMI_AUDIENCE }}
+
+      # ---- Step 2: Exchange OIDC token for UAMI token ----
       - name: Get UAMI token via GitHub OIDC
         shell: pwsh
         run: |
           $tenantId = "${{ env.TENANT_ID }}"
           $uamiClientId = "${{ env.UAMI_CLIENT_ID }}"
-          $oidcToken = $env:GITHUB_ACTIONS_ID_TOKEN_REQUEST_TOKEN
+          $oidcToken = "${{ steps.oidc.outputs.token }}"
 
           # Validate OIDC token exists and looks like a JWT
           if (-not $oidcToken) { throw "OIDC token not found" }
@@ -37,7 +45,6 @@ jobs:
           Write-Host "OIDC token appears valid (first 20 chars): $($oidcToken.Substring(0,20))"
 
           Write-Host "Exchanging GitHub OIDC token for UAMI token..."
-
           $body = @{
               client_id = $uamiClientId
               scope = "api://AzureADTokenExchange/.default"
@@ -60,7 +67,7 @@ jobs:
           $env:MI_TOKEN = $resp.access_token
           Write-Host "UAMI token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
-      # ---- Hop 2: UAMI token -> App Registration token ----
+      # ---- Step 3: Exchange UAMI token for App token ----
       - name: Exchange UAMI token for App token
         shell: pwsh
         run: |
@@ -86,7 +93,7 @@ jobs:
           $env:APP_TOKEN = $resp.access_token
           Write-Host "App token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
-      # ---- Use App token to call Microsoft Graph ----
+      # ---- Step 4: Call Microsoft Graph with App token ----
       - name: Call Microsoft Graph (list one user)
         shell: pwsh
         run: |
@@ -94,19 +101,3 @@ jobs:
           $r = Invoke-RestMethod -Method GET -Headers $headers `
                -Uri "https://graph.microsoft.com/v1.0/users?`$top=1&`$select=id,displayName"
           $r.value | Format-Table id, displayName
-
-      # ---- Optional: Decode JWTs for debugging ----
-      - name: Show token payloads (debug)
-        if: always()
-        shell: pwsh
-        run: |
-          function Decode-Jwt($jwt) {
-              $parts = $jwt -split '\.'
-              $pad = { param($s) return $s + ('=' * ((4 - ($s.Length % 4)) % 4)) }
-              $payload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((& $pad $parts[1]).Replace('-', '+').Replace('_','/')))
-              return $payload
-          }
-
-          Write-Host "OIDC token payload: $(Decode-Jwt $env:GITHUB_ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
-          Write-Host "UAMI token payload: $(Decode-Jwt $env:MI_TOKEN)"
-          Write-Host "App token payload: $(Decode-Jwt $env:APP_TOKEN)"
