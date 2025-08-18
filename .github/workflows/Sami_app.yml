@@ -33,9 +33,12 @@ jobs:
           if (-not $env:ACTIONS_ID_TOKEN_REQUEST_URL) { throw "ACTIONS_ID_TOKEN_REQUEST_URL not set" }
           if (-not $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) { throw "ACTIONS_ID_TOKEN_REQUEST_TOKEN not set" }
 
-          $jwtResponse = Invoke-RestMethod -Method Get `
-              -Uri "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)?audience=$audience" `
-              -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" }
+          $headers = @{
+                'Authorization' = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+              }
+              
+              $uri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+              $jwtResponse = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
 
           $oidcToken = $jwtResponse.value
 
