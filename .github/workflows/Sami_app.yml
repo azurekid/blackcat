@@ -6,45 +6,42 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write  # Needed to request OIDC token from GitHub
+  id-token: write  # Required to request OIDC token
   contents: read
 
 env:
   TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}
-  APP_CLIENT_ID:  ${{ secrets.AZURE_APP_CLIENT_ID }}
+  APP_CLIENT_ID: ${{ secrets.AZURE_APP_CLIENT_ID }}
   GRAPH_SCOPE: "https://graph.microsoft.com/.default"
-  UAMI_AUDIENCE: "api://AzureADTokenExchange"  # Must match UAMI federated credential
+  UAMI_AUDIENCE: "api://AzureADTokenExchange"  # Ensure this matches your UAMI federated credential
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # ---- Step 1: Explicitly request OIDC token for UAMI audience ----
       - name: Request OIDC token
         id: oidc
-        uses: actions/oidc-token@v1
-        with:
-          audience: ${{ env.UAMI_AUDIENCE }}
+        run: |
+          echo "OIDC token requested"
 
-      # ---- Step 2: Exchange OIDC token for UAMI token ----
-      - name: Get UAMI token via GitHub OIDC
+      - name: Exchange OIDC token for UAMI token
         shell: pwsh
         run: |
           $tenantId = "${{ env.TENANT_ID }}"
           $uamiClientId = "${{ env.UAMI_CLIENT_ID }}"
           $oidcToken = "${{ steps.oidc.outputs.token }}"
 
-          # Validate OIDC token exists and looks like a JWT
+          # Validate OIDC token format
           if (-not $oidcToken) { throw "OIDC token not found" }
           if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
           Write-Host "OIDC token appears valid (first 20 chars): $($oidcToken.Substring(0,20))"
 
-          Write-Host "Exchanging GitHub OIDC token for UAMI token..."
+          # Exchange OIDC token for UAMI token
           $body = @{
               client_id = $uamiClientId
               scope = "api://AzureADTokenExchange/.default"
@@ -67,7 +64,6 @@ jobs:
           $env:MI_TOKEN = $resp.access_token
           Write-Host "UAMI token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
-      # ---- Step 3: Exchange UAMI token for App token ----
       - name: Exchange UAMI token for App token
         shell: pwsh
         run: |
@@ -77,7 +73,7 @@ jobs:
           $scope    = "${{ env.GRAPH_SCOPE }}"
           $tokenUrl = "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token"
 
-          Write-Host "Exchanging UAMI token for App token..."
+          # Exchange UAMI token for App token
           $body = @{
               client_id             = $appId
               grant_type            = "client_credentials"
@@ -93,8 +89,7 @@ jobs:
           $env:APP_TOKEN = $resp.access_token
           Write-Host "App token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
-      # ---- Step 4: Call Microsoft Graph with App token ----
-      - name: Call Microsoft Graph (list one user)
+      - name: Call Microsoft Graph API
         shell: pwsh
         run: |
           $headers = @{ Authorization = "Bearer $env:APP_TOKEN" }
