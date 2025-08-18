@@ -28,8 +28,8 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ secrets.TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+  TENANT_ID: ${{ vars.TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
@@ -76,20 +76,59 @@ jobs:
         run: |
           echo "🔄 Exchanging GitHub token for Azure UAMI token..."
           
-          # Use proper OAuth 2.0 client_credentials flow with federated credential
-          UAMI_TOKEN=$(curl -sS -X POST \
+          # Validate required environment variables
+          if [[ -z "$TENANT_ID" ]]; then
+            echo "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
+            exit 1
+          fi
+          
+          if [[ -z "$UAMI_CLIENT_ID" ]]; then
+            echo "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables."
+            exit 1
+          fi
+          
+          # Enhanced token exchange with proper error handling
+          echo "🔍 Attempting UAMI token exchange..."
+          RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default" \
-            | jq -r '.access_token // empty')
+            -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default")
           
-          if [[ -n "$UAMI_TOKEN" && "$UAMI_TOKEN" != "null" ]]; then
-            echo "✅ UAMI token acquired successfully"
-            echo "UAMI_TOKEN<<EOF" >> $GITHUB_ENV
-            echo "$UAMI_TOKEN" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          RESPONSE_BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
+          
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            UAMI_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.access_token // empty')
+            if [[ -n "$UAMI_TOKEN" && "$UAMI_TOKEN" != "null" ]]; then
+              echo "✅ UAMI token acquired successfully"
+              echo "UAMI_TOKEN<<EOF" >> $GITHUB_ENV
+              echo "$UAMI_TOKEN" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+            else
+              echo "❌ No access token in response"
+              echo "Response: $RESPONSE_BODY"
+              exit 1
+            fi
           else
-            echo "❌ Failed to acquire UAMI token"
+            echo "❌ Failed to acquire UAMI token - HTTP $HTTP_CODE"
+            ERROR_DESC=$(echo "$RESPONSE_BODY" | jq -r '.error_description // .error // "Unknown error"')
+            echo "Error: $ERROR_DESC"
+            
+            # Provide troubleshooting guidance
+            case "$(echo "$RESPONSE_BODY" | jq -r '.error')" in
+              "invalid_client")
+                echo "💡 Check: UAMI_CLIENT_ID is correct and UAMI exists in tenant"
+                ;;
+              "invalid_grant"|"invalid_request")
+                echo "💡 Check: Federated identity credential configuration"
+                echo "   - Issuer: https://token.actions.githubusercontent.com"
+                echo "   - Subject matches your repo pattern"
+                echo "   - Audience: api://AzureADTokenExchange"
+                ;;
+              "unauthorized_client")
+                echo "💡 Check: UAMI has required Graph permissions"
+                ;;
+            esac
             exit 1
           fi
 
