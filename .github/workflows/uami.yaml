@@ -1,4 +1,4 @@
-etsname: "Enterprise Infrastructure Automation"
+name: "Enterprise Infrastructure Automation"
 
 on:
   workflow_dispatch:
