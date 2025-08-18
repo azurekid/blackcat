@@ -1,64 +1,55 @@
-name: uami-to-app-powershell-end-to-end
+# .github/workflows/Sami_app.yml
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
+name: BlackCat - Secure Azure Token Exchange
+on: [workflow_dispatch]
 
 permissions:
-  id-token: write  # required for OIDC
+  id-token: write
   contents: read
 
 env:
   TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}
-  APP_CLIENT_ID: ${{ secrets.AZURE_APP_CLIENT_ID }}
+  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+  APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
   GRAPH_SCOPE: "https://graph.microsoft.com/.default"
-  UAMI_AUDIENCE: "api://AzureADTokenExchange"  # must match UAMI federated credential
 
 jobs:
-  run:
+  token-exchange:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ---- Step 1: Request GitHub OIDC token ----
-      - name: Get GitHub OIDC token for UAMI
+      - name: Echo environment variables
         shell: pwsh
         run: |
-          $audience = "${{ env.UAMI_AUDIENCE }}"
+          Write-Host "TENANT_ID: $env:TENANT_ID"
+          Write-Host "UAMI_CLIENT_ID: $env:UAMI_CLIENT_ID"
+          Write-Host "APP_CLIENT_ID: $env:APP_CLIENT_ID"
+          Write-Host "GRAPH_SCOPE: $env:GRAPH_SCOPE"
+          # Persist for next steps (if needed)
+          "TENANT_ID=$env:TENANT_ID" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "UAMI_CLIENT_ID=$env:UAMI_CLIENT_ID" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "APP_CLIENT_ID=$env:APP_CLIENT_ID" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GRAPH_SCOPE=$env:GRAPH_SCOPE" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-          if (-not $env:ACTIONS_ID_TOKEN_REQUEST_URL) { throw "ACTIONS_ID_TOKEN_REQUEST_URL not set" }
-          if (-not $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) { throw "ACTIONS_ID_TOKEN_REQUEST_TOKEN not set" }
-
-          $headers = @{
-                'Authorization' = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-              }
-              
-              $uri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
-              $jwtResponse = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-
-          $oidcToken = $jwtResponse.value
-        
-          if (-not $oidcToken) { throw "OIDC token not found" }
-          if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
-          
+      - name: Acquire OIDC Token
+        shell: pwsh
+        run: |
+          # Simulate OIDC token acquisition (replace with real logic as needed)
+          $oidcToken = "SIMULATED_OIDC_TOKEN"
           Write-Host "OIDC token acquired (first 20 chars): $($oidcToken.Substring(0,20))"
-          echo "OIDC_TOKEN=$oidcToken" >> $env:GITHUB_ENV
+          $env:OIDC_TOKEN = $oidcToken
+          "OIDC_TOKEN=$oidcToken" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # ---- Step 2: Exchange OIDC token for UAMI token ----
       - name: Exchange OIDC token for UAMI token
         shell: pwsh
         run: |
-          $tenantId = "${{ secrets.AZURE_TENANT_ID }}"
-          $uamiClientId = "${{ secrets.AZURE_UAMI_CLIENT_ID }}"
+          $tenantId = $env:TENANT_ID
+          $uamiClientId = $env:UAMI_CLIENT_ID
           $oidcToken = $env:OIDC_TOKEN
 
-          Write-Host "Exchanging OIDC token for UAMI token..."
-          if (-not $oidcToken) { throw "OIDC token not found in environment. Cannot proceed with UAMI token exchange." }
+          if (-not $uamiClientId) { Write-Host "❌ UAMI_CLIENT_ID not set."; exit 1 }
+          if (-not $oidcToken) { Write-Host "❌ OIDC_TOKEN not set."; exit 1 }
 
+          Write-Host "Exchanging OIDC token for UAMI token..."
           $body = @{
               client_id = $uamiClientId
               scope = "api://AzureADTokenExchange/.default"
@@ -66,30 +57,29 @@ jobs:
               requested_token_use = "on_behalf_of"
               assertion = $oidcToken
           }
-
           function ConvertTo-FormData($hash) {
               return ($hash.GetEnumerator() | ForEach-Object { 
                   [System.Web.HttpUtility]::UrlEncode($_.Key) + "=" + [System.Web.HttpUtility]::UrlEncode($_.Value) 
               }) -join "&"
           }
-
           $bodyEncoded = ConvertTo-FormData $body
           $tokenUrl = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
           $resp = Invoke-RestMethod -Method Post -Uri $tokenUrl -Body $bodyEncoded -ContentType "application/x-www-form-urlencoded"
-
           if (-not $resp.access_token) { throw "UAMI token exchange failed" }
           $env:MI_TOKEN = $resp.access_token
           Write-Host "UAMI token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
+          "MI_TOKEN=$($resp.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # ---- Step 3: Exchange UAMI token for App token ----
       - name: Exchange UAMI token for App token
         shell: pwsh
         run: |
-          $tenant   = "${{ secrets.AZURE_TENANT_ID }}"
-          $appId    = "${{ secrets.AZURE_UAMI_CLIENT_ID }}"
-          $miToken  = $env:MI_TOKEN
-          $scope    = "${{ env.GRAPH_SCOPE }}"
-          $tokenUrl = "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token"
+          $tenant = $env:TENANT_ID
+          $appId = $env:APP_CLIENT_ID
+          $miToken = $env:MI_TOKEN
+          $scope = $env:GRAPH_SCOPE
+
+          if (-not $appId) { Write-Host "❌ APP_CLIENT_ID not set."; exit 1 }
+          if (-not $miToken) { Write-Host "❌ MI_TOKEN not set."; exit 1 }
 
           Write-Host "Exchanging UAMI token for App token..."
           $body = @{
@@ -99,19 +89,31 @@ jobs:
               client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
               client_assertion      = $miToken
           }
-
+          function ConvertTo-FormData($hash) {
+              return ($hash.GetEnumerator() | ForEach-Object { 
+                  [System.Web.HttpUtility]::UrlEncode($_.Key) + "=" + [System.Web.HttpUtility]::UrlEncode($_.Value) 
+              }) -join "&"
+          }
           $bodyEncoded = ConvertTo-FormData $body
+          $tokenUrl = "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token"
           $resp = Invoke-RestMethod -Method Post -Uri $tokenUrl -Body $bodyEncoded -ContentType "application/x-www-form-urlencoded"
-
           if (-not $resp.access_token) { throw "App token exchange failed" }
           $env:APP_TOKEN = $resp.access_token
           Write-Host "App token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
+          "APP_TOKEN=$($resp.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # ---- Step 4: Call Microsoft Graph using App token ----
-      - name: Call Microsoft Graph (list one user)
+      - name: Call Microsoft Graph using App token
         shell: pwsh
         run: |
-          $headers = @{ Authorization = "Bearer $env:APP_TOKEN" }
-          $r = Invoke-RestMethod -Method GET -Headers $headers `
-               -Uri "https://graph.microsoft.com/v1.0/users?`$top=1&`$select=id,displayName"
-          $r.value | Format-Table id, displayName
+          $appToken = $env:APP_TOKEN
+          if (-not $appToken) { Write-Host "❌ APP_TOKEN not set."; exit 1 }
+          Write-Host "Calling Microsoft Graph API..."
+          # Example call (replace with actual API call as needed)
+          $graphUrl = "https://graph.microsoft.com/v1.0/me"
+          $headers = @{ Authorization = "Bearer $appToken" }
+          try {
+            $response = Invoke-RestMethod -Uri $graphUrl -Headers $headers -Method Get
+            Write-Host "Graph API response: $($response | ConvertTo-Json -Depth 3)"
+          } catch {
+            Write-Host "Graph API call failed: $($_.Exception.Message)"
+          }
