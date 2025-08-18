@@ -28,7 +28,7 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ vars.TENANT_ID }}
+  TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
   UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
 jobs:
