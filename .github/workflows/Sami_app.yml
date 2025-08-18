@@ -12,7 +12,7 @@ permissions:
 env:
   TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}          # <tenant GUID>
   SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}# the UAMI's clientId (from the UAMI resource)
+  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}# the UAMI's clientId (from the UAMI resource)
   APP_CLIENT_ID:  ${{ secrets.AZURE_APP_CLIENT_ID }} # the App Registration clientId (the one that trusts the UAMI)
   GRAPH_SCOPE: "https://graph.microsoft.com/.default"
 
