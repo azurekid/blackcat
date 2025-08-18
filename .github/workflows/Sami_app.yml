@@ -42,16 +42,16 @@ jobs:
 
           $oidcToken = $jwtResponse.value
 
-          Write-Host $oidcToken
+          Write-Host [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($oidcToken))
 
           if (-not $oidcToken) { throw "OIDC token not found" }
           if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
 
           # Decode JWT payload to validate audience
-          # $payload = $oidcToken.Split('.')[1]
-          # $payload += ('=' * (4 - ($payload.Length % 4))) # pad base64
-          # $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($payload))
-          # $payloadObj = ConvertFrom-Json $decoded
+          $payload = $oidcToken.Split('.')[1]
+          $payload += ('=' * (4 - ($payload.Length % 4))) # pad base64
+          $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($payload))
+          $payloadObj = ConvertFrom-Json $decoded
 
           # if ($payloadObj.aud -ne $audience) { throw "OIDC token audience mismatch: $($payloadObj.aud)" }
 
