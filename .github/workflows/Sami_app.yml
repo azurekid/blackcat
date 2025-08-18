@@ -52,8 +52,8 @@ jobs:
       - name: Exchange OIDC token for UAMI token
         shell: pwsh
         run: |
-          $tenantId = "${{ env.TENANT_ID }}"
-          $uamiClientId = "${{ env.UAMI_CLIENT_ID }}"
+          $tenantId = "${{ secrets.AZURE_TENANT_ID }}"
+          $uamiClientId = "${{ secrets.AZURE_UAMI_CLIENT_ID }}"
           $oidcToken = $env:OIDC_TOKEN
 
           Write-Host "Exchanging OIDC token for UAMI token..."
@@ -85,8 +85,8 @@ jobs:
       - name: Exchange UAMI token for App token
         shell: pwsh
         run: |
-          $tenant   = "${{ env.TENANT_ID }}"
-          $appId    = "${{ env.APP_CLIENT_ID }}"
+          $tenant   = "${{ secrets.AZURE_TENANT_ID }}"
+          $appId    = "${{ secrets.AZURE_UAMI_CLIENT_ID }}"
           $miToken  = $env:MI_TOKEN
           $scope    = "${{ env.GRAPH_SCOPE }}"
           $tokenUrl = "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token"
