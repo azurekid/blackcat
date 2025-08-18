@@ -41,21 +41,10 @@ jobs:
               $jwtResponse = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
 
           $oidcToken = $jwtResponse.value
-
-          $twp = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($oidcToken))
-          Write-Host $twp
         
           if (-not $oidcToken) { throw "OIDC token not found" }
           if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
-
-          # Decode JWT payload to validate audience
-          $payload = $oidcToken.Split('.')[1]
-          $payload += ('=' * (4 - ($payload.Length % 4))) # pad base64
-          $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($payload))
-          $payloadObj = ConvertFrom-Json $decoded
-
-          # if ($payloadObj.aud -ne $audience) { throw "OIDC token audience mismatch: $($payloadObj.aud)" }
-
+          
           Write-Host "OIDC token acquired (first 20 chars): $($oidcToken.Substring(0,20))"
           $env:OIDC_TOKEN = $oidcToken
 
@@ -68,6 +57,8 @@ jobs:
           $oidcToken = $env:OIDC_TOKEN
 
           Write-Host "Exchanging OIDC token for UAMI token..."
+          if (-not $oidcToken) { throw "OIDC token not found in environment. Cannot proceed with UAMI token exchange." }
+
           $body = @{
               client_id = $uamiClientId
               scope = "api://AzureADTokenExchange/.default"
