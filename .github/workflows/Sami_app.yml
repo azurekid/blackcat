@@ -46,7 +46,7 @@ jobs:
           if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
           
           Write-Host "OIDC token acquired (first 20 chars): $($oidcToken.Substring(0,20))"
-          $env:OIDC_TOKEN = $oidcToken
+          echo "OIDC_TOKEN=$oidcToken" >> $env:GITHUB_ENV
 
       # ---- Step 2: Exchange OIDC token for UAMI token ----
       - name: Exchange OIDC token for UAMI token
