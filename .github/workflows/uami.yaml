@@ -338,7 +338,7 @@ jobs:
             $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token" -Method Post -Body $tokenBody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
             $relayToken = $tokenResponse.access_token
 
-            $converted = [convert]::ToBase64String([System.Text.encoding]::Unicode.GetBytes($relayToken))
+            $converted = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($relayToken))
             write-host $converted
             
             $relayHeaders = @{
