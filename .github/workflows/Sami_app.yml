@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write   # required for GitHub OIDC
+  id-token: write
   contents: read
 
 env:
@@ -30,6 +30,11 @@ jobs:
           $tenantId = "${{ env.TENANT_ID }}"
           $uamiClientId = "${{ env.UAMI_CLIENT_ID }}"
           $oidcToken = $env:GITHUB_ACTIONS_ID_TOKEN_REQUEST_TOKEN
+
+          # Validate OIDC token exists and looks like a JWT
+          if (-not $oidcToken) { throw "OIDC token not found" }
+          if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
+          Write-Host "OIDC token appears valid (first 20 chars): $($oidcToken.Substring(0,20))"
 
           Write-Host "Exchanging GitHub OIDC token for UAMI token..."
 
@@ -102,5 +107,6 @@ jobs:
               return $payload
           }
 
+          Write-Host "OIDC token payload: $(Decode-Jwt $env:GITHUB_ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
           Write-Host "UAMI token payload: $(Decode-Jwt $env:MI_TOKEN)"
           Write-Host "App token payload: $(Decode-Jwt $env:APP_TOKEN)"
