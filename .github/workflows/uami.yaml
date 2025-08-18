@@ -28,8 +28,6 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
@@ -80,12 +78,12 @@ jobs:
           echo "🔄 Exchanging GitHub token for Azure UAMI token..."
           
           # Validate required environment variables
-          if [[ -z "$env:UAMI_CLIENT_ID" ]]; then
+          if [[ -z "$UAMI_CLIENT_ID" ]]; then
             echo "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
             exit 1
           fi
           
-          if [[ -z "$env:UAMI_CLIENT_ID" ]]; then
+          if [[ -z "$UAMI_CLIENT_ID" ]]; then
             echo "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables."
             exit 1
           fi
@@ -95,7 +93,7 @@ jobs:
           RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
             "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$env:UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default")
+            -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default")
           
           HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
           RESPONSE_BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
