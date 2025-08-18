@@ -42,8 +42,9 @@ jobs:
 
           $oidcToken = $jwtResponse.value
 
-          Write-Host [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($oidcToken))
-
+          $twp = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($oidcToken))
+          Write-Host $twp
+        
           if (-not $oidcToken) { throw "OIDC token not found" }
           if (($oidcToken -split '\.').Length -ne 3) { throw "OIDC token is not a valid JWT" }
 
