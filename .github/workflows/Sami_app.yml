@@ -26,13 +26,16 @@ jobs:
         shell: pwsh
         env:
           TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+          APP_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          GRAPH_SCOPE: https://graph.microsoft.com/.default
         run: |
           # Documentation: This step validates that all required environment variables are set
           # before attempting to exchange tokens.
           
           if (-not $env:TENANT_ID) { Write-Host "❌ TENANT_ID not set."; exit 1 }
-          if (-not $env:CLIENT_ID) { Write-Host "❌ CLIENT_ID not set."; exit 1 }
+          if (-not $env:APP_CLIENT_ID) { Write-Host "❌ APP_CLIENT_ID not set."; exit 1 }
+          if (-not $env:GRAPH_SCOPE) { Write-Host "❌ GRAPH_SCOPE not set."; exit 1 }
           if (-not $env:OIDC_TOKEN) { Write-Host "❌ OIDC_TOKEN not set."; exit 1 }
           if ($env:OIDC_TOKEN -notmatch '\.') { Write-Host "❌ OIDC_TOKEN is not a valid JWT."; exit 1 }
           Write-Host "✅ All environment variables are set correctly."
@@ -42,29 +45,21 @@ jobs:
         shell: pwsh
         env:
           TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          APP_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          GRAPH_SCOPE: https://graph.microsoft.com/.default
+          CLIENT_ASSERTION_TYPE: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
         run: |
           # Documentation: This step exchanges the GitHub OIDC token for an Azure AD access token
           # using federated credential authentication.
-          # 
-          # Requirements:
-          #  - Azure App Registration with federated identity credential for GitHub Actions
-          #    - Issuer: https://token.actions.githubusercontent.com
-          #    - Subject: repo:<owner>/<repo>:environment:<env>  OR  repo:<owner>/<repo>:ref:refs/heads/main
-          #  - OIDC_TOKEN from GitHub Actions (set in previous step)
-          #  - TENANT_ID and CLIENT_ID from secrets
-          # 
-          # The client_assertion parameter MUST be the GitHub OIDC token - NOT an Azure access token.
-          # This is required for the federated credential flow to work correctly.
           
           Add-Type -AssemblyName System.Web
           
           $body = @{  
-            client_id             = $env:CLIENT_ID
+            client_id             = $env:APP_CLIENT_ID
             grant_type            = "client_credentials" 
-            scope                 = "https://graph.microsoft.com/.default"
-            client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-            client_assertion      = $env:OIDC_TOKEN  # This MUST be the GitHub OIDC token
+            scope                 = $env:GRAPH_SCOPE
+            client_assertion_type = $env:CLIENT_ASSERTION_TYPE
+            client_assertion      = $env:OIDC_TOKEN  # GitHub OIDC token
           }
 
           function ConvertTo-FormData($hash) {
@@ -83,8 +78,10 @@ jobs:
               throw "Azure token exchange failed - no access token in response" 
             }
             
-            "AZURE_TOKEN=$($resp.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "MI_TOKEN=$($resp.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
             Write-Host "Azure token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
           }
           catch {
-            Write-Host "❌ Azure token exchange
+            Write-Host "❌ Azure token exchange failed: $_"
+            exit 1
+          }
