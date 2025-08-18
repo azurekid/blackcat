@@ -28,8 +28,8 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ vars.TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
+  TENANT_ID: ${{ secrets.TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
