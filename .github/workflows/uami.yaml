@@ -78,8 +78,8 @@ jobs:
           echo "🔄 Exchanging GitHub token for Azure UAMI token..."
           
           # Validate required environment variables
-          if [[ -z "$UAMI_CLIENT_ID" ]]; then
-            echo "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
+          if [[ -z "$AZURE_TENANT_ID" ]]; then
+            echo "❌ AZURE_TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
             exit 1
           fi
           
@@ -91,7 +91,7 @@ jobs:
           # Enhanced token exchange with proper error handling
           echo "🔍 Attempting UAMI token exchange..."
           RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default")
           
@@ -261,7 +261,7 @@ jobs:
           
           # Get relay App token
           RELAY_TOKEN=$(curl -sS -X POST \
-            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "client_id=$RELAY_APP_ID&client_secret=$RELAY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | jq -r '.access_token')
           
@@ -375,7 +375,7 @@ jobs:
           
           # Acquire operational token using relay app
           RELAY_TOKEN=$(curl -sS -X POST \
-            "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "client_id=$RELAY_APP_ID&client_secret=$PRIMARY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default" | \
             jq -r '.access_token // empty')
