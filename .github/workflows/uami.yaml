@@ -77,12 +77,12 @@ jobs:
           echo "🔄 Exchanging GitHub token for Azure UAMI token..."
           
           # Validate required environment variables
-          if [[ -z "$TENANT_ID" ]]; then
+          if [[ -z "$env:UAMI_CLIENT_ID" ]]; then
             echo "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
             exit 1
           fi
           
-          if [[ -z "$UAMI_CLIENT_ID" ]]; then
+          if [[ -z "$env:UAMI_CLIENT_ID" ]]; then
             echo "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables."
             exit 1
           fi
