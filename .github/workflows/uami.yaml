@@ -34,7 +34,10 @@ env:
 jobs:
   infrastructure-automation:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    env:
+      UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      environment: ${{ inputs.environment }}
     
     steps:
       - name: "Initialize Operation Context"
