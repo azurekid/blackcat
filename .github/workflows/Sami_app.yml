@@ -1,5 +1,3 @@
-# .github/workflows/Sami_app.yml
-
 name: BlackCat - Secure Azure Token Exchange
 on: [workflow_dispatch]
 
