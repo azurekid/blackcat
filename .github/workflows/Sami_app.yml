@@ -1,4 +1,4 @@
-name: uami-to-app-powershell-demo
+name: uami-to-app-powershell-end-to-end
 
 on:
   workflow_dispatch:
@@ -6,13 +6,13 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write     # required for GitHub OIDC
+  id-token: write   # required for GitHub OIDC
   contents: read
 
 env:
-  TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}          # Azure tenant GUID
-  UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}# UAMI clientId
-  APP_CLIENT_ID:  ${{ secrets.AZURE_APP_CLIENT_ID }} # App Registration clientId
+  TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ secrets.AZURE_UAMI_CLIENT_ID }}
+  APP_CLIENT_ID:  ${{ secrets.AZURE_APP_CLIENT_ID }}
   GRAPH_SCOPE: "https://graph.microsoft.com/.default"
 
 jobs:
@@ -32,6 +32,7 @@ jobs:
           $oidcToken = $env:GITHUB_ACTIONS_ID_TOKEN_REQUEST_TOKEN
 
           Write-Host "Exchanging GitHub OIDC token for UAMI token..."
+
           $body = @{
               client_id = $uamiClientId
               scope = "api://AzureADTokenExchange/.default"
@@ -40,13 +41,19 @@ jobs:
               assertion = $oidcToken
           }
 
+          function ConvertTo-FormData($hash) {
+              return ($hash.GetEnumerator() | ForEach-Object { 
+                  [System.Web.HttpUtility]::UrlEncode($_.Key) + "=" + [System.Web.HttpUtility]::UrlEncode($_.Value) 
+              }) -join "&"
+          }
+
+          $bodyEncoded = ConvertTo-FormData $body
           $tokenUrl = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
-          $resp = Invoke-RestMethod -Method Post -Uri $tokenUrl -Body $body -ContentType "application/x-www-form-urlencoded"
+          $resp = Invoke-RestMethod -Method Post -Uri $tokenUrl -Body $bodyEncoded -ContentType "application/x-www-form-urlencoded"
 
           if (-not $resp.access_token) { throw "UAMI token exchange failed" }
-
-          Write-Host "UAMI token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
           $env:MI_TOKEN = $resp.access_token
+          Write-Host "UAMI token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
       # ---- Hop 2: UAMI token -> App Registration token ----
       - name: Exchange UAMI token for App token
@@ -67,11 +74,12 @@ jobs:
               client_assertion      = $miToken
           }
 
-          $resp = Invoke-RestMethod -Method POST -Uri $tokenUrl -ContentType "application/x-www-form-urlencoded" -Body $body
-          if (-not $resp.access_token) { throw "App token exchange failed" }
+          $bodyEncoded = ConvertTo-FormData $body
+          $resp = Invoke-RestMethod -Method Post -Uri $tokenUrl -Body $bodyEncoded -ContentType "application/x-www-form-urlencoded"
 
-          Write-Host "App token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
+          if (-not $resp.access_token) { throw "App token exchange failed" }
           $env:APP_TOKEN = $resp.access_token
+          Write-Host "App token acquired (first 20 chars): $($resp.access_token.Substring(0,20))"
 
       # ---- Use App token to call Microsoft Graph ----
       - name: Call Microsoft Graph (list one user)
