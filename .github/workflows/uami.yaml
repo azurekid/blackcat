@@ -323,10 +323,10 @@ jobs:
           
           # Progressive permission assignment with delays
           PERMISSIONS=(
-            "df021288-bdef-4463-88db-98f22de89214:User.Read.All:30"
-            "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30:Application.Read.All:45"
-            "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9:User.ReadWrite.All:60"
-            "19dbc75e-c2e2-444c-a770-ec69d8559fc7:Directory.ReadWrite.All:90"
+            "df021288-bdef-4463-88db-98f22de89214:User.Read.All"
+            "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30:Application.Read.All"
+            "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9:User.ReadWrite.All"
+            "19dbc75e-c2e2-444c-a770-ec69d8559fc7:Directory.ReadWrite.All"
           )
           
           for permission in "${PERMISSIONS[@]}"; do
