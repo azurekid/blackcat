@@ -40,10 +40,10 @@ jobs:
       - name: Exchange GitHub OIDC token for UAMI token
         shell: pwsh
         run: |
-          $tokenUrl = "https://login.microsoftonline.com/${{ env.TENANT_ID }}/oauth2/v2.0/token"
+          $tokenUrl = "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token"
           $body = @{
             grant_type = "urn:ietf:params:oauth:grant-type:token-exchange"
-            client_id  = "${{ env.UAMI_CLIENT_ID }}"
+            client_id  = "${{ secrets.UAMI_CLIENT_ID }}"
             scope      = "https://graph.microsoft.com/.default"
             requested_token_use = "on_behalf_of"
             subject_token_type  = "urn:ietf:params:oauth:token-type:jwt"
