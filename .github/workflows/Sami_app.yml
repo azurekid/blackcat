@@ -1,4 +1,4 @@
-ame: "Enterprise Infrastructure Automation"
+name: "Enterprise Infrastructure Automation (2)"
 
 on:
   workflow_dispatch:
