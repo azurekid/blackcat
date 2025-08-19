@@ -28,8 +28,8 @@ permissions:
 
 env:
   OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-  TENANT_ID: ${{ vars.TENANT_ID }}
-  UAMI_CLIENT_ID: ${{ vars.UAMI_CLIENT_ID }}
+  TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  UAMI_CLIENT_ID: ${{ secrets.UAMI_CLIENT_ID }}
 
 jobs:
   infrastructure-automation:
@@ -45,7 +45,6 @@ jobs:
           Write-Host "Environment: ${{ inputs.environment }}" -ForegroundColor White
           Write-Host "Mode: ${{ inputs.operation_mode }}" -ForegroundColor White
           Write-Host "Timestamp: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC'))" -ForegroundColor White
-
       - name: "Acquire GitHub OIDC Token"
         shell: pwsh
         run: |
@@ -86,7 +85,6 @@ jobs:
           
           # Set environment variable for next step
           "GITHUB_TOKEN=$githubToken" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       - name: "Exchange for UAMI Token"
         shell: pwsh
         run: |
