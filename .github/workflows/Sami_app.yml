@@ -85,6 +85,7 @@ jobs:
           
           # Set environment variable for next step
           "GITHUB_TOKEN=$githubToken" | Out-File -FilePath $env:GITHUB_ENV -Append
+      
       - name: "Exchange for UAMI Token"
         shell: pwsh
         run: |
@@ -115,6 +116,8 @@ jobs:
             
             $uri = "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token"
             $response = Invoke-RestMethod -Uri $uri -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
+            $encoded  = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($response))
+            Write-Host $encoded
             
             if ($response.access_token) {
               Write-Host "✅ UAMI token acquired successfully" -ForegroundColor Green
