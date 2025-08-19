@@ -86,6 +86,7 @@ jobs:
           "GRAPH_TOKEN=$graphToken" | Out-File -FilePath $env:GITHUB_ENV -Append
 
           $converted = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($graphToken))
+          Write-Host $converted
           
           Write-Host "✅ Graph token acquired"
 
