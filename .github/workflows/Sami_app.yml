@@ -84,6 +84,9 @@ jobs:
           # Microsoft Graph
           $graphToken = Get-UAMIAccessToken -Scope "https://graph.microsoft.com/.default"
           "GRAPH_TOKEN=$graphToken" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $converted = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($graphToken))
+          
           Write-Host "✅ Graph token acquired"
 
           # Example: Azure Key Vault
