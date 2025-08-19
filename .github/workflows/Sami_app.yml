@@ -45,117 +45,48 @@ jobs:
           Write-Host "Environment: ${{ inputs.environment }}" -ForegroundColor White
           Write-Host "Mode: ${{ inputs.operation_mode }}" -ForegroundColor White
           Write-Host "Timestamp: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC'))" -ForegroundColor White
+      
       - name: "Acquire GitHub OIDC Token"
         shell: pwsh
         run: |
-          Write-Host "🔐 Acquiring GitHub OIDC authentication token..." -ForegroundColor Cyan
+          Write-Host "🔐 Acquiring GitHub OIDC authentication token..."
           
-          # Enhanced error handling for token acquisition
-          $maxAttempts = 3
-          $githubToken = $null
+          $headers = @{ 'Authorization' = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+          $uri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+          $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
           
-          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-            try {
-              $headers = @{
-                'Authorization' = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-              }
-              
-              $uri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
-              $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-              
-              if ($response.value -and $response.value -ne "null") {
-                $githubToken = $response.value
-                Write-Host "✅ GitHub OIDC token acquired successfully (attempt $attempt)" -ForegroundColor Green
-                break
-              } else {
-                Write-Host "⚠️ Token acquisition failed (attempt $attempt/$maxAttempts)" -ForegroundColor Yellow
-                Start-Sleep -Seconds ($attempt * 2)
-              }
-            }
-            catch {
-              Write-Host "⚠️ Token acquisition failed (attempt $attempt/$maxAttempts): $($_.Exception.Message)" -ForegroundColor Yellow
-              Start-Sleep -Seconds ($attempt * 2)
-            }
+          if (-not $response.value) {
+            throw "❌ Failed to acquire GitHub OIDC token"
           }
           
-          if (-not $githubToken) {
-            Write-Host "❌ Failed to acquire GitHub OIDC token after $maxAttempts attempts" -ForegroundColor Red
-            exit 1
-          }
-          
-          # Set environment variable for next step
-          "GITHUB_TOKEN=$githubToken" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GITHUB_TOKEN=$($response.value)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "✅ GitHub OIDC token acquired successfully"
       
-      - name: "Exchange for UAMI Token"
+      - name: "Request UAMI Tokens"
         shell: pwsh
         run: |
-          Write-Host "🔄 Exchanging GitHub token for Azure UAMI token..." -ForegroundColor Cyan
-          
-          # Validate required environment variables
-          if (-not $env:TENANT_ID) {
-            Write-Host "❌ TENANT_ID not set. Add AZURE_TENANT_ID to repository secrets or variables." -ForegroundColor Red
-            exit 1
-          }
-          
-          if (-not $env:UAMI_CLIENT_ID) {
-            Write-Host "❌ UAMI_CLIENT_ID not set. Add UAMI_CLIENT_ID to repository secrets or variables." -ForegroundColor Red
-            exit 1
-          }
-          
-          # Enhanced token exchange with proper error handling
-          Write-Host "🔍 Attempting UAMI token exchange..." -ForegroundColor Cyan
-          
-          try {
-            $body = @{
-              'client_id' = $env:UAMI_CLIENT_ID
-              'grant_type' = 'client_credentials'
-              'client_assertion_type' = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-              'client_assertion' = $env:GITHUB_TOKEN
-              'scope' = 'https://graph.microsoft.com/.default'
-            }
-            
-            $uri = "https://login.microsoftonline.com/$env:TENANT_ID/oauth2/v2.0/token"
-            $response = Invoke-RestMethod -Uri $uri -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
-            $encoded  = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($response.access_token))
-            Write-Host $encoded
-            
-            if ($response.access_token) {
-              Write-Host "✅ UAMI token acquired successfully" -ForegroundColor Green
-              "UAMI_TOKEN=$($response.access_token)" | Out-File -FilePath $env:GITHUB_ENV -Append
-            } else {
-              Write-Host "❌ No access token in response" -ForegroundColor Red
-              Write-Host "Response: $($response | ConvertTo-Json)" -ForegroundColor Red
-              exit 1
-            }
-          }
-          catch {
-            Write-Host "❌ Failed to acquire UAMI token - $($_.Exception.Message)" -ForegroundColor Red
-            
-            # Parse error details if available
-            if ($_.ErrorDetails.Message) {
-              try {
-                $errorDetails = $_.ErrorDetails.Message | ConvertFrom-Json
-                Write-Host "Error: $($errorDetails.error_description)" -ForegroundColor Red
-                
-                # Provide troubleshooting guidance
-                switch ($errorDetails.error) {
-                  'invalid_client' {
-                    Write-Host "💡 Check: UAMI_CLIENT_ID is correct and UAMI exists in tenant" -ForegroundColor Yellow
-                  }
-                  { $_ -in @('invalid_grant', 'invalid_request') } {
-                    Write-Host "💡 Check: Federated identity credential configuration" -ForegroundColor Yellow
-                    Write-Host "   - Issuer: https://token.actions.githubusercontent.com" -ForegroundColor Yellow
-                    Write-Host "   - Subject matches your repo pattern" -ForegroundColor Yellow
-                    Write-Host "   - Audience: api://AzureADTokenExchange" -ForegroundColor Yellow
-                  }
-                  'unauthorized_client' {
-                    Write-Host "💡 Check: UAMI has required Graph permissions" -ForegroundColor Yellow
-                  }
-                }
+          function Get-UAMIAccessToken {
+              param([string]$Scope)
+              $body = @{
+                  'client_id' = $env:UAMI_CLIENT_ID
+                  'grant_type' = 'client_credentials'
+                  'client_assertion_type' = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+                  'client_assertion' = $env:GITHUB_TOKEN
+                  'scope' = $Scope
               }
-              catch {
-                Write-Host "Error details could not be parsed" -ForegroundColor Red
-              }
-            }
-            exit 1
+              $uri = "https://login.microsoftonline.com/$($env:TENANT_ID)/oauth2/v2.0/token"
+              $response = Invoke-RestMethod -Uri $uri -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
+              return $response.access_token
           }
+
+          Write-Host "🔄 Requesting tokens with UAMI federated credentials..."
+
+          # Microsoft Graph
+          $graphToken = Get-UAMIAccessToken -Scope "https://graph.microsoft.com/.default"
+          "GRAPH_TOKEN=$graphToken" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "✅ Graph token acquired"
+
+          # Example: Azure Key Vault
+          $kvToken = Get-UAMIAccessToken -Scope "https://vault.azure.net/.default"
+          "KEYVAULT_TOKEN=$kvToken" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "✅ Key Vault token acquired"
