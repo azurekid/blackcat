@@ -1,12 +1,5 @@
 using namespace System.Management.Automation
 
-# used for auto-generating the valid values for the AppRoleName parameter
-class appRoleNames : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        return ($script:SessionVariables.appRoleIds.Permission)
-    }
-}
-
 function Get-AppRolePermission {
     [cmdletbinding()]
     param (
@@ -15,7 +8,6 @@ function Get-AppRolePermission {
         [string]$appRoleId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidateSet( [appRoleNames] )]
         [string]$appRoleName,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
@@ -27,6 +19,19 @@ function Get-AppRolePermission {
     begin {
         Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+        
+        # Validate appRoleName parameter against available permissions
+        if ($appRoleName -and $script:SessionVariables -and $script:SessionVariables.appRoleIds) {
+            $availablePermissions = $script:SessionVariables.appRoleIds | Where-Object Type -eq $Type | Select-Object -ExpandProperty Permission
+            Write-Verbose "Available app role permissions loaded: $($availablePermissions.Count) total permissions for type '$Type'"
+            
+            if ($appRoleName -notin $availablePermissions) {
+                $errorMessage = "Invalid appRoleName '$appRoleName' for type '$Type'. Valid values are: $($availablePermissions -join ', ')"
+                throw [System.ArgumentException]::new($errorMessage, 'appRoleName')
+            }
+        } elseif ($appRoleName) {
+            Write-Warning "SessionVariables not available for validation. Proceeding without validation."
+        }
     }
 
     process {
@@ -106,4 +111,35 @@ Get-MsServicePrincipalsPermissions | Get-AppRolePermission
 This function uses session variables to retrieve the App Role permissions. Ensure that the session variables are properly initialized before calling this function.
 
 #>
+}
+
+# Register argument completer for appRoleName parameter
+Register-ArgumentCompleter -CommandName Get-AppRolePermission -ParameterName appRoleName -ScriptBlock {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+    
+    # Get the Type parameter from bound parameters or use default
+    $type = if ($fakeBoundParameters.ContainsKey('Type')) { $fakeBoundParameters['Type'] } else { 'Application' }
+    
+    if ($script:SessionVariables -and $script:SessionVariables.appRoleIds) {
+        $availablePermissions = $script:SessionVariables.appRoleIds | Where-Object Type -eq $type | Select-Object -ExpandProperty Permission
+        $availablePermissions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    } else {
+        # Fallback to common permissions if SessionVariables not available
+        $commonPermissions = @(
+            'Application.Read.All',
+            'Application.ReadWrite.All',
+            'AppRoleAssignment.ReadWrite.All',
+            'Directory.Read.All',
+            'Directory.ReadWrite.All',
+            'User.Read.All',
+            'User.ReadWrite.All',
+            'Group.Read.All',
+            'Group.ReadWrite.All'
+        )
+        $commonPermissions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
 }
