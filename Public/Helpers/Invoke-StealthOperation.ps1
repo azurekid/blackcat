@@ -1,100 +1,4 @@
 function Invoke-StealthOperation {
-    <#
-    .SYNOPSIS
-        Executes operations with configurable stealth timing delays.
-    
-    .DESCRIPTION
-        Invoke-StealthOperation processes input objects through a pipeline while applying
-        intelligent timing delays to avoid detection patterns. The function supports multiple
-        delay strategies including random intervals, progressive timing, business hours
-        simulation, and exponential backoff patterns.
-        
-        Ideal for scenarios requiring rate limiting, anti-detection measures, or simulating
-        human-like interaction patterns in automated operations.
-    
-    .PARAMETER InputObject
-        Objects to process through the stealth pipeline. Accepts pipeline input.
-    
-    .PARAMETER DelayType
-        Specifies the delay pattern strategy:
-        - Random: Random delays between min and max values
-        - Progressive: Incrementally increasing delays per item
-        - BusinessHours: Simulates activity during business hours
-        - Exponential: Exponential backoff pattern for each item
-        Default: Random
-    
-    .PARAMETER MinDelay
-        Minimum delay duration in seconds (0-600). Default: 1
-    
-    .PARAMETER MaxDelay
-        Maximum delay duration in seconds (1-3600). Default: 5
-    
-    .PARAMETER Silent
-        Suppresses delay notification messages when specified.
-    
-    .PARAMETER Country
-        Two-letter country code for business hours timing. Valid values: 
-        US, UK, DE, JP, AU, ES, IT, FR, MX, CN, BR, IN, KR.
-        Only used when DelayType is BusinessHours. Default: "US"
-    
-    .PARAMETER TimeZone
-        Override timezone for business hours calculation. Supports timezone names 
-        (e.g., "Pacific Standard Time") or UTC offset notation (e.g., "+2", "-5", "+5.5").
-        Only used when DelayType is BusinessHours.
-    
-    .PARAMETER Jitter
-        Random jitter percentage to add to delays (0.0-1.0).
-        Adds randomness to prevent pattern detection. Default: 0.2
-    
-    .PARAMETER WaitForBusinessHours
-        When specified with BusinessHours DelayType, waits until business hours begin
-        before executing operations. Useful for timing-sensitive operations.
-    
-    .EXAMPLE
-        Invoke-StealthOperation | Find-PublicStorageContainer -StorageAccountName "test"
-        
-        Executes storage discovery with default random stealth timing.
-    
-    .EXAMPLE
-        "example.com", "test.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "UK" | ForEach-Object {
-            Find-DnsRecords -Domain $_
-        }
-        
-        Processes domains with UK business hours timing simulation.
-
-    .EXAMPLE
-        Get-Content domains.txt | Invoke-StealthOperation -MinDelay 30 -MaxDelay 180 -Silent | ForEach-Object {
-            Find-SubDomain -Domain $_
-        }
-
-        Performs subdomain enumeration with extended delays (30-180 seconds) without status messages.
-    
-    .EXAMPLE
-        1..10 | Invoke-StealthOperation -DelayType Exponential | ForEach-Object {
-            Test-Connection -Count 1 -ComputerName "server$_"
-        }
-        
-        Tests multiple servers with exponentially increasing delays between operations.
-    
-    .EXAMPLE
-        "target.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "UK" -WaitForBusinessHours | ForEach-Object {
-            Find-DnsRecords -Domain $_
-        }
-        
-        Waits until UK business hours before executing DNS reconnaissance.
-    
-    .EXAMPLE
-        "target.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "DE" -TimeZone "+2" | ForEach-Object {
-            Find-DnsRecords -Domain $_
-        }
-        
-        Uses German business culture with UTC+2 timezone offset for precise timing.
-    
-    .NOTES
-        Built-in stealth delay implementation eliminates dependency on external functions.
-        Consider network policies and rate limits when configuring delay parameters.
-    #>
-
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
@@ -116,18 +20,15 @@ function Invoke-StealthOperation {
         [switch]$Silent,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("US", "UK", "DE", "JP", "AU", "ES", "IT", "FR", "MX", "CN", "BR", "IN", "KR")]
-        [string]$Country = "US",
+        [ValidateSet("US", "UK", "EU", "JP", "AU", "ES", "IT", "FR", "MX", "CN", "BR", "IN", "KR")]
+        [string]$Country = "EU",
 
         [Parameter(Mandatory = $false)]
         [string]$TimeZone = $null,
 
         [Parameter(Mandatory = $false)]
         [ValidateRange(0.0, 1.0)]
-        [double]$Jitter = 0.2,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$WaitForBusinessHours
+        [double]$Jitter = 0.2
     )
 
     begin {
@@ -138,7 +39,7 @@ function Invoke-StealthOperation {
         $businessHours = @{
             "US" = @{ Start = 9; End = 17; TimeZone = "Eastern Standard Time"; LunchBreak = $false }
             "UK" = @{ Start = 9; End = 17; TimeZone = "GMT Standard Time"; LunchBreak = $false }
-            "DE" = @{ Start = 8; End = 16; TimeZone = "W. Europe Standard Time"; LunchBreak = $false }
+            "EU" = @{ Start = 9; End = 17; TimeZone = "W. Europe Standard Time"; LunchBreak = $false }
             "JP" = @{ Start = 9; End = 18; TimeZone = "Tokyo Standard Time"; LunchBreak = $false }
             "AU" = @{ Start = 9; End = 17; TimeZone = "AUS Eastern Standard Time"; LunchBreak = $false }
             "ES" = @{ Start = 9; End = 14; End2 = 17; End2Close = 20; TimeZone = "Romance Standard Time"; LunchBreak = $true; LunchStart = 14; LunchEnd = 17; SiestaPattern = $true }
@@ -275,8 +176,8 @@ function Invoke-StealthOperation {
                     $isBusinessHours = $currentHour -ge $businessConfig.Start -and $currentHour -lt $businessConfig.End
                 }
                 
-                # Check if we need to wait for business hours
-                if ($WaitForBusinessHours -and (-not $isBusinessHours -or -not $isWeekday)) {
+                # Check if we need to wait for business hours (default behavior for BusinessHours timing)
+                if (-not $isBusinessHours -or -not $isWeekday) {
                     $waitSeconds = 0
                     
                     if (-not $isWeekday) {
@@ -333,7 +234,11 @@ function Invoke-StealthOperation {
                         if (-not $Silent) {
                             $configDescription = if ($TimeZone) { $businessConfig.Description } else { $Country }
                             $waitMessage = if ($isLunchBreak -and $businessConfig.SiestaPattern) {
-                                "🌅 Waiting {0}m until {1} siesta/lunch break ends..." -f $waitMinutes, $configDescription
+                                if ($waitHours -gt 0) {
+                                    "🌅 Waiting {0}h {1}m until {2} siesta/lunch break ends..." -f $waitHours, $waitMinutes, $configDescription
+                                } else {
+                                    "🌅 Waiting {0}m until {1} siesta/lunch break ends..." -f $waitMinutes, $configDescription
+                                }
                             } elseif ($waitHours -gt 0) {
                                 "🌙 Waiting {0}h {1}m until {2} business hours begin..." -f $waitHours, $waitMinutes, $configDescription
                             } else {
@@ -439,4 +344,93 @@ function Invoke-StealthOperation {
     end {
         Write-Verbose "✅ Stealth pipeline completed for $itemCount items"
     }
+<#
+    .SYNOPSIS
+        Executes operations with configurable stealth timing delays.
+
+    .DESCRIPTION
+        Invoke-StealthOperation processes input objects through a pipeline while applying
+        intelligent timing delays to avoid detection patterns. The function supports multiple
+        delay strategies including random intervals, progressive timing, business hours
+        simulation, and exponential backoff patterns.
+
+        Ideal for scenarios requiring rate limiting, anti-detection measures, or simulating
+        human-like interaction patterns in automated operations.
+
+    .PARAMETER InputObject
+        Objects to process through the stealth pipeline. Accepts pipeline input.
+
+    .PARAMETER DelayType
+        Specifies the delay pattern strategy:
+        - Random: Random delays between min and max values
+        - Progressive: Incrementally increasing delays per item
+        - BusinessHours: Simulates activity during business hours (automatically waits for business hours)
+        - Exponential: Exponential backoff pattern for each item
+        Default: Random
+
+    .PARAMETER MinDelay
+        Minimum delay duration in seconds (0-600). Default: 1
+
+    .PARAMETER MaxDelay
+        Maximum delay duration in seconds (1-3600). Default: 5
+
+    .PARAMETER Silent
+        Suppresses delay notification messages when specified.
+
+    .PARAMETER Country
+        Two-letter country code for business hours timing. Valid values:
+        US, UK, EU, JP, AU, ES, IT, FR, MX, CN, BR, IN, KR.
+        Only used when DelayType is BusinessHours. Default: "US"
+
+    .PARAMETER TimeZone
+        Override timezone for business hours calculation. Supports timezone names
+        (e.g., "Pacific Standard Time") or UTC offset notation (e.g., "+2", "-5", "+5.5").
+        Only used when DelayType is BusinessHours.
+
+    .PARAMETER Jitter
+        Random jitter percentage to add to delays (0.0-1.0).
+        Adds randomness to prevent pattern detection. Default: 0.2
+
+    .EXAMPLE
+        Invoke-StealthOperation | Find-PublicStorageContainer -StorageAccountName "test"        Executes storage discovery with default random stealth timing.
+
+    .EXAMPLE
+        "example.com", "test.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "UK" | ForEach-Object {
+            Find-DnsRecords -Domain $_
+        }
+
+        Processes domains with UK business hours timing simulation.
+
+    .EXAMPLE
+        Get-Content domains.txt | Invoke-StealthOperation -MinDelay 30 -MaxDelay 180 -Silent | ForEach-Object {
+            Find-SubDomain -Domain $_
+        }
+
+        Performs subdomain enumeration with extended delays (30-180 seconds) without status messages.
+
+    .EXAMPLE
+        1..10 | Invoke-StealthOperation -DelayType Exponential | ForEach-Object {
+            Test-Connection -Count 1 -ComputerName "server$_"
+        }
+
+        Tests multiple servers with exponentially increasing delays between operations.
+
+    .EXAMPLE
+        "target.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "UK" | ForEach-Object {
+            Find-DnsRecords -Domain $_
+        }
+
+        Automatically waits until UK business hours before executing DNS reconnaissance.
+
+    .EXAMPLE
+        "target.com" | Invoke-StealthOperation -DelayType BusinessHours -Country "EU" -TimeZone "+2" | ForEach-Object {
+            Find-DnsRecords -Domain $_
+        }
+
+        Uses German business culture with UTC+2 timezone offset for precise timing.
+
+    .NOTES
+        Built-in stealth delay implementation eliminates dependency on external functions.
+        Consider network policies and rate limits when configuring delay parameters.
+    #>
 }
