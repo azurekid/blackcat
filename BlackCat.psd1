@@ -144,8 +144,6 @@
         'Public\Helpers\New-JWT.ps1',
         'Public\Helpers\Read-SASToken.ps1',
         'Public\Helpers\Select-AzureContext.ps1',
-        'Public\Helpers\Start-StealthDelay.ps1',
-        'Public\Helpers\Start-StealthPipeline.ps1',
         'Public\Helpers\Update-AzureServiceTag.ps1',
         'Public\Helpers\Clear-BlackCatCache.ps1',
         'Public\Helpers\Get-BlackCatCacheStats.ps1',
