@@ -1,8 +1,162 @@
-[![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjUsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
+[![Mr Robot fonts](https://see.fontimg.com/api/renderfont4/g123/eyJyIjoiZnMiLCJoIjoxMjIsInciOjE1MDAsImZzIjo4MywiZmdjIjoiI0VGMDkwOSIsImJnYyI6IiMxMTAwMDAiLCJ0IjoxfQ/QiA3IDQgYyBLIEMgQCBU/mrrobot.png)](https://www.fontspace.com/category/mr-robot)
 
 ![logo](/.github/media/cateye.png?raw=true)
 
 # CHANGELOG
+
+## v0.22.0 [2025-08-25] 🔐 Security & UX Enhancements
+
+_Improvements & New Features_
+
+**Enhanced Stealth Operations:**
+* **Enhanced `Invoke-StealthOperation` with color output and improved timezone handling**
+  - 🌈 **Colorized Status Messages**: Added colored output for improved visual feedback
+  - 🌍 **Improved Timezone Handling**: Enhanced custom UTC offset support with validation
+  - 🏢 **Business Hours Descriptions**: Added country/timezone descriptions to delay messages
+  - ⏰ **Waiting Period Feedback**: Enhanced messages for business hours/lunch breaks with proper formatting
+  - 🎭 **Emoji Context Awareness**: Dynamic emoji selection based on configuration
+  - 🛡️ **Robust Error Handling**: Improved fallback behavior for invalid timezone specifications
+  - 🔍 **Enhanced Verbose Logging**: Better tracking of configuration selection and timing decisions
+
+**Azure Identity & Authentication Security:**
+* **Added UAMI-based App Escalation workflow**
+  - 🆔 **GitHub OIDC Integration**: Implemented secure token exchange using OIDC tokens
+  - 🔄 **Two-Stage Token Exchange**: OIDC → UAMI → Application token flow
+  - 🛡️ **Audience Validation**: Strict validation of token audiences for enhanced security
+  - 🔐 **No-CLI Authentication**: Pure API-based authentication without Azure CLI dependency
+  - 🧪 **Automated Verification**: Built-in token validation and smoke testing
+  - 📝 **Detailed Documentation**: Comprehensive comments explaining the OAuth 2.0 token flow
+  - ⚙️ **GitHub Actions Integration**: Ready-to-use workflow for secure token acquisition
+
+**Module Improvements:**
+* **Enhanced Security Documentation**: Added comprehensive documentation on token-based authentication techniques
+* **Code Quality**: Improved error handling and parameter validation across multiple functions
+* **Performance Optimization**: Enhanced parallelization and resource management
+
+## v0.21.0 [2025-07-09] 🚀 Major Cache Analytics Release
+
+_New Features & Major Enhancements_
+
+**Revolutionary Cache Analytics System:**
+* **Completely redesigned `Get-BlackCatCacheStats` function with enterprise-grade analytics**
+  - 🎯 **Advanced Filtering Engine**: 15 new parameters including FilterExpired, FilterValid, FilterCompressed, FilterLarge, MinSize, MaxAge
+  - 📊 **Sophisticated Analytics**: Performance metrics, trend analysis, distribution histograms, and predictive insights
+  - 🔍 **Enhanced Sorting**: 6 sorting options (Timestamp, Size, Key, ExpirationTime, Age, TTL) for comprehensive data organization
+  - 📈 **Trend Analysis**: Growth rate calculations, peak usage patterns, cache freshness metrics, and usage predictions
+  - 📊 **Distribution Histograms**: Visual size and age distribution analysis with ASCII bar charts and statistical breakdowns
+  - 💾 **Multi-Format Export**: 6 output formats (Summary, Table, List, JSON, CSV, XML) with automatic file export capabilities
+  - 🎨 **Enhanced Visual Dashboard**: Color-coded metrics, emoji indicators, comprehensive performance visualization
+  - 🧠 **Intelligent Recommendations**: Context-aware optimization suggestions, memory usage analysis, compression recommendations
+  - 🔧 **Performance Optimization**: Hit rate analysis, cache utilization metrics, memory density calculations
+  - 📋 **Programmatic Interface**: Quiet mode for automated scripts, structured data objects for integration
+  - ⚡ **Advanced Performance Metrics**: Hit rates, cache utilization, memory efficiency, compression ratios, turnover rates
+  - 🚀 **Predictive Analysis**: Cache growth predictions, usage pattern analysis, maintenance recommendations
+
+* **Enhanced Cache Management Functions:**
+  - **Universal Cache System**: Implemented LRU (Least Recently Used) eviction, compression support, configurable expiration
+  - **Memory Management**: Advanced memory optimization with size-based eviction and compression ratios
+  - **Cache Integration**: Seamless integration with core functions (Invoke-MSGraph, Invoke-AzBatch, Get-RoleAssignment)
+  - **Parameter Standardization**: Consistent cache parameters across all functions (SkipCache, CacheExpirationMinutes, MaxCacheSize, CompressCache)
+
+**Core Function Cache Integration:**
+* **Enhanced `Get-RoleAssignment` function with comprehensive cache support**
+  - Added full cache parameter support: `-SkipCache`, `-CacheExpirationMinutes`, `-MaxCacheSize`, `-CompressCache`
+  - Implemented intelligent cache key generation based on subscription, filters, and PIM settings
+  - Added cache-aware processing with automatic cache management and cleanup
+  - Enhanced performance for repeated role assignment queries across multiple subscriptions
+  - Maintains full compatibility with all existing functionality including PIM eligible assignments
+
+* **Enhanced `Invoke-MSGraph` and `Invoke-AzBatch` functions with advanced caching**
+  - Updated cache integration with new parameter support and LRU management
+  - Improved cache key generation for better cache hit rates
+  - Enhanced memory management with compression support
+  - Optimized performance for large-scale API operations
+
+**Module Architecture Improvements:**
+* **Modular Function Organization**: Split multi-function files into individual function files for better module compatibility
+* **Enhanced Module Loading**: Updated BlackCat.psd1 manifest with comprehensive function exports and file listings
+* **Function Export Standardization**: All cache management functions properly exported and available after module import
+* **Documentation Updates**: Comprehensive documentation for all new cache features and advanced analytics
+
+## v0.20.6 [2025-07-09]
+
+_Improvements_
+
+**App Role Permission Discovery Enhancements:**
+* **Enhanced `Get-AppRolePermission` function with emoji output and improved user experience**
+  - Added emoji-enhanced progress indicators and status messages for better visual feedback
+  - Implemented color-coded output for easy identification of results (✅ success, ❌ errors, 🔍 search)
+  - Enhanced search feedback showing permission details (📋 Permission, 🏷️ Type, 🆔 App Role ID)
+  - Improved error handling with clear visual indicators for not found scenarios
+  - Added detailed function documentation highlighting the enhanced output capabilities
+  - Maintains full compatibility with pipeline input and all existing functionality
+
+**Storage Account Key Retrieval Enhancements:**
+* **Enhanced `Get-StorageAccountKey` function with comprehensive output and statistics**
+  - Added emoji-enhanced progress indicators and colored output similar to Get-KeyVaultSecret
+  - Implemented comprehensive summary statistics including access denial tracking
+  - Enhanced error categorization for RBAC vs. permission based access denials
+  - **FIXED**: Corrected error handling to use RBAC terminology instead of Key Vault "access policy" references
+  - Storage Accounts use Role-Based Access Control (RBAC) for management operations like listKeys, not access policies
+  - Updated error patterns to specifically detect Azure RBAC role assignment and permission errors
+  - Improved accuracy of error classification for Storage Account access scenarios
+  - Added parallel processing with ConcurrentBag for thread-safe result and error aggregation
+  - Implemented OutputFormat parameter (Object, JSON, CSV, Table) with file output for JSON/CSV
+  - Added detailed error categorization and summary (RBAC denied, permission denied, not found, bad request, etc.)
+  - Added verbose/debug output for error messages and HTTP status codes
+
+**Role Assignment Discovery Enhancements:**
+* **Enhanced `Get-RoleAssignment` function with duration tracking and improved performance monitoring**
+  - Added comprehensive duration tracking from start to completion of role assignment analysis
+  - Enhanced summary statistics to include execution time in seconds with precise formatting
+  - Provides users with valuable timing information for performance optimization
+  - Duration tracking works consistently across all output formats (Table, JSON, CSV, Object)
+  - Helps users understand performance characteristics when dealing with multiple subscriptions or large result sets
+
+* **Added PIM (Privileged Identity Management) eligible role assignment support**
+  - Added `-IncludeEligible` parameter (aliases: `include-eligible`, `eligible`) to query PIM eligible assignments
+  - Integrated Microsoft.Authorization/roleEligibilityScheduleInstances API for comprehensive PIM discovery
+  - Enhanced role assignment objects with `IsEligible` property to distinguish active vs. eligible assignments
+  - Added PIM-specific properties: `StartDateTime`, `EndDateTime`, and `Status` for eligible assignments
+  - Improved summary statistics with breakdown of active vs. eligible assignment counts
+  - Maintains full compatibility with all existing filtering options (PrincipalType, ObjectId, etc.)
+  - Uses parallel processing for optimal performance when querying eligible assignments across subscriptions
+  - Enhanced error handling for scenarios where PIM might not be available or accessible
+  - Updated comprehensive help documentation with PIM-related examples and parameter descriptions
+
+**Entra ID Information Discovery Enhancements:**
+* **Enhanced `Get-EntraInformation` function with automatic object type detection**
+  - Added intelligent automatic fallback for ObjectId queries
+  - When querying by ObjectId without the -Group switch, automatically attempts group query if user query fails
+  - Eliminates need to manually specify -Group switch when uncertain about object type
+  - Enhanced verbose logging to track query attempts and results
+  - Improved error handling with detailed error message classification
+  - Distinguishes between "resource not found" errors vs. permission/access errors
+  - Only attempts automatic group fallback for genuine "not found" scenarios
+  - Provides specific error messages when ObjectId doesn't exist in Azure AD
+  - Enhanced error pattern matching to catch various forms of "does not exist" messages
+  - Updated help documentation with examples demonstrating automatic fallback behavior
+  - Maintains backward compatibility with existing explicit -Group parameter usage
+
+**Microsoft Graph API Core Enhancements:**
+* **Enhanced `Invoke-MsGraph` function with robust retry logic and throttling management**
+  - Added configurable retry mechanism with `-MaxRetries` parameter (default: 3 attempts)
+  - Implemented intelligent exponential backoff with `-RetryDelaySeconds` parameter (default: 5 seconds)
+  - Enhanced throttling detection and automatic retry handling for HTTP 429 responses
+  - Added support for Microsoft Graph "Retry-After" header compliance
+  - Improved error handling with specific detection for unauthorized (401) errors
+  - Enhanced verbose logging for API calls and retry attempts
+  - Robust error message extraction from Graph API JSON error responses
+  - Graceful handling of batch vs. non-batch requests with consistent retry behavior
+  - Prevents unnecessary retries for authorization failures while maintaining resilience for transient errors
+  - Maintains backward compatibility with existing Graph API call patterns
+  - Added `OutputFormat` parameter with support for Object, JSON, CSV, and Table formats
+  - JSON and CSV outputs are automatically saved to timestamped files (MSGraphResult_YYYYMMDD_HHMMSS.json/csv)
+  - Table format provides formatted output using Format-Table -AutoSize for improved readability
+  - Object format maintains default behavior returning raw PowerShell objects
+  - Includes parameter aliases ("output", "o") for convenient command-line usage
+  - Enhanced function documentation with comprehensive parameter descriptions and usage examples
+  - Maintains full compatibility with all existing functionality including batch processing and retry logic
 
 ## v0.20.5 [2025-07-09]
 
@@ -358,7 +512,7 @@ _Improvements_
 
 _Bug fixes_
 
-- Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`. 
+- Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`.
 
 _Bug fixes_
 
@@ -377,7 +531,7 @@ _Bug fixes_
 
 _What's new?_
 
-- Added `SkipCustom` to the `Get-RoleAssignments` function to improve performance in large environments. 
+- Added `SkipCustom` to the `Get-RoleAssignments` function to improve performance in large environments.
 
 ## v0.10.3 [2025-04-05]
 
