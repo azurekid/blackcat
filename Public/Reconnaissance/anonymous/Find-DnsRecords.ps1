@@ -455,4 +455,108 @@ function Find-DnsRecords {
             "Table"  { return $Results | Format-Table -AutoSize }
         }
     }
+<#
+.SYNOPSIS
+    Performs comprehensive DNS reconnaissance on target domains with enhanced provider support and subdomain enumeration capabilities.
+
+.DESCRIPTION
+    Find-DnsRecords is an advanced DNS reconnaissance tool that queries multiple DNS-over-HTTPS providers to gather DNS records
+    for specified domains. It supports various record types, subdomain enumeration with CNAME discovery, and can detect
+    flattened/proxied CNAMEs used by CDN services like Cloudflare. The function provides load balancing across multiple
+    DNS providers, customizable delays for stealth, and integrates with the BlackCat framework for enhanced subdomain lists
+    and user agent rotation.
+
+.PARAMETER Domains
+    One or more target domains to perform DNS reconnaissance on.
+    Accepts pipeline input.
+
+.PARAMETER MinDelay
+    Minimum delay in seconds between DNS queries (1-300).
+    Default: 1 second. Helps avoid rate limiting.
+
+.PARAMETER MaxDelay
+    Maximum delay in seconds between DNS queries (1-600).
+    Default: 3 seconds. Random delay between MinDelay and MaxDelay is used.
+
+.PARAMETER LogPath
+    Path to save reconnaissance results log file.
+    Default: ".\recon_results.log"
+
+.PARAMETER RecordTypes
+    Array of DNS record types to query.
+    Valid values: "A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR"
+    Default: @("A", "AAAA", "CNAME", "MX", "TXT")
+
+.PARAMETER FastMode
+    Switch to enable fast mode with reduced delays and timeouts.
+    Overrides MinDelay/MaxDelay settings.
+
+.PARAMETER DNSInfoLevel
+    Level of detail in output messages.
+    Valid values: "Minimal", "Standard", "Detailed"
+    Default: "Standard"
+
+.PARAMETER OutputFormat
+    Format for the returned results.
+    Valid values: "Object", "JSON", "CSV", "Table"
+    Default: "Table"
+
+.PARAMETER EnumerateSubdomains
+    Switch to enable subdomain enumeration for CNAME discovery.
+    Requires BlackCat framework session variables for subdomain lists.
+
+.PARAMETER SubdomainThrottleLimit
+    Maximum number of parallel threads for subdomain testing (1-200).
+    Default: 50. Higher values may cause rate limiting.
+
+.PARAMETER SubdomainCategory
+    Category of subdomains to enumerate from session variables.
+    Valid values depend on loaded subdomain lists (e.g., "common", "cloud", "all").
+    Default: "common"
+
+.PARAMETER DeepSubdomainSearch
+    Switch to enable deep subdomain search using extended wordlists.
+    Automatically enables EnumerateSubdomains if not already set.
+
+.EXAMPLE
+    Find-DnsRecords -Domains "example.com" -RecordTypes "A","CNAME"
+
+    Performs basic DNS reconnaissance for A and CNAME records on example.com.
+
+.EXAMPLE
+    Find-DnsRecords -Domains "example.com","test.com" -EnumerateSubdomains -SubdomainCategory "cloud" -OutputFormat JSON
+
+    Enumerates cloud-related subdomains for multiple domains and returns results in JSON format.
+
+.EXAMPLE
+    @("domain1.com", "domain2.com") | Find-DnsRecords -FastMode -RecordTypes "A","AAAA","CNAME" -DNSInfoLevel Detailed
+
+    Performs fast reconnaissance with detailed output for multiple domains via pipeline.
+
+.EXAMPLE
+    Find-DnsRecords -Domains "target.com" -EnumerateSubdomains -DeepSubdomainSearch -SubdomainThrottleLimit 100
+
+    Performs deep subdomain enumeration with increased parallelization for comprehensive CNAME discovery.
+
+.NOTES
+    Author: BlackCat Security Framework
+    Version: 2.0.0
+
+    This function integrates with the BlackCat framework when available, providing:
+    - Enhanced subdomain wordlists from session variables
+    - Randomized user agent rotation
+    - Category-based subdomain enumeration
+    - CNAME flattening detection
+
+.INPUTS
+    System.String[]
+    Accepts domain names from pipeline.
+
+.OUTPUTS
+    System.Object[] | System.String
+    Returns DNS record objects in specified format (Object, JSON, CSV, or Table).
+
+.LINK
+    https://github.com/blackcat/reconnaissance
+#>
 }
