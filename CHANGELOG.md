@@ -4,6 +4,35 @@
 
 # CHANGELOG
 
+## v0.22.0 [2025-08-25] 🔐 Security & UX Enhancements
+
+_Improvements & New Features_
+
+**Enhanced Stealth Operations:**
+* **Enhanced `Invoke-StealthOperation` with color output and improved timezone handling**
+  - 🌈 **Colorized Status Messages**: Added colored output for improved visual feedback
+  - 🌍 **Improved Timezone Handling**: Enhanced custom UTC offset support with validation
+  - 🏢 **Business Hours Descriptions**: Added country/timezone descriptions to delay messages
+  - ⏰ **Waiting Period Feedback**: Enhanced messages for business hours/lunch breaks with proper formatting
+  - 🎭 **Emoji Context Awareness**: Dynamic emoji selection based on configuration
+  - 🛡️ **Robust Error Handling**: Improved fallback behavior for invalid timezone specifications
+  - 🔍 **Enhanced Verbose Logging**: Better tracking of configuration selection and timing decisions
+
+**Azure Identity & Authentication Security:**
+* **Added UAMI-based App Escalation workflow**
+  - 🆔 **GitHub OIDC Integration**: Implemented secure token exchange using OIDC tokens
+  - 🔄 **Two-Stage Token Exchange**: OIDC → UAMI → Application token flow
+  - 🛡️ **Audience Validation**: Strict validation of token audiences for enhanced security
+  - 🔐 **No-CLI Authentication**: Pure API-based authentication without Azure CLI dependency
+  - 🧪 **Automated Verification**: Built-in token validation and smoke testing
+  - 📝 **Detailed Documentation**: Comprehensive comments explaining the OAuth 2.0 token flow
+  - ⚙️ **GitHub Actions Integration**: Ready-to-use workflow for secure token acquisition
+
+**Module Improvements:**
+* **Enhanced Security Documentation**: Added comprehensive documentation on token-based authentication techniques
+* **Code Quality**: Improved error handling and parameter validation across multiple functions
+* **Performance Optimization**: Enhanced parallelization and resource management
+
 ## v0.21.0 [2025-07-09] 🚀 Major Cache Analytics Release
 
 _New Features & Major Enhancements_
@@ -483,7 +512,7 @@ _Improvements_
 
 _Bug fixes_
 
-- Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`. 
+- Removed the redundant update step for the `Az.Accounts` module in `BlackCat.psm1`.
 
 _Bug fixes_
 
@@ -502,7 +531,7 @@ _Bug fixes_
 
 _What's new?_
 
-- Added `SkipCustom` to the `Get-RoleAssignments` function to improve performance in large environments. 
+- Added `SkipCustom` to the `Get-RoleAssignments` function to improve performance in large environments.
 
 ## v0.10.3 [2025-04-05]
 
