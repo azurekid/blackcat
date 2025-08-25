@@ -64,9 +64,9 @@ function Get-AzResourceSecretList {
                 'Microsoft.Automation/automationAccounts'
             )
             
-            foreach ($resourceType in $resourceTypes) {
+            # foreach ($resourceType in $resourceTypes) {
                 try {
-                    $resources = Invoke-AzBatch -ResourceType $resourceType -Silent
+                    $resources = Invoke-AzBatch -Silent
                     if ($resources) {
                         $allResources += $resources
                     }
@@ -75,7 +75,7 @@ function Get-AzResourceSecretList {
                     Write-Verbose "Failed to get resources for type $resourceType`: $($_.Exception.Message)"
                     [void][System.Threading.Interlocked]::Increment($processingErrorsCount)
                 }
-            }
+            # }
 
             $stats.TotalResources = $allResources.Count
             Write-Host "    ✅ Found $($allResources.Count) total resources to analyze" -ForegroundColor Green

@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.20.6'
+    ModuleVersion     = '0.22.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -44,11 +44,17 @@
         'Show-BlackCatCommands',
         'Find-AzureServiceTag',
         'Invoke-Update',
+        'Invoke-StealthOperation',
         'New-AuthHeader',
         'New-JWT',
         'Read-SASToken',
         'Select-AzureContext',
         'Update-AzureServiceTag',
+        'Clear-BlackCatCache',
+        'Get-BlackCatCacheStats',
+        'Get-BlackCatCacheMemoryStats',
+        'Optimize-BlackCatCacheMemory',
+        'Write-CacheTypeStats',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
@@ -109,6 +115,7 @@
         'Private\Write-Message.ps1',
         'Private\Get-AllPages.ps1',
         'Private\ConvertFrom-AzAccessToken.ps1',
+        'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
@@ -132,11 +139,19 @@
         'Public\Helpers\Show-BlackCatCommands.ps1',
         'Public\Helpers\Find-AzureServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
+        'Public\Helpers\Invoke-StealthOperation.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
         'Public\Helpers\New-JWT.ps1',
         'Public\Helpers\Read-SASToken.ps1',
         'Public\Helpers\Select-AzureContext.ps1',
+        'Public\Helpers\Start-StealthDelay.ps1',
+        'Public\Helpers\Start-StealthPipeline.ps1',
         'Public\Helpers\Update-AzureServiceTag.ps1',
+        'Public\Helpers\Clear-BlackCatCache.ps1',
+        'Public\Helpers\Get-BlackCatCacheStats.ps1',
+        'Public\Helpers\Get-BlackCatCacheMemoryStats.ps1',
+        'Public\Helpers\Optimize-BlackCatCacheMemory.ps1',
+        'Public\Helpers\Write-CacheTypeStats.ps1',
 
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
