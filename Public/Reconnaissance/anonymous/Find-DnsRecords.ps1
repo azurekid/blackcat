@@ -51,6 +51,22 @@ function Find-DnsRecords {
         [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
         [string]$OutputFormat = "Table",
+        
+        [Parameter(Mandatory = $false)]
+        [Alias("no-cache", "bypass-cache")]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("cache-expiration", "expiration")]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("max-cache")]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("compress")]
+        [switch]$CompressCache,
 
         [Parameter(Mandatory = $false)]
         [Alias("enum-subdomains", "subdomains", "s")]
@@ -87,6 +103,8 @@ function Find-DnsRecords {
             $EnumerateSubdomains = $true
         }
 
+        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'DnsRecon'
+
         $DNSProviders = @{
             "Cloudflare" = @{ URL = "https://cloudflare-dns.com/dns-query"; Region = "Global"; Type = "Commercial"; Reliability = 99.9 }
             "Google" = @{ URL = "https://dns.google/resolve"; Region = "Global"; Type = "Commercial"; Reliability = 99.8 }
@@ -122,6 +140,37 @@ function Find-DnsRecords {
 
     process {
         foreach ($Domain in $Domains) {
+            # Generate a cache key for the current domain and parameters
+            $cacheParams = @{
+                Domain = $Domain
+                RecordTypes = ($RecordTypes -join ",")
+                EnumerateSubdomains = $EnumerateSubdomains.IsPresent
+                DeepSubdomainSearch = $DeepSubdomainSearch.IsPresent
+                SubdomainCategory = $SubdomainCategory
+            }
+            $cacheKey = ConvertTo-CacheKey -BaseIdentifier "Find-DnsRecords" -Parameters $cacheParams
+
+            # Try to get cached results if not skipping cache
+            if (-not $SkipCache) {
+                try {
+                    $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'General'
+                    if ($null -ne $cachedResult) {
+                        Write-Verbose "Retrieved DNS results from cache for domain: $Domain"
+                        
+                        # Merge cached results into Results collection
+                        foreach ($entry in $cachedResult) {
+                            [void]$Results.Add($entry)
+                        }
+                        
+                        # Skip processing this domain since we have cached results
+                        continue
+                    }
+                }
+                catch {
+                    Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh DNS queries."
+                }
+            }
+        
             Write-Host "🎯 Analyzing domain: $Domain" -ForegroundColor Green
             
             # Rotate through providers for load balancing
@@ -430,6 +479,24 @@ function Find-DnsRecords {
                     }
                 }
             }
+            
+            # Store domain-specific results in cache
+            if (-not $SkipCache) {
+                try {
+                    # Get only results for this domain
+                    $domainResults = $Results | Where-Object { $_.Domain -eq $Domain -or ($_.Domain -like "*.$Domain" -and $_.IsSubdomain -eq $true) }
+                    
+                    # Cache results if we have any
+                    if ($domainResults -and $domainResults.Count -gt 0) {
+                        Set-BlackCatCache -Key $cacheKey -Data $domainResults -ExpirationMinutes $CacheExpirationMinutes `
+                            -CacheType 'General' -MaxCacheSize $MaxCacheSize -CompressData:$CompressCache
+                        Write-Verbose "Cached DNS results for domain: $Domain (expires in $CacheExpirationMinutes minutes)"
+                    }
+                }
+                catch {
+                    Write-Verbose "Failed to cache results for domain $Domain`: $($_.Exception.Message)"
+                }
+            }
         }
     }
 
@@ -447,13 +514,15 @@ function Find-DnsRecords {
             Write-Host "   Subdomain Records: $($SubdomainResults.Count)" -ForegroundColor Cyan
         }
 
-        # Return results in requested format
-        switch ($OutputFormat) {
-            "JSON" { return $Results | ConvertTo-Json -Depth 3 }
-            "CSV" { return $Results | ConvertTo-CSV }
-            "Object" { return $Results }
-            "Table"  { return $Results | Format-Table -AutoSize }
+        # Format and return results using Format-BlackCatOutput if available
+        $formatParam = @{
+            Data = $Results
+            OutputFormat = $OutputFormat
+            FunctionName = $MyInvocation.MyCommand.Name
+            FilePrefix = 'DNSRecon'
         }
+        
+        return Format-BlackCatOutput @formatParam
     }
 <#
 .SYNOPSIS
@@ -501,6 +570,22 @@ function Find-DnsRecords {
     Valid values: "Object", "JSON", "CSV", "Table"
     Default: "Table"
 
+.PARAMETER SkipCache
+    Switch to bypass using cached results and force a fresh DNS query.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store results in cache before they expire.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (uses LRU eviction).
+    Default: 100 entries
+
+.PARAMETER CompressCache
+    Switch to enable compression of cached data to reduce memory usage.
+    Default: False (no compression)
+
 .PARAMETER EnumerateSubdomains
     Switch to enable subdomain enumeration for CNAME discovery.
     Requires BlackCat framework session variables for subdomain lists.
@@ -535,8 +620,23 @@ function Find-DnsRecords {
 
 .EXAMPLE
     Find-DnsRecords -Domains "target.com" -EnumerateSubdomains -DeepSubdomainSearch -SubdomainThrottleLimit 100
-
+    
     Performs deep subdomain enumeration with increased parallelization for comprehensive CNAME discovery.
+    
+.EXAMPLE
+    Find-DnsRecords -Domains "example.com" -OutputFormat JSON -OutputFile "example-dns-scan"
+    
+    Performs DNS reconnaissance and exports the results to "example-dns-scan.json" using Format-BlackCatOutput.
+    
+.EXAMPLE
+    Find-DnsRecords -Domains "example.com" -CacheExpirationMinutes 60 -CompressCache
+    
+    Performs DNS reconnaissance and caches the results for 60 minutes with compression enabled.
+    
+.EXAMPLE
+    Find-DnsRecords -Domains "example.com" -SkipCache
+    
+    Forces a fresh DNS lookup, bypassing any cached results for the domain.
 
 .NOTES
     Author: BlackCat Security Framework
