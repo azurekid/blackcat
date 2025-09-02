@@ -77,6 +77,7 @@
         'Get-AdministrativeUnits',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
+        'Get-EntraRoleMember',
         'Get-ManagedIdentity',
         'Get-StorageContainerList',
         'Invoke-AzBatch',
@@ -88,6 +89,7 @@
 
         # Resource Development
         'Add-EntraApplication',
+        'Copy-PrivilegedUser',
         'Restore-DeletedIdentity',
         'Connect-ServicePrincipal',
 
@@ -176,7 +178,7 @@
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
         'Public\Reconnaissance\Invoke-MsGraph.ps1',
-
+        'Public\Reconnaissance\Get-EntraRoleMember.ps1',
 
         # Anonymous Reconnaissance
         'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
@@ -186,6 +188,7 @@
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
+        'Public\Resource Development\Copy-PrivilegedUser.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
         'Public\Resource Development\Connect-ServicePrincipal.ps1',
 
