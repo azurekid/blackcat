@@ -33,7 +33,83 @@ function Get-PrincipalDetails {
         [hashtable]$ResultHashtable
     )
     
-    # Create batch requests for MS Graph
+    # Handle single principal differently to avoid batch request issues
+    if ($PrincipalIds.Count -eq 1) {
+        $principalId = $PrincipalIds[0]
+        
+        try {
+            # Try directoryObjects endpoint first (most efficient for type detection)
+            $objectInfo = Invoke-MsGraph -relativeUrl "directoryObjects/$principalId" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
+            if ($objectInfo) {
+                # Determine object type from @odata.type
+                $principalType = "Unknown"
+                if ($objectInfo.'@odata.type' -match '#microsoft.graph.user') {
+                    $principalType = "User"
+                }
+                elseif ($objectInfo.'@odata.type' -match '#microsoft.graph.group') {
+                    $principalType = "Group"
+                }
+                elseif ($objectInfo.'@odata.type' -match '#microsoft.graph.servicePrincipal') {
+                    $principalType = "ServicePrincipal"
+                }
+                
+                $ResultHashtable[$principalId] = @{
+                    Type = $principalType
+                    Details = $objectInfo
+                }
+                return
+            }
+        }
+        catch {
+            Write-Verbose "DirectoryObjects endpoint failed for $principalId, trying individual endpoints"
+        }
+        
+        # If directoryObjects fails, try specific endpoints
+        try {
+            $userInfo = Invoke-MsGraph -relativeUrl "users/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
+            $ResultHashtable[$principalId] = @{
+                Type = "User"
+                Details = $userInfo
+            }
+            return
+        }
+        catch {
+            Write-Verbose "User endpoint failed for $principalId"
+        }
+        
+        try {
+            $groupInfo = Invoke-MsGraph -relativeUrl "groups/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
+            $ResultHashtable[$principalId] = @{
+                Type = "Group"
+                Details = $groupInfo
+            }
+            return
+        }
+        catch {
+            Write-Verbose "Group endpoint failed for $principalId"
+        }
+        
+        try {
+            $spInfo = Invoke-MsGraph -relativeUrl "servicePrincipals/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
+            $ResultHashtable[$principalId] = @{
+                Type = "ServicePrincipal"
+                Details = $spInfo
+            }
+            return
+        }
+        catch {
+            Write-Verbose "ServicePrincipal endpoint failed for $principalId"
+        }
+        
+        # If all attempts fail, mark as unknown
+        $ResultHashtable[$principalId] = @{
+            Type = "Unknown"
+            Details = $null
+        }
+        return
+    }
+    
+    # Handle multiple principals with batch requests
     $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
     foreach ($principalId in $PrincipalIds) {
         $batchRequests.Add(@{
@@ -155,11 +231,20 @@ function Get-EntraRoleMember {
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
         
         $startTime = Get-Date
+        
+        $script:RoleName = $RoleName
+        $script:RoleId = $RoleId
+        $script:roleMembers = $null
+        $script:principalTypes = @{
+            "User" = 0
+            "Group" = 0
+            "ServicePrincipal" = 0
+            "Unknown" = 0
+        }
     }
 
     process {
         try {
-            # Handle role identification
             if (-not $RoleId) {
                 $roleDefinition = $null
                 
@@ -199,6 +284,9 @@ function Get-EntraRoleMember {
                 }
             }
 
+            $script:RoleName = $RoleName
+            $script:RoleId = $roleId
+
             try {
                 $allRoleAssignments = Invoke-MsGraph -relativeUrl "roleManagement/directory/roleAssignments" -OutputFormat Object
                 if (-not $allRoleAssignments -or $allRoleAssignments.Count -eq 0) {
@@ -219,20 +307,18 @@ function Get-EntraRoleMember {
                 Write-Warning "Error retrieving role assignments: $($_.Exception.Message)"
                 throw "Failed to retrieve role assignments. Check your permissions and network connectivity."
             }
-            $roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
-            $principalTypes = @{
+            $script:roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
+            $script:principalTypes = @{
                 "User" = 0
                 "Group" = 0
                 "ServicePrincipal" = 0
                 "Unknown" = 0
             }
 
-            # Get valid unique principal IDs and map them to their assignments
             $principalIdToAssignment = @{}
             foreach ($assignment in $targetRoleAssignments) {
                 $principalId = $assignment.principalId
                 
-                # Skip invalid principal IDs
                 if ($principalId -match '^[0-9]{1,2}$' -or $principalId.Length -lt 5) {
                     Write-Verbose "Skipping invalid principal ID: $principalId"
                     continue
@@ -242,16 +328,15 @@ function Get-EntraRoleMember {
             }
             
             $uniquePrincipalIds = @($principalIdToAssignment.Keys)
-            $roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
+            $script:roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
             $principalDetails = @{}
-            $principalTypes = @{
+            $script:principalTypes = @{
                 "User" = 0
                 "Group" = 0
                 "ServicePrincipal" = 0
                 "Unknown" = 0
             }
             
-            # Process principals in batches of 20
             $batchSize = 20
             for ($i = 0; $i -lt $uniquePrincipalIds.Count; $i += $batchSize) {
                 $batchPrincipalIds = $uniquePrincipalIds[$i..([Math]::Min($i + $batchSize - 1, $uniquePrincipalIds.Count - 1))]
@@ -260,14 +345,13 @@ function Get-EntraRoleMember {
                 
                 foreach ($principalId in $batchPrincipalIds) {
                     if ($principalDetails.ContainsKey($principalId)) {
-                        $principalTypes[$principalDetails[$principalId].Type]++
+                        $script:principalTypes[$principalDetails[$principalId].Type]++
                     }
                     else {
-                        $principalTypes["Unknown"]++
+                        $script:principalTypes["Unknown"]++
                     }
                 }
                 
-                # Create role members for all principals in the current batch
                 foreach ($principalId in $batchPrincipalIds) {
                     $principalInfo = $principalDetails[$principalId]
                     $assignment = $principalIdToAssignment[$principalId]
@@ -288,7 +372,7 @@ function Get-EntraRoleMember {
                         Status               = $isUnknown ? "Possibly Deleted or Inaccessible" : "Active"
                     }
                     
-                    $roleMembers.Add($roleMember)
+                    $script:roleMembers.Add($roleMember)
                 }
             }
 
@@ -297,10 +381,9 @@ function Get-EntraRoleMember {
 
                 Write-Host "`n📊 Role Member Discovery Summary:" -ForegroundColor Magenta
                 Write-Host "   Role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
-                Write-Host "   Total Members Found: $($roleMembers.Count)" -ForegroundColor Green
+                Write-Host "   Total Members Found: $($script:roleMembers.Count)" -ForegroundColor Green
                 
-                # Group by principal type for summary
-                $principalTypeSummary = $roleMembers | Group-Object PrincipalType
+                $principalTypeSummary = $script:roleMembers | Group-Object PrincipalType
                 foreach ($group in $principalTypeSummary) {
                     $color = switch ($group.Name) {
                         "User"             { "Green" }
@@ -312,10 +395,9 @@ function Get-EntraRoleMember {
                     Write-Host "   $($group.Name): $($group.Count)" -ForegroundColor $color
                 }
 
-                # Show account status if there are users
-                if ($principalTypes["User"] -gt 0) {
-                    $enabledUsers = $roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $true } | Measure-Object
-                    $disabledUsers = $roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $false } | Measure-Object
+                if ($script:principalTypes["User"] -gt 0) {
+                    $enabledUsers = $script:roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $true } | Measure-Object
+                    $disabledUsers = $script:roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $false } | Measure-Object
                     
                     if ($enabledUsers.Count -gt 0) {
                         Write-Host "   Enabled Users: $($enabledUsers.Count)" -ForegroundColor Green
@@ -325,32 +407,29 @@ function Get-EntraRoleMember {
                     }
                 }
 
-                # Add scopes information if available
-                $directoryScopes = $roleMembers | Where-Object { $_.AssignmentScope -ne "/" } | Measure-Object
+                $directoryScopes = $script:roleMembers | Where-Object { $_.AssignmentScope -ne "/" } | Measure-Object
                 if ($directoryScopes.Count -gt 0) {
                     Write-Host "   Scoped Assignments: $($directoryScopes.Count)" -ForegroundColor Yellow
                 }
 
-                if ($principalTypes["Group"] -gt 0) {
+                if ($script:principalTypes["Group"] -gt 0) {
                     Write-Host "`n⚠️  Note: Group members also inherit this role but are not included in this count" -ForegroundColor Yellow
                 }
 
-                # Performance metrics
                 Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
-                Write-Host "   Processing Rate: $([math]::Round($roleMembers.Count / $duration.TotalSeconds, 2)) principals/second" -ForegroundColor White
+                Write-Host "   Processing Rate: $([math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)) principals/second" -ForegroundColor White
                 
                 Write-Host "`n✅ Role member analysis completed successfully!" -ForegroundColor Green
             }
 
-            # Calculate processing rate for performance metrics
-            $processingRate = if ($roleMembers.Count -gt 0 -and $duration.TotalSeconds -gt 0) {
-                [math]::Round($roleMembers.Count / $duration.TotalSeconds, 2)
+            $processingRate = if ($script:roleMembers.Count -gt 0 -and $duration.TotalSeconds -gt 0) {
+                [math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)
             } else { 0 }
             
-            Write-Verbose "Processed $($roleMembers.Count) role members at $processingRate items/second"
+            Write-Verbose "Processed $($script:roleMembers.Count) role members at $processingRate items/second"
             
             $formatParam = @{
-                Data         = $roleMembers
+                Data         = $script:roleMembers
                 OutputFormat = $OutputFormat
                 FunctionName = $MyInvocation.MyCommand.Name
                 FilePrefix   = "$($RoleName.Replace(' ', ''))-Members"
@@ -361,14 +440,15 @@ function Get-EntraRoleMember {
             }
             catch {
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Error formatting output: $($_.Exception.Message)" -Severity 'Warning'
-                return $roleMembers
+                return $script:roleMembers
             }
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
             return $null
         }
-    }
+    } # End of process block
+
     end {
         # Calculate performance metrics
         $endTime = Get-Date
@@ -383,13 +463,13 @@ function Get-EntraRoleMember {
             $metrics = @{
                 FunctionName = $MyInvocation.MyCommand.Name
                 DurationSeconds = $totalSeconds
-                RoleName = $RoleName
-                RoleId = $roleId
-                MemberCount = $roleMembers?.Count ?? 0
-                UserCount = $principalTypes["User"]
-                GroupCount = $principalTypes["Group"]
-                ServicePrincipalCount = $principalTypes["ServicePrincipal"]
-                UnknownCount = $principalTypes["Unknown"]
+                RoleName = $script:RoleName
+                RoleId = $script:RoleId
+                MemberCount = $script:roleMembers?.Count ?? 0
+                UserCount = $script:principalTypes["User"]
+                GroupCount = $script:principalTypes["Group"]
+                ServicePrincipalCount = $script:principalTypes["ServicePrincipal"]
+                UnknownCount = $script:principalTypes["Unknown"]
             }
         }
     }
