@@ -1,17 +1,14 @@
 using namespace System.Management.Automation
 
-# Used for auto-generating the valid values for the RoleName parameter
 class EntraRoleNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
         try {
-            # Check if Roles is loaded in SessionVariables
             if ($null -ne $script:SessionVariables -and $null -ne $script:SessionVariables.Roles) {
                 return ($script:SessionVariables.Roles |
                        Select-Object -ExpandProperty DisplayName |
                        Sort-Object)
             }
             else {
-                # Return a default value if Roles is not loaded
                 return @('Global Administrator', 'User Administrator', 'Privileged Role Administrator')
             }
         }
@@ -22,7 +19,6 @@ class EntraRoleNames : IValidateSetValuesGenerator {
     }
 }
 
-# Helper function to get principal details in batch
 function Get-PrincipalDetails {
     [CmdletBinding()]
     param (
@@ -33,15 +29,12 @@ function Get-PrincipalDetails {
         [hashtable]$ResultHashtable
     )
     
-    # Handle single principal differently to avoid batch request issues
     if ($PrincipalIds.Count -eq 1) {
         $principalId = $PrincipalIds[0]
         
         try {
-            # Try directoryObjects endpoint first (most efficient for type detection)
             $objectInfo = Invoke-MsGraph -relativeUrl "directoryObjects/$principalId" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
             if ($objectInfo) {
-                # Determine object type from @odata.type
                 $principalType = "Unknown"
                 if ($objectInfo.'@odata.type' -match '#microsoft.graph.user') {
                     $principalType = "User"
@@ -64,7 +57,6 @@ function Get-PrincipalDetails {
             Write-Verbose "DirectoryObjects endpoint failed for $principalId, trying individual endpoints"
         }
         
-        # If directoryObjects fails, try specific endpoints
         try {
             $userInfo = Invoke-MsGraph -relativeUrl "users/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
@@ -101,7 +93,6 @@ function Get-PrincipalDetails {
             Write-Verbose "ServicePrincipal endpoint failed for $principalId"
         }
         
-        # If all attempts fail, mark as unknown
         $ResultHashtable[$principalId] = @{
             Type = "Unknown"
             Details = $null
@@ -109,7 +100,6 @@ function Get-PrincipalDetails {
         return
     }
     
-    # Handle multiple principals with batch requests
     $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
     foreach ($principalId in $PrincipalIds) {
         $batchRequests.Add(@{
@@ -119,18 +109,15 @@ function Get-PrincipalDetails {
         })
     }
     
-    # Execute batch request if we have any principals
     if ($batchRequests.Count -gt 0) {
         $batchResults = Invoke-MsGraph -BatchRequests $batchRequests -ErrorAction SilentlyContinue
         
-        # Process batch results
         foreach ($principalId in $PrincipalIds) {
             $result = $batchResults[$principalId]
             
             if ($result -and $result.Success -eq $true) {
                 $objectInfo = $result.Data
                 
-                # Determine object type from @odata.type
                 $principalType = "Unknown"
                 if ($objectInfo.'@odata.type' -match '#microsoft.graph.user') {
                     $principalType = "User"
@@ -148,10 +135,8 @@ function Get-PrincipalDetails {
                 }
             }
             else {
-                # Try specific endpoints for any failures
                 $wasFound = $false
                 
-                # Try user endpoint
                 try {
                     $userInfo = Get-MgUser -UserId $principalId -ErrorAction Stop
                     $ResultHashtable[$principalId] = @{
@@ -164,7 +149,6 @@ function Get-PrincipalDetails {
                     Write-Verbose "Principal $principalId not found as user"
                 }
                 
-                # Try group endpoint
                 if (-not $wasFound) {
                     try {
                         $groupInfo = Get-MgGroup -GroupId $principalId -ErrorAction Stop
@@ -179,7 +163,6 @@ function Get-PrincipalDetails {
                     }
                 }
                 
-                # Try service principal endpoint
                 if (-not $wasFound) {
                     try {
                         $spInfo = Get-MgServicePrincipal -ServicePrincipalId $principalId -ErrorAction Stop
@@ -194,7 +177,6 @@ function Get-PrincipalDetails {
                     }
                 }
                 
-                # Mark as unknown if not found in any endpoint
                 if (-not $wasFound) {
                     $ResultHashtable[$principalId] = @{
                         Type = "Unknown"
