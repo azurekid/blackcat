@@ -2,16 +2,16 @@ function Connect-ServicePrincipal {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]
-        [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        # [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [Alias('ApplicationId', 'ClientId', 'AppId')]
         [string]$ServicePrincipalId,
 
         [Parameter(Mandatory = $false)]
-        [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        # [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
-        [SecureString]$ClientSecret,
+        [string]$ClientSecret,
 
         [Parameter(Mandatory = $false)]
         [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
@@ -55,8 +55,9 @@ function Connect-ServicePrincipal {
                 Write-Verbose "Tenant ID: $TenantId"
                 Write-Verbose "Environment: $Environment"
 
-                # Create PSCredential object from ServicePrincipalId and ClientSecret
-                $credential = New-Object System.Management.Automation.PSCredential($ServicePrincipalId, $ClientSecret)
+                $SecureStringPwd = $appSecret | ConvertTo-SecureString -AsPlainText -Force
+
+                $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $clientId, $SecureStringPwd
 
                 # Build connection parameters
                 $connectParams = @{
@@ -99,12 +100,6 @@ function Connect-ServicePrincipal {
                         ConnectedAt        = Get-Date
                     }
 
-                    # Display connection summary using Write-Message
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Service Principal authentication successful" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Service Principal: $($result.ServicePrincipalId)" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Tenant: $($result.TenantName) ($($result.TenantId))" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Subscription: $($result.SubscriptionName) ($($result.SubscriptionId))" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Environment: $($result.Environment)" -Severity 'Information'
 
                     # Test basic functionality by getting access token
                     try {
