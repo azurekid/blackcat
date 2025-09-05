@@ -55,7 +55,7 @@ function Connect-ServicePrincipal {
                 Write-Verbose "Tenant ID: $TenantId"
                 Write-Verbose "Environment: $Environment"
 
-                $SecureStringPwd = $appSecret | ConvertTo-SecureString -AsPlainText -Force
+                $SecureStringPwd = $ClientSecret | ConvertTo-SecureString -AsPlainText -Force
 
                 $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $clientId, $SecureStringPwd
 
@@ -171,17 +171,6 @@ The Azure environment to connect to. Valid values are: AzureCloud (default), Azu
 .PARAMETER Force
 Forces the connection even if there's already an active Azure context. This will override the current session.
 
-.OUTPUTS
-Returns a PSCustomObject containing connection details including:
-- ServicePrincipalId: The service principal ID used
-- TenantId: The tenant ID
-- TenantName: The tenant display name
-- SubscriptionId: The subscription ID
-- SubscriptionName: The subscription name
-- Environment: The Azure environment
-- Account: The account ID
-- ConnectedAt: The connection timestamp
-
 .EXAMPLE
 $clientSecret = ConvertTo-SecureString "your-client-secret" -AsPlainText -Force
 Connect-ServicePrincipal -ServicePrincipalId "12345678-1234-1234-1234-123456789012" -TenantId "87654321-4321-4321-4321-210987654321" -ClientSecret $clientSecret
@@ -216,14 +205,6 @@ if ($connection) {
 }
 
 Shows how to use the function with other BlackCat functions after successful authentication.
-
-.NOTES
-- This function requires the Az.Accounts module to be installed
-- The client secret is handled securely using SecureString
-- After successful connection, all Azure PowerShell cmdlets and BlackCat functions will use this authentication context
-- The function provides detailed error messages for common authentication failures
-- Use this function for automated scripts and CI/CD pipelines where interactive authentication is not possible
-- This function follows BlackCat module patterns using Write-Message for consistent logging
 
 .LINK
 https://learn.microsoft.com/en-us/powershell/azure/authenticate-azureps-service-principal
