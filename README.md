@@ -13,6 +13,11 @@ Languages & Tools
 
 </div>
 
+[!IMPORTANT]
+**Requirements:**
+- PowerShell 7.0 or higher (Windows PowerShell 5.1 is NOT supported)
+- Az.Accounts module
+
 PowerShell Module
 
 ### BlackCat Module Overview
