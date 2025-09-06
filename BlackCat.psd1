@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.22.0'
+    ModuleVersion     = '0.22.1'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -18,8 +18,11 @@
     # Copyright statement for this module
     Copyright         = '(c) Rogier Dijkman. All rights reserved.'
 
+
     # Description of the functionality provided by this module
     Description       = 'Helper module to validate Azure Security'
+    # Requirements: PowerShell 7.0 or higher, Az.Accounts module
+
 
     FunctionsToExport = @(
         # Credential Access
@@ -193,6 +196,10 @@
         'BlackCat.psd1',
         'BlackCat.psm1'
     )
+
+
+    # Prerequisite modules required for this module
+    PrerequisiteModules = @('Az.Accounts')
 
     PrivateData       = @{
 
