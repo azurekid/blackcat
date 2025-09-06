@@ -13,7 +13,7 @@ Languages & Tools
 
 </div>
 
-[!IMPORTANT]
+> [!IMPORTANT]
 **Requirements:**
 - PowerShell 7.0 or higher (Windows PowerShell 5.1 is NOT supported)
 - Az.Accounts module
