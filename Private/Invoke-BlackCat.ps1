@@ -17,12 +17,11 @@ function Invoke-BlackCat {
     $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
 
     try {
-        # Select a random user agent
-        $randomUserAgent = ($sessionVariables.userAgents.agents | Get-Random).value
-        Write-Verbose -Message "Using user agent: $randomUserAgent"
+            $randomUserAgent = "BlackCat/$($manifest.ModuleVersion) PowerShell Client"
+            Write-Verbose "Using default user agent: $randomUserAgent"
 
         if ($azProfile.Contexts.Count -ne 0) {
-            if ([string]::IsNullOrEmpty($SessionVariables.AccessToken)) {
+            if ([string]::IsNullOrEmpty($script:SessionVariables.AccessToken)) {
                 try {
                     Get-AccessToken
                 }
@@ -31,7 +30,7 @@ function Invoke-BlackCat {
                     break
                 }
             }
-            elseif ($SessionVariables.ExpiresOn - [datetime]::UtcNow.AddMinutes(-5) -le 0) {
+            elseif ($script:SessionVariables.ExpiresOn - [datetime]::UtcNow.AddMinutes(-5) -le 0) {
                 # if token expires within 5 minutes, request a new access token
                 try {
                     Get-AccessToken
@@ -52,11 +51,11 @@ function Invoke-BlackCat {
             }
 
             # Set the subscription from AzContext
-            $SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($SessionVariables.subscriptionId)"
-            $SessionVariables.UserAgent = $randomUserAgent
+            $script:SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($script:SessionVariables.subscriptionId)"
+            $script:SessionVariables.UserAgent = $randomUserAgent
 
             $script:authHeader = @{
-                'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($SessionVariables.AccessToken)))
+                'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($script:SessionVariables.AccessToken)))
             }
 
             if ($ResourceTypeName -eq "MSGraph") {
