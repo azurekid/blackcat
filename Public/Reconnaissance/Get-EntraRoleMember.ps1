@@ -24,14 +24,14 @@ function Get-PrincipalDetails {
     param (
         [Parameter(Mandatory = $true)]
         [string[]]$PrincipalIds,
-        
+
         [Parameter(Mandatory = $true)]
         [hashtable]$ResultHashtable
     )
-    
+
     if ($PrincipalIds.Count -eq 1) {
         $principalId = $PrincipalIds[0]
-        
+
         try {
             $objectInfo = Invoke-MsGraph -relativeUrl "directoryObjects/$principalId" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
             if ($objectInfo) {
@@ -45,7 +45,7 @@ function Get-PrincipalDetails {
                 elseif ($objectInfo.'@odata.type' -match '#microsoft.graph.servicePrincipal') {
                     $principalType = "ServicePrincipal"
                 }
-                
+
                 $ResultHashtable[$principalId] = @{
                     Type = $principalType
                     Details = $objectInfo
@@ -56,7 +56,7 @@ function Get-PrincipalDetails {
         catch {
             Write-Verbose "DirectoryObjects endpoint failed for $principalId, trying individual endpoints"
         }
-        
+
         try {
             $userInfo = Invoke-MsGraph -relativeUrl "users/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
@@ -68,7 +68,7 @@ function Get-PrincipalDetails {
         catch {
             Write-Verbose "User endpoint failed for $principalId"
         }
-        
+
         try {
             $groupInfo = Invoke-MsGraph -relativeUrl "groups/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
@@ -80,7 +80,7 @@ function Get-PrincipalDetails {
         catch {
             Write-Verbose "Group endpoint failed for $principalId"
         }
-        
+
         try {
             $spInfo = Invoke-MsGraph -relativeUrl "servicePrincipals/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
@@ -92,14 +92,14 @@ function Get-PrincipalDetails {
         catch {
             Write-Verbose "ServicePrincipal endpoint failed for $principalId"
         }
-        
+
         $ResultHashtable[$principalId] = @{
             Type = "Unknown"
             Details = $null
         }
         return
     }
-    
+
     $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
     foreach ($principalId in $PrincipalIds) {
         $batchRequests.Add(@{
@@ -108,16 +108,16 @@ function Get-PrincipalDetails {
             url = "/directoryObjects/$principalId"
         })
     }
-    
+
     if ($batchRequests.Count -gt 0) {
         $batchResults = Invoke-MsGraph -BatchRequests $batchRequests -ErrorAction SilentlyContinue
-        
+
         foreach ($principalId in $PrincipalIds) {
             $result = $batchResults[$principalId]
-            
+
             if ($result -and $result.Success -eq $true) {
                 $objectInfo = $result.Data
-                
+
                 $principalType = "Unknown"
                 if ($objectInfo.'@odata.type' -match '#microsoft.graph.user') {
                     $principalType = "User"
@@ -128,7 +128,7 @@ function Get-PrincipalDetails {
                 elseif ($objectInfo.'@odata.type' -match '#microsoft.graph.servicePrincipal') {
                     $principalType = "ServicePrincipal"
                 }
-                
+
                 $ResultHashtable[$principalId] = @{
                     Type = $principalType
                     Details = $objectInfo
@@ -136,7 +136,7 @@ function Get-PrincipalDetails {
             }
             else {
                 $wasFound = $false
-                
+
                 try {
                     $userInfo = Get-MgUser -UserId $principalId -ErrorAction Stop
                     $ResultHashtable[$principalId] = @{
@@ -148,7 +148,7 @@ function Get-PrincipalDetails {
                 catch {
                     Write-Verbose "Principal $principalId not found as user"
                 }
-                
+
                 if (-not $wasFound) {
                     try {
                         $groupInfo = Get-MgGroup -GroupId $principalId -ErrorAction Stop
@@ -162,7 +162,7 @@ function Get-PrincipalDetails {
                         Write-Verbose "Principal $principalId not found as group"
                     }
                 }
-                
+
                 if (-not $wasFound) {
                     try {
                         $spInfo = Get-MgServicePrincipal -ServicePrincipalId $principalId -ErrorAction Stop
@@ -176,7 +176,7 @@ function Get-PrincipalDetails {
                         Write-Verbose "Principal $principalId not found as service principal"
                     }
                 }
-                
+
                 if (-not $wasFound) {
                     $ResultHashtable[$principalId] = @{
                         Type = "Unknown"
@@ -211,9 +211,9 @@ function Get-EntraRoleMember {
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
-        
+
         $startTime = Get-Date
-        
+
         $script:RoleName = $RoleName
         $script:RoleId = $RoleId
         $script:roleMembers = $null
@@ -229,10 +229,10 @@ function Get-EntraRoleMember {
         try {
             if (-not $RoleId) {
                 $roleDefinition = $null
-                
+
                 if ($null -ne $script:SessionVariables -and $null -ne $script:SessionVariables.Roles) {
                     $roleDefinition = $script:SessionVariables.Roles | Where-Object { $_.DisplayName -eq $RoleName } | Select-Object -First 1
-                    
+
                     if ($roleDefinition) {
                         $roleId = $roleDefinition.Id
                     }
@@ -242,17 +242,17 @@ function Get-EntraRoleMember {
                     }
                 }
                 else {
-                    throw "Session variables for roles not available. Ensure roles are loaded before calling this function."
                 }
 
                 Write-Host "Using role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
             } else {
                 $roleId = $RoleId
                 $roleDefinition = $null
-                
+
+                # Try to use the role ID to get the display name
                 if ($null -ne $script:SessionVariables -and $null -ne $script:SessionVariables.Roles) {
                     $roleDefinition = $script:SessionVariables.Roles | Where-Object { $_.Id -eq $roleId } | Select-Object -First 1
-                    
+
                     if ($roleDefinition) {
                         $RoleName = $roleDefinition.DisplayName
                         Write-Host "Using role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
@@ -300,15 +300,15 @@ function Get-EntraRoleMember {
             $principalIdToAssignment = @{}
             foreach ($assignment in $targetRoleAssignments) {
                 $principalId = $assignment.principalId
-                
+
                 if ($principalId -match '^[0-9]{1,2}$' -or $principalId.Length -lt 5) {
                     Write-Verbose "Skipping invalid principal ID: $principalId"
                     continue
                 }
-                
+
                 $principalIdToAssignment[$principalId] = $assignment
             }
-            
+
             $uniquePrincipalIds = @($principalIdToAssignment.Keys)
             $script:roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
             $principalDetails = @{}
@@ -318,13 +318,13 @@ function Get-EntraRoleMember {
                 "ServicePrincipal" = 0
                 "Unknown" = 0
             }
-            
+
             $batchSize = 20
             for ($i = 0; $i -lt $uniquePrincipalIds.Count; $i += $batchSize) {
                 $batchPrincipalIds = $uniquePrincipalIds[$i..([Math]::Min($i + $batchSize - 1, $uniquePrincipalIds.Count - 1))]
-                
+
                 Get-PrincipalDetails -PrincipalIds $batchPrincipalIds -ResultHashtable $principalDetails
-                
+
                 foreach ($principalId in $batchPrincipalIds) {
                     if ($principalDetails.ContainsKey($principalId)) {
                         $script:principalTypes[$principalDetails[$principalId].Type]++
@@ -333,13 +333,13 @@ function Get-EntraRoleMember {
                         $script:principalTypes["Unknown"]++
                     }
                 }
-                
+
                 foreach ($principalId in $batchPrincipalIds) {
                     $principalInfo = $principalDetails[$principalId]
                     $assignment = $principalIdToAssignment[$principalId]
                     $details = $principalInfo.Details
                     $isUnknown = ($principalInfo.Type -eq "Unknown" -or $null -eq $details)
-                    
+
                     $roleMember = [PSCustomObject]@{
                         PrincipalId          = $principalId
                         PrincipalType        = $isUnknown ? "Unknown" : $principalInfo.Type
@@ -353,7 +353,7 @@ function Get-EntraRoleMember {
                         RoleId               = $roleId
                         Status               = $isUnknown ? "Possibly Deleted or Inaccessible" : "Active"
                     }
-                    
+
                     $script:roleMembers.Add($roleMember)
                 }
             }
@@ -364,7 +364,7 @@ function Get-EntraRoleMember {
                 Write-Host "`n📊 Role Member Discovery Summary:" -ForegroundColor Magenta
                 Write-Host "   Role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
                 Write-Host "   Total Members Found: $($script:roleMembers.Count)" -ForegroundColor Green
-                
+
                 $principalTypeSummary = $script:roleMembers | Group-Object PrincipalType
                 foreach ($group in $principalTypeSummary) {
                     $color = switch ($group.Name) {
@@ -380,7 +380,7 @@ function Get-EntraRoleMember {
                 if ($script:principalTypes["User"] -gt 0) {
                     $enabledUsers = $script:roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $true } | Measure-Object
                     $disabledUsers = $script:roleMembers | Where-Object { $_.PrincipalType -eq "User" -and $_.AccountEnabled -eq $false } | Measure-Object
-                    
+
                     if ($enabledUsers.Count -gt 0) {
                         Write-Host "   Enabled Users: $($enabledUsers.Count)" -ForegroundColor Green
                     }
@@ -400,16 +400,16 @@ function Get-EntraRoleMember {
 
                 Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
                 Write-Host "   Processing Rate: $([math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)) principals/second" -ForegroundColor White
-                
+
                 Write-Host "`n✅ Role member analysis completed successfully!" -ForegroundColor Green
             }
 
             $processingRate = if ($script:roleMembers.Count -gt 0 -and $duration.TotalSeconds -gt 0) {
                 [math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)
             } else { 0 }
-            
+
             Write-Verbose "Processed $($script:roleMembers.Count) role members at $processingRate items/second"
-            
+
             $formatParam = @{
                 Data         = $script:roleMembers
                 OutputFormat = $OutputFormat
@@ -436,11 +436,11 @@ function Get-EntraRoleMember {
         $endTime = Get-Date
         $duration = $endTime - $startTime
         $totalSeconds = $duration.TotalSeconds
-        
+
         # Log completion metrics
         if (-not $ShowSummary) {
             Write-Verbose "Function completed in $($totalSeconds.ToString('F2')) seconds"
-            
+
             # Write detailed metrics to log if available
             $metrics = @{
                 FunctionName = $MyInvocation.MyCommand.Name
@@ -456,7 +456,7 @@ function Get-EntraRoleMember {
         }
     }
 
-<# 
+<#
 .SYNOPSIS
     Gets all members of a specified Microsoft Entra ID (Azure AD) role.
 
