@@ -27,6 +27,7 @@
         'Get-StorageAccountKey',
 
         # Discovery
+        'Find-EntraPermissionHolder',
         'Get-AppRolePermission',
         'Get-FederatedAppCredential',
         'Get-PrivilegedApp',
@@ -55,6 +56,9 @@
         'Get-BlackCatCacheMemoryStats',
         'Optimize-BlackCatCacheMemory',
         'Write-CacheTypeStats',
+        'Set-UserAgentRotation',
+        'Get-UserAgentStatus',
+        'Invoke-BlackCat',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
@@ -124,6 +128,7 @@
         'Public\Credential Access\Get-StorageAccountKey.ps1',
 
         # Discovery
+        'Public\Discovery\Find-EntraPermissionHolder.ps1',
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
