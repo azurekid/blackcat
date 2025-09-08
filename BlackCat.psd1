@@ -58,7 +58,7 @@
         'Write-CacheTypeStats',
         'Set-UserAgentRotation',
         'Get-UserAgentStatus',
-        'Invoke-BlackCat',
+        'Get-CurrentUserAgent',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
@@ -157,6 +157,9 @@
         'Public\Helpers\Get-BlackCatCacheMemoryStats.ps1',
         'Public\Helpers\Optimize-BlackCatCacheMemory.ps1',
         'Public\Helpers\Write-CacheTypeStats.ps1',
+        'Public\Helpers\Set-UserAgentRotation.ps1',
+        'Public\Helpers\Get-CurrentUserAgent.ps1',
+        'Public\Helpers\Get-UserAgentStatus.ps1',
 
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
@@ -235,7 +238,7 @@
     } # End of PrivateData hashtable
 
     # HelpInfo URI of this module
-    HelpInfoURI = 'https://github.com/azurekid/blackcat/blob/2078bf641cf680fe41ccdb0f1ea98ce696e58384/README.md'
+    HelpInfoURI = 'https://github.com/azurekid/blackcat/blob/main/README.md'
 
     # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
     # DefaultCommandPrefix = ''
