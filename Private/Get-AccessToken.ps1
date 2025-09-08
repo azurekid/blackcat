@@ -11,15 +11,15 @@ function Get-AccessToken {
 
         Write-Verbose "Current Subscription: $($azProfile.DefaultContext.Subscription.Name) in tenant $($azProfile.DefaultContext.Tenant.Id)"
 
-        $SessionVariables.subscriptionId = $azProfile.DefaultContext.Subscription.Id
-        $SessionVariables.tenantId = $azProfile.DefaultContext.Tenant.Id
+        $script:SessionVariables.subscriptionId = $azProfile.DefaultContext.Subscription.Id
+        $script:SessionVariables.tenantId = $azProfile.DefaultContext.Tenant.Id
 
         $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::new($azProfile)
 
         try {
-            $SessionVariables.accessToken = ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($profileClient.AcquireAccessToken($SessionVariables.tenantId)).accessToken)))
-            $SessionVariables.ExpiresOn = ($profileClient.AcquireAccessToken($SessionVariables.tenantId)).ExpiresOn.DateTime
-            Write-Verbose "Access Token expires on: $($SessionVariables.ExpiresOn)"
+            $script:SessionVariables.accessToken = ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($profileClient.AcquireAccessToken($script:SessionVariables.tenantId)).accessToken)))
+            $script:SessionVariables.ExpiresOn = ($profileClient.AcquireAccessToken($script:SessionVariables.tenantId)).ExpiresOn.DateTime
+            Write-Verbose "Access Token expires on: $($script:SessionVariables.ExpiresOn)"
         }
         catch {
             Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message 'Run Connect-AzAccount to login' -Severity 'Error'
