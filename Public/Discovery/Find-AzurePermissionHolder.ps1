@@ -120,9 +120,6 @@ function Find-AzurePermissionHolder {
         }
     }
 
-    # STEP 1: Get all role definitions
-    Write-Host "🔍 Step 1: Retrieving Azure role definitions..." -ForegroundColor Green
-
     # Determine scope for role definitions query
     $scope = if ($SubscriptionId) {
         "/subscriptions/$SubscriptionId"
@@ -144,9 +141,7 @@ function Find-AzurePermissionHolder {
         Write-Error "Failed to retrieve role definitions: $($_.Exception.Message)"
         return
     }
-    
-    # STEP 2: Find role definitions that contain the target permission(s)
-    Write-Host "🔍 Step 2: Finding roles containing target permissions..." -ForegroundColor Green
+
     $matchingRoles = @{}
     
     foreach ($roleDef in $roleDefinitions) {
@@ -213,9 +208,6 @@ function Find-AzurePermissionHolder {
         return
     }
     
-    # STEP 3: Get all role assignments for the matching roles
-    Write-Host "🔍 Step 3: Retrieving role assignments..." -ForegroundColor Green
-    
     # Get all subscriptions if not specified
     $subscriptions = @()
     if ($SubscriptionId) {
@@ -274,9 +266,6 @@ function Find-AzurePermissionHolder {
         return
     }
     
-    # STEP 4: Retrieve principal details
-    Write-Host "🔍 Step 4: Retrieving principal details..." -ForegroundColor Green
-    
     # Group principals by type
     $principalGroups = $roleAssignments | Group-Object { $_.properties.principalType }
 
@@ -288,57 +277,8 @@ function Find-AzurePermissionHolder {
         if ($principalType -eq 'Group' -and -not $IncludeGroups) {
             continue
         }
-        
-        # Get principal details via Microsoft Graph in batches
-        $batchSize = 20
-        for ($i = 0; $i -lt $principalIds.Count; $i += $batchSize) {
-            $batchIds = $principalIds[$i..([Math]::Min($principalIds.Count - 1, $i + $batchSize - 1))]
-            
-            try {
-                $requests = @()
-                $idMap = @{}
-                
-                for ($j = 0; $j -lt $batchIds.Count; $j++) {
-                    $principalId = $batchIds[$j]
-                    $endpoint = switch ($principalType) {
-                        'User' { "/users/$principalId" }
-                        'Group' { "/groups/$principalId" }
-                        'ServicePrincipal' { "/servicePrincipals/$principalId" }
-                        default { $null }
-                    }
-                    
-                    if ($endpoint) {
-                        $requests += @{
-                            id = $j.ToString()
-                            method = "GET"
-                            url = "$endpoint"
-                        }
-                        $idMap[$j.ToString()] = $principalId
-                    }
-                }
-                
-                if ($requests.Count -gt 0) {
-                    $graphResponse = Invoke-MsGraph -RelativeUrl '$batch' -Method 'POST' -Body @{ requests = $requests }
-                    
-                    foreach ($response in $graphResponse.responses) {
-                        if ($response.status -eq 200) {
-                            # Variable previously used for lookup - removed as part of code cleanup
-                            # $id = $idMap[$response.id]
-                        }
-                    }
-                }
-            }
-            catch {
-                Write-Warning "Error retrieving details for $principalType principals: $($_.Exception.Message)"
-            }
-        }
     }
-    
-    Write-Host "  ✅ Retrieved details for $($principalCache.Count) principals" -ForegroundColor Green
-    
-    # STEP 5: Build final result objects
-    Write-Host "🔍 Step 5: Building result objects..." -ForegroundColor Green
-    
+        
     foreach ($assignment in $roleAssignments) {
         $roleDefId = ($assignment.properties.roleDefinitionId -split '/')[-1]
         $principalId = $assignment.properties.principalId
