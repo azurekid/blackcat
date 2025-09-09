@@ -28,6 +28,17 @@ _Improvements & Function Standardization_
   - **High-Performance Queries**: Optimized for large Entra ID tenants
   - **Standard Output Options**: Full support for all BlackCat output formats
 
+**Enhanced Security & Stealth:**
+* **Advanced UserAgent rotation system**
+  - **Dynamic UserAgent Generation**: Intelligent rotation of realistic browser user-agents
+  - **Platform-Aware Headers**: Customized headers that match the reported operating system
+  - **Natural Patterns**: Mimics organic user behavior patterns to avoid detection
+  - **Fingerprint Diversity**: Prevents correlation of requests across multiple sessions
+  - **Automatic Header Management**: Seamlessly integrates with all API requests
+  - **Low Detection Profile**: Reduces the risk of being blocked by security monitoring systems
+  - **Enhanced Privacy**: Minimizes trackable footprints during sensitive operations
+  - **Configurable Behavior**: Adjustable rotation frequency and pattern settings
+
 ## v0.22.0 [2025-08-25] 🔐 Security & UX Enhancements
 
 _Improvements & New Features_

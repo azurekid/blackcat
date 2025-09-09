@@ -2,12 +2,10 @@ function Connect-ServicePrincipal {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]
-        # [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [Alias('ApplicationId', 'ClientId', 'AppId')]
         [string]$ServicePrincipalId,
 
         [Parameter(Mandatory = $false)]
-        # [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
