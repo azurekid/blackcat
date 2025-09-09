@@ -3,8 +3,8 @@
     # Script module or binary module file associated with this manifest.
     RootModule        = 'BlackCat.psm1'
 
-    # Version number of this module.
-    ModuleVersion     = '0.22.1'
+    # Version number of this module
+    ModuleVersion     = '0.23.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -30,6 +30,8 @@
         'Get-StorageAccountKey',
 
         # Discovery
+        'Find-EntraPermissionHolder',
+        'Find-AzurePermissionHolder',
         'Get-AppRolePermission',
         'Get-FederatedAppCredential',
         'Get-PrivilegedApp',
@@ -58,6 +60,9 @@
         'Get-BlackCatCacheMemoryStats',
         'Optimize-BlackCatCacheMemory',
         'Write-CacheTypeStats',
+        'Set-UserAgentRotation',
+        'Get-UserAgentStatus',
+        'Get-CurrentUserAgent',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
@@ -80,6 +85,7 @@
         'Get-AdministrativeUnits',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
+        'Get-EntraRoleMember',
         'Get-ManagedIdentity',
         'Get-StorageContainerList',
         'Invoke-AzBatch',
@@ -91,6 +97,7 @@
 
         # Resource Development
         'Add-EntraApplication',
+        'Copy-PrivilegedUser',
         'Restore-DeletedIdentity',
         'Connect-ServicePrincipal',
 
@@ -125,6 +132,8 @@
         'Public\Credential Access\Get-StorageAccountKey.ps1',
 
         # Discovery
+        'Public\Discovery\Find-EntraPermissionHolder.ps1',
+        'Public\Discovery\Find-AzurePermissionHolder.ps1',
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
@@ -153,6 +162,9 @@
         'Public\Helpers\Get-BlackCatCacheMemoryStats.ps1',
         'Public\Helpers\Optimize-BlackCatCacheMemory.ps1',
         'Public\Helpers\Write-CacheTypeStats.ps1',
+        'Public\Helpers\Set-UserAgentRotation.ps1',
+        'Public\Helpers\Get-CurrentUserAgent.ps1',
+        'Public\Helpers\Get-UserAgentStatus.ps1',
 
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
@@ -179,7 +191,7 @@
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
         'Public\Reconnaissance\Invoke-MsGraph.ps1',
-
+        'Public\Reconnaissance\Get-EntraRoleMember.ps1',
 
         # Anonymous Reconnaissance
         'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
@@ -189,6 +201,7 @@
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
+        'Public\Resource Development\Copy-PrivilegedUser.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
         'Public\Resource Development\Connect-ServicePrincipal.ps1',
 
@@ -234,7 +247,7 @@
     } # End of PrivateData hashtable
 
     # HelpInfo URI of this module
-    HelpInfoURI = 'https://github.com/azurekid/blackcat/blob/2078bf641cf680fe41ccdb0f1ea98ce696e58384/README.md'
+    HelpInfoURI = 'https://github.com/azurekid/blackcat/blob/main/README.md'
 
     # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
     # DefaultCommandPrefix = ''

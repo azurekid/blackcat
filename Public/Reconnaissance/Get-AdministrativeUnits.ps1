@@ -62,7 +62,7 @@ function Get-AdministrativeUnits {
 
                 if ($using:IncludeMembers) {
                     Write-Verbose "Including members for administrative unit: $($_.id)"
-                    $members = (Invoke-RestMethod -Uri "$($using:sessionVariables.graphUri)/administrativeUnits/$($_.id)/members" -Headers $using:script:graphHeader).value
+                    $members = (Invoke-RestMethod -Uri "$($using:script:SessionVariables.graphUri)/administrativeUnits/$($_.id)/members" -Headers $using:script:graphHeader).value
 
                     Write-Verbose "Found $($members.Count) members for administrative unit: $($_.id)"
                     $currentItem | Add-Member -MemberType NoteProperty -Name Members -Value $members.userPrincipalName

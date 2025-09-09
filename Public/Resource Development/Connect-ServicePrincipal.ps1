@@ -2,16 +2,14 @@ function Connect-ServicePrincipal {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]
-        [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [Alias('ApplicationId', 'ClientId', 'AppId')]
         [string]$ServicePrincipalId,
 
         [Parameter(Mandatory = $false)]
-        [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
-        [SecureString]$ClientSecret,
+        [string]$ClientSecret,
 
         [Parameter(Mandatory = $false)]
         [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
@@ -55,8 +53,9 @@ function Connect-ServicePrincipal {
                 Write-Verbose "Tenant ID: $TenantId"
                 Write-Verbose "Environment: $Environment"
 
-                # Create PSCredential object from ServicePrincipalId and ClientSecret
-                $credential = New-Object System.Management.Automation.PSCredential($ServicePrincipalId, $ClientSecret)
+                $SecureStringPwd = $ClientSecret | ConvertTo-SecureString -AsPlainText -Force
+
+                $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $clientId, $SecureStringPwd
 
                 # Build connection parameters
                 $connectParams = @{
@@ -99,12 +98,6 @@ function Connect-ServicePrincipal {
                         ConnectedAt        = Get-Date
                     }
 
-                    # Display connection summary using Write-Message
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Service Principal authentication successful" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Service Principal: $($result.ServicePrincipalId)" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Tenant: $($result.TenantName) ($($result.TenantId))" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Subscription: $($result.SubscriptionName) ($($result.SubscriptionId))" -Severity 'Information'
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Environment: $($result.Environment)" -Severity 'Information'
 
                     # Test basic functionality by getting access token
                     try {
@@ -176,17 +169,6 @@ The Azure environment to connect to. Valid values are: AzureCloud (default), Azu
 .PARAMETER Force
 Forces the connection even if there's already an active Azure context. This will override the current session.
 
-.OUTPUTS
-Returns a PSCustomObject containing connection details including:
-- ServicePrincipalId: The service principal ID used
-- TenantId: The tenant ID
-- TenantName: The tenant display name
-- SubscriptionId: The subscription ID
-- SubscriptionName: The subscription name
-- Environment: The Azure environment
-- Account: The account ID
-- ConnectedAt: The connection timestamp
-
 .EXAMPLE
 $clientSecret = ConvertTo-SecureString "your-client-secret" -AsPlainText -Force
 Connect-ServicePrincipal -ServicePrincipalId "12345678-1234-1234-1234-123456789012" -TenantId "87654321-4321-4321-4321-210987654321" -ClientSecret $clientSecret
@@ -221,14 +203,6 @@ if ($connection) {
 }
 
 Shows how to use the function with other BlackCat functions after successful authentication.
-
-.NOTES
-- This function requires the Az.Accounts module to be installed
-- The client secret is handled securely using SecureString
-- After successful connection, all Azure PowerShell cmdlets and BlackCat functions will use this authentication context
-- The function provides detailed error messages for common authentication failures
-- Use this function for automated scripts and CI/CD pipelines where interactive authentication is not possible
-- This function follows BlackCat module patterns using Write-Message for consistent logging
 
 .LINK
 https://learn.microsoft.com/en-us/powershell/azure/authenticate-azureps-service-principal
