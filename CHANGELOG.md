@@ -38,6 +38,19 @@ _Improvements & Function Standardization_
   - **Low Detection Profile**: Reduces the risk of being blocked by security monitoring systems
   - **Enhanced Privacy**: Minimizes trackable footprints during sensitive operations
   - **Configurable Behavior**: Adjustable rotation frequency and pattern settings
+=======
+## v0.22.1 [2025-09-05] 🐞 Bug Fixes & Compatibility
+
+_Bug Fixes_
+
+* **PowerShell 5.1 Import Error:**
+  - The module previously failed to import in Windows PowerShell 5.1 due to unsupported syntax. BlackCat now clearly requires PowerShell 7.0 or higher and the Az.Accounts module. Documentation and manifest have been updated to reflect this requirement. ([#70](https://github.com/azurekid/blackcat/issues/70))
+  - Users on PowerShell 5.1 will see a requirement notice and should upgrade to PowerShell 7+ for full compatibility.
+
+_Improvements_
+
+* Updated README and module manifest to list PowerShell 7+ and Az.Accounts as prerequisites.
+* Minor documentation and code cleanups for clarity and maintainability.
 
 ## v0.22.0 [2025-08-25] 🔐 Security & UX Enhancements
 
