@@ -11,6 +11,7 @@ BlackCat v0.23.0 continues our commitment to standardization, performance, and u
 * Added new `Find-EntraPermissionHolder` for Microsoft Entra ID permission discovery
 * Implemented consistent output formatting using `Format-BlackCatOutput`
 * Enhanced performance through batch processing and optimized API calls
+* Advanced UserAgent rotation system for improved security and stealth
 * Improved user experience with better progress indicators and error handling
 * Added comprehensive documentation and usage examples
 
@@ -18,7 +19,9 @@ BlackCat v0.23.0 continues our commitment to standardization, performance, and u
 * Faster permission discovery across both Azure resources and Entra ID
 * Consistent experience across all BlackCat module functions
 * Enhanced reporting capabilities with standardized output options
+* Improved security posture with advanced UserAgent management
 * More intelligent caching for repeated operations
+* Reduced detection risk during sensitive operations
 
 ## What's New in v0.23.0
 
@@ -69,6 +72,29 @@ The following improvements have been made to ensure consistency across the modul
 - **Detailed Performance Metrics**: Added execution statistics and duration reporting
 - **Better Error Handling**: Improved error messages and recovery options
 - **Standardized Output**: Consistent result formatting for easier consumption
+
+### 🔒 **Advanced Security & Stealth Features**
+
+#### **Dynamic UserAgent Rotation System**
+```powershell
+# Get current UserAgent configuration
+Get-UserAgentStatus
+
+# Configure rotation settings
+Set-UserAgentRotation -RotationInterval 30 -RandomizeBrowsers
+
+# View the current UserAgent in use
+Get-CurrentUserAgent
+```
+
+The new UserAgent system provides:
+
+- **Enhanced Security Posture**: Sophisticated request fingerprint management
+- **Detection Avoidance**: Prevents correlation of requests across API calls
+- **Natural Request Patterns**: Mimics regular browser behavior to blend with normal traffic
+- **Configurable Rotation**: Adjustable timing and patterns for different scenarios
+- **Integrated Management**: Automatically handles headers across all HTTP operations
+- **Transparent Operation**: No additional configuration needed for standard functions
 
 ## Testing Notes
 
