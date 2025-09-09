@@ -210,9 +210,8 @@
         'BlackCat.psm1'
     )
 
-
-    # Prerequisite modules required for this module
-    PrerequisiteModules = @('Az.Accounts')
+    # Modules required by this module
+    RequiredModules = @('Az.Accounts')
 
     PrivateData       = @{
 
