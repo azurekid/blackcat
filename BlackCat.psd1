@@ -3,7 +3,7 @@
     # Script module or binary module file associated with this manifest.
     RootModule        = 'BlackCat.psm1'
 
-    # Version number of this module.
+    # Version number of this module
     ModuleVersion     = '0.23.0'
 
     # ID used to uniquely identify this module
@@ -18,8 +18,11 @@
     # Copyright statement for this module
     Copyright         = '(c) Rogier Dijkman. All rights reserved.'
 
+
     # Description of the functionality provided by this module
     Description       = 'Helper module to validate Azure Security'
+    # Requirements: PowerShell 7.0 or higher, Az.Accounts module
+
 
     FunctionsToExport = @(
         # Credential Access
@@ -206,6 +209,10 @@
         'BlackCat.psd1',
         'BlackCat.psm1'
     )
+
+
+    # Prerequisite modules required for this module
+    PrerequisiteModules = @('Az.Accounts')
 
     PrivateData       = @{
 
