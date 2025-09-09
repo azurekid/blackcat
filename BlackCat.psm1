@@ -61,6 +61,12 @@ $script:SessionVariables = [ordered]@{
     permutations     = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt }
     subdomains       = if (Test-Path $helperPath\subdomains.json) { Get-Content -Path $helperPath\subdomains.json | ConvertFrom-Json -AsHashtable}
     userAgents       = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json }
+    # User agent rotation tracking
+    CurrentUserAgent        = $null
+    UserAgentLastChanged    = $null
+    UserAgentRequestCount   = 0
+    UserAgentRotationInterval = [TimeSpan]::FromMinutes(30)
+    MaxRequestsPerAgent     = 50
     default          = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM=='
 }
 

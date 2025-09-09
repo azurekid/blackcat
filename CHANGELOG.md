@@ -4,6 +4,41 @@
 
 # CHANGELOG
 
+## v0.23.0 [2025-09-09] 🔍 Discovery & Output Enhancements
+
+_Improvements & Function Standardization_
+
+**Enhanced Discovery Functions:**
+* **New `Find-AzurePermissionHolder` function for Microsoft Azure permission discovery**
+  - **Standard Output Formatting**: Migrated to `Format-BlackCatOutput` for consistent results across all functions
+  - **Enhanced Performance**: Implemented batch processing for subscription queries
+  - **Intelligent Caching**: Improved cache key generation and data storage for repeated queries
+  - **Improved UX**: Enhanced progress indicators and result summaries with rich formatting
+  - **Robust Error Handling**: Better exception management and graceful fallbacks
+  - **Performance Metrics**: Added execution statistics and analysis summaries
+  - **Enhanced Documentation**: Improved help content and examples for better usability
+
+* **New `Find-EntraPermissionHolder` function for Microsoft Entra ID permission discovery**
+  - **Modern Identity Focus**: Specialized for Entra ID permission discovery and analysis
+  - **Enhanced Role Analysis**: Deep inspection of Entra ID role assignments and permissions
+  - **Cross-Platform Support**: Works seamlessly across all supported platforms
+  - **Hierarchical Permission Mapping**: Advanced permission hierarchy understanding
+  - **Directory-Wide Scanning**: Efficient scanning of entire tenant directories
+  - **Rich Permission Analysis**: Detailed permission relationship mapping
+  - **High-Performance Queries**: Optimized for large Entra ID tenants
+  - **Standard Output Options**: Full support for all BlackCat output formats
+
+**Enhanced Security & Stealth:**
+* **Advanced UserAgent rotation system**
+  - **Dynamic UserAgent Generation**: Intelligent rotation of realistic browser user-agents
+  - **Platform-Aware Headers**: Customized headers that match the reported operating system
+  - **Natural Patterns**: Mimics organic user behavior patterns to avoid detection
+  - **Fingerprint Diversity**: Prevents correlation of requests across multiple sessions
+  - **Automatic Header Management**: Seamlessly integrates with all API requests
+  - **Low Detection Profile**: Reduces the risk of being blocked by security monitoring systems
+  - **Enhanced Privacy**: Minimizes trackable footprints during sensitive operations
+  - **Configurable Behavior**: Adjustable rotation frequency and pattern settings
+=======
 ## v0.22.1 [2025-09-05] 🐞 Bug Fixes & Compatibility
 
 _Bug Fixes_
@@ -16,8 +51,6 @@ _Improvements_
 
 * Updated README and module manifest to list PowerShell 7+ and Az.Accounts as prerequisites.
 * Minor documentation and code cleanups for clarity and maintainability.
-
----
 
 ## v0.22.0 [2025-08-25] 🔐 Security & UX Enhancements
 
