@@ -28,6 +28,7 @@
 
         # Discovery
         'Find-EntraPermissionHolder',
+        'Find-AzurePermissionHolder',
         'Get-AppRolePermission',
         'Get-FederatedAppCredential',
         'Get-PrivilegedApp',
@@ -129,6 +130,7 @@
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',
+        'Public\Discovery\Find-AzurePermissionHolder.ps1',
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
