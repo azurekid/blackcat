@@ -19,202 +19,301 @@ function Get-PrivilegedServicePrincipal {
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        
+        # Start timing analytics
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        # Load privileged roles from file
-        $privilegedRolesPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "support-files/privileged-roles.json"
-        if (Test-Path $privilegedRolesPath) {
-            $privilegedRolesData = Get-Content $privilegedRolesPath -Raw | ConvertFrom-Json
-            $privilegedRoles = $privilegedRolesData.privilegedRoles
-            Write-Verbose "Loaded $($privilegedRoles.Count) privileged roles"
-        }
-        else {
-            Write-Warning "Privileged roles file not found at $privilegedRolesPath"
-            return
+        $privilegedPermissions = @{
+            # Critical permissions - can read/write anything
+            'Directory.ReadWrite.All'                     = @{ Name = 'Directory.ReadWrite.All'; Criticality = 'Critical'; Description = 'Read and write directory data' }
+            'Application.ReadWrite.All'                   = @{ Name = 'Application.ReadWrite.All'; Criticality = 'Critical'; Description = 'Read and write all applications' }
+            'AppRoleAssignment.ReadWrite.All'             = @{ Name = 'AppRoleAssignment.ReadWrite.All'; Criticality = 'Critical'; Description = 'Manage app role assignments for any app' }
+            'RoleManagement.ReadWrite.Directory'          = @{ Name = 'RoleManagement.ReadWrite.Directory'; Criticality = 'Critical'; Description = 'Read and write role management data' }
+            'Domain.ReadWrite.All'                        = @{ Name = 'Domain.ReadWrite.All'; Criticality = 'Critical'; Description = 'Read and write domains' }
+            
+            # High permissions - significant access
+            'User.ReadWrite.All'                          = @{ Name = 'User.ReadWrite.All'; Criticality = 'High'; Description = 'Read and write all users' }
+            'Group.ReadWrite.All'                         = @{ Name = 'Group.ReadWrite.All'; Criticality = 'High'; Description = 'Read and write all groups' }
+            'Directory.Read.All'                          = @{ Name = 'Directory.Read.All'; Criticality = 'High'; Description = 'Read directory data' }
+            'Application.Read.All'                        = @{ Name = 'Application.Read.All'; Criticality = 'High'; Description = 'Read all applications' }
+            'DeviceManagementConfiguration.ReadWrite.All' = @{ Name = 'DeviceManagementConfiguration.ReadWrite.All'; Criticality = 'High'; Description = 'Read and write device management configuration' }
+            'Policy.ReadWrite.All'                        = @{ Name = 'Policy.ReadWrite.All'; Criticality = 'High'; Description = 'Read and write organization policies' }
+            'RoleManagement.Read.Directory'               = @{ Name = 'RoleManagement.Read.Directory'; Criticality = 'High'; Description = 'Read role management data' }
+            'PrivilegedAccess.ReadWrite.AzureAD'          = @{ Name = 'PrivilegedAccess.ReadWrite.AzureAD'; Criticality = 'High'; Description = 'Read and write privileged access settings' }
+            
+            # Medium permissions - moderate access
+            'User.Read.All'                               = @{ Name = 'User.Read.All'; Criticality = 'Medium'; Description = 'Read all users' }
+            'Group.Read.All'                              = @{ Name = 'Group.Read.All'; Criticality = 'Medium'; Description = 'Read all groups' }
+            'Mail.ReadWrite'                              = @{ Name = 'Mail.ReadWrite'; Criticality = 'Medium'; Description = 'Read and write mail' }
+            'Files.ReadWrite.All'                         = @{ Name = 'Files.ReadWrite.All'; Criticality = 'Medium'; Description = 'Read and write all files' }
+            'Sites.ReadWrite.All'                         = @{ Name = 'Sites.ReadWrite.All'; Criticality = 'Medium'; Description = 'Read and write all site collections' }
+            'DeviceManagementConfiguration.Read.All'      = @{ Name = 'DeviceManagementConfiguration.Read.All'; Criticality = 'Medium'; Description = 'Read device management configuration' }
+            
+            # Low permissions - limited but notable access
+            'Mail.Read'                                   = @{ Name = 'Mail.Read'; Criticality = 'Low'; Description = 'Read mail' }
+            'Files.Read.All'                              = @{ Name = 'Files.Read.All'; Criticality = 'Low'; Description = 'Read all files' }
+            'Calendars.ReadWrite'                         = @{ Name = 'Calendars.ReadWrite'; Criticality = 'Low'; Description = 'Read and write calendars' }
         }
 
-        # Filter by criticality
         if ($Criticality -ne 'All') {
-            $privilegedRoles = $privilegedRoles | Where-Object { $_.criticality -eq $Criticality }
-            Write-Verbose "Filtered to $($privilegedRoles.Count) $Criticality roles"
+            $privilegedPermissions = $privilegedPermissions.GetEnumerator() | Where-Object { $_.Value.Criticality -eq $Criticality } | ForEach-Object { @{ $_.Key = $_.Value } }
+            Write-Verbose "Filtered to $($privilegedPermissions.Count) $Criticality permissions"
         }
 
-        # Get role definitions from Entra ID
-        try {
-            Write-Verbose "Retrieving role definitions from Entra ID"
-            $roleDefinitions = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions'
-            Write-Verbose "Retrieved $($roleDefinitions.Count) role definitions"
-        }
-        catch {
-            Write-Warning "Failed to retrieve role definitions: $($_.Exception.Message)"
-            return
-        }
+        Write-Output "Loaded $($privilegedPermissions.Count) privileged permissions"
     }
 
     process {
         try {
-            # Get all role assignments
-            Write-Verbose "Retrieving role assignments"
-            $roleAssignments = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleAssignments'
+            Write-Verbose "Retrieving service principals with optimized query"
+            $queryUrl = "servicePrincipals?`$filter=servicePrincipalType eq 'Application'&`$select=id,appId,displayName,servicePrincipalType,accountEnabled,createdDateTime"
             
-            if (-not $roleAssignments) {
-                Write-Warning "No role assignments found."
+            $servicePrincipals = Invoke-MsGraph -relativeUrl $queryUrl
+            
+            if (-not $servicePrincipals) {
+                Write-Warning "No service principals found."
                 return
             }
             
-            Write-Verbose "Retrieved $($roleAssignments.Count) role assignments"
+            Write-Verbose "Retrieved $($servicePrincipals.Count) application service principals"
             
-            # Debug the first few assignments
-            foreach ($assignment in $roleAssignments | Select-Object -First 3) {
-                Write-Verbose "Assignment: ID=$($assignment.id), RoleDefID=$($assignment.roleDefinitionId), PrincipalID=$($assignment.principalId)"
-            }
+            $resourceCache = @{}
             
-            # Create a hashtable for service principal cache
-            $spLookup = @{}
-            
-            # Create a mapping of privileged roles by ID
-            $privilegedRoleMap = @{}
-            foreach ($privilegedRole in $privilegedRoles) {
-                $privilegedRoleMap[$privilegedRole.roleId] = $privilegedRole
-                Write-Verbose "Added privileged role to map: $($privilegedRole.roleName) ($($privilegedRole.roleId))"
-            }
-            
-            # Process results
             $results = @()
+            $totalCount = $servicePrincipals.Count
             
-            # Process each role assignment
-            foreach ($assignment in $roleAssignments) {
-                # Skip if no role definition ID
-                if (-not $assignment.roleDefinitionId) {
-                    continue
+            if ($ServicePrincipalName) {
+                $servicePrincipals = $servicePrincipals | Where-Object { $_.displayName -like "*$ServicePrincipalName*" }
+                Write-Verbose "Filtered to $($servicePrincipals.Count) service principals matching name pattern"
+            }
+            
+            if ($servicePrincipals.Count -eq 0) {
+                Write-Verbose "No service principals to process after filtering"
+                return $null
+            }
+            
+            Write-Verbose "Processing $($servicePrincipals.Count) service principals for privileged permissions using batch processing"
+            
+            $allBatchRequests = @()
+            $requestMap = @{}
+            
+            for ($i = 0; $i -lt $servicePrincipals.Count; $i++) {
+                $sp = $servicePrincipals[$i]
+                
+                $appRoleRequestId = "appRole_$i"
+                $allBatchRequests += @{
+                    id = $appRoleRequestId
+                    method = "GET"
+                    url = "/servicePrincipals/$($sp.id)/appRoleAssignments?`$select=resourceId,appRoleId"
                 }
+                $requestMap[$appRoleRequestId] = @{ ServicePrincipal = $sp; Type = "AppRole" }
                 
-                # Get the role definition ID (format may vary)
-                $roleId = $assignment.roleDefinitionId
-                
-                # Check if this is a privileged role
-                $privilegedRole = $null
-                
-                # First try direct match
-                if ($privilegedRoleMap.ContainsKey($roleId)) {
-                    $privilegedRole = $privilegedRoleMap[$roleId]
+                $oauth2RequestId = "oauth2_$i"
+                $allBatchRequests += @{
+                    id = $oauth2RequestId
+                    method = "GET"
+                    url = "/servicePrincipals/$($sp.id)/oauth2PermissionGrants?`$select=resourceId,scope"
                 }
-                else {
-                    # Try extracting GUID if present
-                    if ($roleId -match "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$") {
-                        $extractedId = $matches[1]
-                        if ($privilegedRoleMap.ContainsKey($extractedId)) {
-                            $privilegedRole = $privilegedRoleMap[$extractedId]
+                $requestMap[$oauth2RequestId] = @{ ServicePrincipal = $sp; Type = "OAuth2" }
+            }
+            
+            Write-Verbose "Created $($allBatchRequests.Count) batch requests for $($servicePrincipals.Count) service principals"
+            
+            $batchAnalytics = @{
+                TotalBatches = [math]::Ceiling($allBatchRequests.Count / 10.0)
+                SuccessfulBatches = 0
+                FailedBatches = 0
+                IndividualFallbacks = 0
+                BatchStartTime = Get-Date
+            }
+            
+            $allBatchResponses = @{}
+            $batchSize = 20
+            
+            for ($batchIndex = 0; $batchIndex -lt $allBatchRequests.Count; $batchIndex += $batchSize) {
+                $batchRequests = $allBatchRequests[$batchIndex..([Math]::Min($batchIndex + $batchSize - 1, $allBatchRequests.Count - 1))]
+                
+                Write-Verbose "Executing batch $([Math]::Floor($batchIndex / $batchSize) + 1) with $($batchRequests.Count) requests"
+                
+                try {
+                    $batchPayload = @{
+                        requests = $batchRequests
+                    } | ConvertTo-Json -Depth 10
+                    
+                    $batchResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/`$batch" -Method POST -Headers $script:graphHeader -ContentType "application/json" -Body $batchPayload -UserAgent $sessionVariables.userAgent
+                    
+                    foreach ($response in $batchResponse.responses) {
+                        if ($response.status -eq 200 -and $response.body) {
+                            $allBatchResponses[$response.id] = $response.body
+                        } else {
+                            Write-Verbose "Request $($response.id) failed with status $($response.status)"
                         }
                     }
+                    $batchAnalytics.SuccessfulBatches++
                 }
-                
-                # If we found a privileged role assignment
-                if ($privilegedRole) {
-                    Write-Verbose "Found privileged role assignment: $($privilegedRole.roleName)"
+                catch {
+                    Write-Warning "Batch request failed: $($_.Exception.Message). Falling back to individual calls for this batch."
+                    $batchAnalytics.FailedBatches++
                     
-                    # Get the principal ID
-                    $principalId = $assignment.principalId
-                    
-                    # Check if we've already fetched this service principal
-                    if (-not $spLookup.ContainsKey($principalId)) {
+                    foreach ($request in $batchRequests) {
                         try {
-                            Write-Verbose "Looking up service principal with ID: $principalId"
-                            $sp = Invoke-MsGraph -relativeUrl "servicePrincipals/$principalId" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
-                            
-                            if ($sp -and $sp.id) {
-                                $spLookup[$principalId] = $sp
-                                Write-Verbose "Found service principal: $($sp.displayName)"
+                            $url = $request.url.TrimStart('/')
+                            $individualResponse = Invoke-MsGraph -relativeUrl $url -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
+                            if ($individualResponse) {
+                                $allBatchResponses[$request.id] = $individualResponse
                             }
+                            $batchAnalytics.IndividualFallbacks++
                         }
                         catch {
-                            Write-Verbose "Not a service principal or error retrieving: $principalId"
-                            # Silently continue - this may be a user or group
-                            continue
-                        }
-                    }
-                    
-                    # Check if we found a service principal
-                    if ($spLookup.ContainsKey($principalId)) {
-                        $sp = $spLookup[$principalId]
-                        
-                        # Apply name filter if provided
-                        if ($ServicePrincipalName -and -not ($sp.displayName -like "*$ServicePrincipalName*")) {
-                            Write-Verbose "Service principal does not match name filter: $($sp.displayName)"
-                            continue
-                        }
-                        
-                        # Check permissions if pattern is provided
-                        $skipDueToPermission = $false
-                        if ($PermissionPattern) {
-                            $hasMatch = $false
-                            
-                            # Get detailed SP info if needed
-                            if (-not $sp.oauth2PermissionGrants -and -not $sp.appRoleAssignments) {
-                                try {
-                                    $spDetails = Invoke-MsGraph -relativeUrl "servicePrincipals/$($sp.id)?`$expand=oauth2PermissionGrants,appRoleAssignments" -NoBatch -OutputFormat Object
-                                    if ($spDetails) {
-                                        $sp = $spDetails
-                                        $spLookup[$principalId] = $spDetails # Update cache
-                                    }
-                                }
-                                catch {
-                                    Write-Verbose "Failed to get detailed permissions: $($_.Exception.Message)"
-                                }
-                            }
-                            
-                            # Check delegated permissions
-                            if ($sp.oauth2PermissionGrants) {
-                                foreach ($grant in $sp.oauth2PermissionGrants) {
-                                    if ($grant.scope -like "*$PermissionPattern*") {
-                                        $hasMatch = $true
-                                        Write-Verbose "Found matching permission: $($grant.scope)"
-                                        break
-                                    }
-                                }
-                            }
-                            
-                            # Check app permissions
-                            if (-not $hasMatch -and $sp.appRoleAssignments) {
-                                foreach ($appRole in $sp.appRoleAssignments) {
-                                    if ($appRole.appRoleId -like "*$PermissionPattern*") {
-                                        $hasMatch = $true
-                                        Write-Verbose "Found matching app role: $($appRole.appRoleId)"
-                                        break
-                                    }
-                                }
-                            }
-                            
-                            if (-not $hasMatch) {
-                                $skipDueToPermission = $true
-                            }
-                        }
-                        
-                        # Add to results if passes all filters
-                        if (-not $skipDueToPermission) {
-                            # Only add if not already in results
-                            if (-not ($results | Where-Object { $_.Id -eq $sp.id })) {
-                                $results += [PSCustomObject]@{
-                                    Id = $sp.id
-                                    AppId = $sp.appId
-                                    DisplayName = $sp.displayName
-                                    Role = $privilegedRole.roleName
-                                    Criticality = $privilegedRole.criticality
-                                    ServicePrincipalType = $sp.servicePrincipalType
-                                    IsEnabled = $sp.accountEnabled
-                                    CreatedDateTime = $sp.createdDateTime
-                                }
-                                
-                                Write-Verbose "Added to results: $($sp.displayName) with role $($privilegedRole.roleName)"
-                            }
+                            Write-Verbose "Individual fallback request failed for $($request.id)"
                         }
                     }
                 }
             }
             
-            # Sort results by criticality and name
+            $batchAnalytics.BatchEndTime = Get-Date
+            $batchAnalytics.BatchProcessingTime = ($batchAnalytics.BatchEndTime - $batchAnalytics.BatchStartTime).TotalSeconds
+            
+            Write-Verbose "Completed batch processing. Processing responses for $($servicePrincipals.Count) service principals"
+            
+            for ($i = 0; $i -lt $servicePrincipals.Count; $i++) {
+                $sp = $servicePrincipals[$i]
+                $foundPermissions = @()
+                
+                # Show progress every 50 SPs
+                if ($i % 50 -eq 0) {
+                    Write-Verbose "Processing service principal $($i + 1) of $($servicePrincipals.Count): $($sp.displayName)"
+                }
+                
+                $appRoleRequestId = "appRole_$i"
+                if ($allBatchResponses.ContainsKey($appRoleRequestId)) {
+                    $appRoleData = $allBatchResponses[$appRoleRequestId]
+                    $appRoleAssignments = if ($appRoleData.value) { $appRoleData.value } else { $appRoleData }
+                    
+                    if ($appRoleAssignments) {
+                        foreach ($appRole in $appRoleAssignments) {
+                            try {
+                                $resource = $null
+                                if ($resourceCache.ContainsKey($appRole.resourceId)) {
+                                    $resource = $resourceCache[$appRole.resourceId]
+                                }
+                                else {
+                                    $resource = Invoke-MsGraph -relativeUrl "servicePrincipals/$($appRole.resourceId)?`$select=displayName,appRoles" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
+                                    if ($resource) {
+                                        $resourceCache[$appRole.resourceId] = $resource
+                                    }
+                                }
+                                
+                                if ($resource -and $resource.appRoles) {
+                                    # Find the specific app role
+                                    $roleDefinition = $resource.appRoles | Where-Object { $_.id -eq $appRole.appRoleId }
+                                    
+                                    if ($roleDefinition -and $privilegedPermissions.ContainsKey($roleDefinition.value)) {
+                                        $foundPermissions += @{
+                                            PermissionName = $roleDefinition.value
+                                            PermissionType = 'Application'
+                                            Resource = $resource.displayName
+                                            Criticality = $privilegedPermissions[$roleDefinition.value].Criticality
+                                            Description = $privilegedPermissions[$roleDefinition.value].Description
+                                        }
+                                        Write-Verbose "Found privileged app permission: $($roleDefinition.value) on $($sp.displayName)"
+                                    }
+                                }
+                            }
+                            catch {
+                                # Silently continue
+                            }
+                        }
+                    }
+                }
+                
+                $oauth2RequestId = "oauth2_$i"
+                if ($allBatchResponses.ContainsKey($oauth2RequestId)) {
+                    $oauth2Data = $allBatchResponses[$oauth2RequestId]
+                    $oauth2Grants = if ($oauth2Data.value) { $oauth2Data.value } else { $oauth2Data }
+                    
+                    if ($oauth2Grants) {
+                        foreach ($grant in $oauth2Grants) {
+                            if ($grant.scope) {
+                                $scopes = $grant.scope -split '\s+'
+                                foreach ($scope in $scopes) {
+                                    if ($privilegedPermissions.ContainsKey($scope)) {
+                                        try {
+                                            $resource = $null
+                                            if ($resourceCache.ContainsKey($grant.resourceId)) {
+                                                $resource = $resourceCache[$grant.resourceId]
+                                            }
+                                            else {
+                                                $resource = Invoke-MsGraph -relativeUrl "servicePrincipals/$($grant.resourceId)?`$select=displayName" -NoBatch -OutputFormat Object -ErrorAction SilentlyContinue
+                                                if ($resource) {
+                                                    $resourceCache[$grant.resourceId] = $resource
+                                                }
+                                            }
+                                            
+                                            $foundPermissions += @{
+                                                PermissionName = $scope
+                                                PermissionType = 'Delegated'
+                                                Resource = if ($resource) { $resource.displayName } else { 'Unknown' }
+                                                Criticality = $privilegedPermissions[$scope].Criticality
+                                                Description = $privilegedPermissions[$scope].Description
+                                            }
+                                            Write-Verbose "Found privileged delegated permission: $scope on $($sp.displayName)"
+                                        }
+                                        catch {
+                                            # Silently continue
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if ($PermissionPattern -and $foundPermissions.Count -gt 0) {
+                    $foundPermissions = $foundPermissions | Where-Object { $_.PermissionName -like "*$PermissionPattern*" }
+                }
+                
+                if ($foundPermissions.Count -gt 0) {
+                    # Get the highest criticality level
+                    $highestCriticality = ($foundPermissions.Criticality | ForEach-Object {
+                            switch ($_) {
+                                "Critical" { 4 }
+                                "High" { 3 }
+                                "Medium" { 2 }
+                                "Low" { 1 }
+                                default { 0 }
+                            }
+                        } | Measure-Object -Maximum).Maximum
+                    
+                    $criticalityName = switch ($highestCriticality) {
+                        4 { "Critical" }
+                        3 { "High" }
+                        2 { "Medium" }
+                        1 { "Low" }
+                        default { "Unknown" }
+                    }
+                    
+                    $results += [PSCustomObject]@{
+                        Id                   = $sp.id
+                        AppId                = $sp.appId
+                        DisplayName          = $sp.displayName
+                        PermissionCount      = $foundPermissions.Count
+                        Permissions          = $foundPermissions
+                        HighestCriticality   = $criticalityName
+                        ServicePrincipalType = $sp.servicePrincipalType
+                        IsEnabled            = $sp.accountEnabled
+                        CreatedDateTime      = $sp.createdDateTime
+                    }
+                    
+                    Write-Verbose "Added privileged SP: $($sp.displayName) with $($foundPermissions.Count) permissions"
+                }
+            }
+            
+            Write-Verbose "Completed processing. Found $($results.Count) privileged service principals from $($servicePrincipals.Count) processed (reduced from $totalCount total)"
+            
             $results = $results | Sort-Object -Property @{
                 Expression = {
-                    switch ($_.Criticality) {
+                    switch ($_.HighestCriticality) {
                         "Critical" { 4 }
                         "High" { 3 }
                         "Medium" { 2 }
@@ -224,7 +323,6 @@ function Get-PrivilegedServicePrincipal {
                 }
             }, DisplayName -Descending
             
-            # Return results
             if ($results.Count -eq 0) {
                 Write-Host "No privileged service principals found matching the criteria." -ForegroundColor Yellow
                 return $null
@@ -232,9 +330,8 @@ function Get-PrivilegedServicePrincipal {
             else {
                 Write-Host "Found $($results.Count) privileged service principals." -ForegroundColor Green
                 
-                # Format output
                 $formatParam = @{
-                    Data = $results
+                    Data         = $results
                     OutputFormat = $OutputFormat
                     FunctionName = $MyInvocation.MyCommand.Name
                 }
@@ -250,20 +347,49 @@ function Get-PrivilegedServicePrincipal {
     }
 
     end {
-        Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
+        $stopwatch.Stop()
+        $elapsedTime = $stopwatch.Elapsed
+        $totalSeconds = [math]::Round($elapsedTime.TotalSeconds, 2)
+        
+        Write-Host "`n=== Execution Analytics ===" -ForegroundColor Cyan
+        Write-Host "Total execution time: $totalSeconds seconds" -ForegroundColor Green
+        
+        # Show batch processing analytics if available
+        if ($batchAnalytics) {
+            $batchTime = [math]::Round($batchAnalytics.BatchProcessingTime, 2)
+            $batchEfficiency = if ($batchAnalytics.TotalBatches -gt 0) { 
+                [math]::Round(($batchAnalytics.SuccessfulBatches / $batchAnalytics.TotalBatches) * 100, 1)
+            } else { 0 }
+            
+            Write-Host "`nBatch Processing Analytics:" -ForegroundColor Yellow
+            Write-Host "  - Total batches: $($batchAnalytics.TotalBatches)" -ForegroundColor White
+            Write-Host "  - Successful batches: $($batchAnalytics.SuccessfulBatches)" -ForegroundColor Green
+            Write-Host "  - Failed batches: $($batchAnalytics.FailedBatches)" -ForegroundColor Red
+            Write-Host "  - Individual fallbacks: $($batchAnalytics.IndividualFallbacks)" -ForegroundColor Yellow
+            Write-Host "  - Batch efficiency: $batchEfficiency%" -ForegroundColor Cyan
+            Write-Host "  - Batch processing time: $batchTime seconds" -ForegroundColor White
+        }
+        
+        Write-Host "`nTime breakdown:" -ForegroundColor Yellow
+        Write-Host "  - Minutes: $($elapsedTime.Minutes)" -ForegroundColor White
+        Write-Host "  - Seconds: $($elapsedTime.Seconds)" -ForegroundColor White
+        Write-Host "  - Milliseconds: $($elapsedTime.Milliseconds)" -ForegroundColor White
+        Write-Host "  - Total seconds: $totalSeconds" -ForegroundColor Cyan
+        
+        Write-Verbose "Completed function $($MyInvocation.MyCommand.Name) in $totalSeconds seconds"
     }
 
     <#
     .SYNOPSIS
-        Discovers privileged service principals in Entra ID.
+        Discovers service principals with privileged permissions in Entra ID.
 
     .DESCRIPTION
-        This function identifies service principals that have been assigned privileged roles in Entra ID.
-        It categorizes roles by criticality (Critical, High, Medium, Low) and provides detailed information
-        about each service principal with privileged access.
+        This function identifies service principals that have been granted privileged permissions in Entra ID.
+        It checks both application permissions (app roles) and delegated permissions (OAuth2 scopes) to identify
+        service principals with high-risk access. Permissions are categorized by criticality level (Critical, High, Medium, Low).
 
     .PARAMETER Criticality
-        Filter results by role criticality level.
+        Filter results by permission criticality level.
         Valid values: Critical, High, Medium, Low, All
         Default: All
 
@@ -281,20 +407,27 @@ function Get-PrivilegedServicePrincipal {
     .EXAMPLE
         Get-PrivilegedServicePrincipal -Criticality Critical -OutputFormat Table
 
-        Returns all service principals with Critical roles and displays them in a table format.
+        Returns all service principals with Critical permissions and displays them in a table format.
 
     .EXAMPLE
         Get-PrivilegedServicePrincipal -PermissionPattern "*ReadWrite*"
 
-        Returns all service principals with privileged roles that have permissions containing "ReadWrite".
+        Returns all service principals with permissions containing "ReadWrite".
 
     .EXAMPLE
         Get-PrivilegedServicePrincipal -ServicePrincipalName "Azure" -OutputFormat JSON
 
-        Returns all privileged service principals with "Azure" in their name and exports the results as JSON.
+        Returns all service principals with "Azure" in their name that have privileged permissions and exports the results as JSON.
+
+        Performs a stealthy scan of only the first 50 service principals looking for Critical permissions.
 
     .NOTES
-        Requires the BlackCat module and appropriate Entra ID permissions to enumerate role assignments.
-        Uses the support-files/privileged-roles.json file to define privileged roles and their criticality levels.
+        Requires the BlackCat module and appropriate Entra ID permissions to enumerate service principals and their permissions.
+        
+        Privileged permissions checked include:
+        - Critical: Directory.ReadWrite.All, Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All
+        - High: User.ReadWrite.All, Group.ReadWrite.All, Directory.Read.All
+        - Medium: User.Read.All, Group.Read.All, Mail.ReadWrite, Files.ReadWrite.All
+        - Low: Mail.Read, Files.Read.All, Calendars.ReadWrite
     #>
 }
