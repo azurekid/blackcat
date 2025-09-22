@@ -1,11 +1,8 @@
-/Private/Reference/
 /WebApp/
 /Documentation/
 /Examples/
 /Tests/
 *.ps1x
 *.html
-*.json
-*.csv
 *.txt
 *.bak
