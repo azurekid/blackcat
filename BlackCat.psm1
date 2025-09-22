@@ -1,7 +1,10 @@
 
 #region PowerShell version check
-if ($PSVersionTable.PSVersion.Major -lt 7) {
+# Ensure the module runs only in PowerShell 7+
+$minPSVersion = [Version]'7.0'
+if ($PSVersionTable.PSVersion -lt $minPSVersion) {
     throw "BlackCat module requires PowerShell 7.0 or higher. Current version: $($PSVersionTable.PSVersion)"
+    # Exit the script
     return
 }
 #endregion PowerShell version check
@@ -62,30 +65,30 @@ if (-not(Test-Path -Path $helperPath)) {
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
 $script:SessionVariables = [ordered]@{
-    baseUri          = ''
-    graphUri         = 'https://graph.microsoft.com/beta'
-    batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01'
-    resourceGraphUri = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01'
-    ExpiresOn        = ''
-    apiVersion       = '2023-06-01-preview'
-    AccessToken      = ''
-    UserAgent        = ''
-    Roles            = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv }
-    AzureRoles       = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv }
-    serviceTags      = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json }
-    appRoleIds       = if (Test-Path $helperPath\appRoleIds.csv) { Get-Content -Path $helperPath\appRoleIds.csv | ConvertFrom-Csv }
-    permutations     = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt }
-    subdomains       = if (Test-Path $helperPath\subdomains.json) { Get-Content -Path $helperPath\subdomains.json | ConvertFrom-Json -AsHashtable}
-    userAgents       = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json }
-    privilegedRoles  = if (Test-Path $helperPath\privileged-roles.json) { Get-Content -Path $helperPath\privileged-roles.json | ConvertFrom-Json }
+    baseUri          = '';
+    graphUri         = 'https://graph.microsoft.com/beta';
+    batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01';
+    resourceGraphUri = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01';
+    ExpiresOn        = '';
+    apiVersion       = '2023-06-01-preview';
+    AccessToken      = '';
+    UserAgent        = '';
+    Roles            = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv };
+    AzureRoles       = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv };
+    serviceTags      = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json };
+    appRoleIds       = if (Test-Path $helperPath\appRoleIds.csv) { Get-Content -Path $helperPath\appRoleIds.csv | ConvertFrom-Csv };
+    permutations     = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt };
+    subdomains       = if (Test-Path $helperPath\subdomains.json) { Get-Content -Path $helperPath\subdomains.json | ConvertFrom-Json -AsHashtable};
+    userAgents       = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json };
+    privilegedRoles  = if (Test-Path $helperPath\privileged-roles.json) { Get-Content -Path $helperPath\privileged-roles.json | ConvertFrom-Json };
 
     # User agent rotation tracking
-    CurrentUserAgent        = $null
-    UserAgentLastChanged    = $null
-    UserAgentRequestCount   = 0
-    UserAgentRotationInterval = [TimeSpan]::FromMinutes(30)
-    MaxRequestsPerAgent     = 50
-    default          = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM=='
+    CurrentUserAgent        = $null;
+    UserAgentLastChanged    = $null;
+    UserAgentRequestCount   = 0;
+    UserAgentRotationInterval = [TimeSpan]::FromMinutes(30);
+    MaxRequestsPerAgent     = 50;
+    default          = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM==';
 }
 
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
@@ -140,22 +143,3 @@ $logo = `
 "@
 
 Write-Host $logo -ForegroundColor Blue
-
-$initializeBlock = {
-    $helperPath = "$PSScriptRoot/Private/Reference"
-
-    $needsUpdate = (-not(Test-Path -Path $helperPath)) -or (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue))
-
-    if ($needsUpdate) {
-        Write-Verbose -Message "Initializing reference files"
-        try {
-            Invoke-Update
-        }
-        catch {
-            Write-Warning "Failed to download reference files. Some module functionality may be limited."
-            Write-Warning "Error: $_"
-        }
-    }
-}
-
-& $initializeBlock
