@@ -7,12 +7,9 @@ if ($PSVersionTable.PSVersion -lt $minPSVersion) {
     # Exit the script
     return
 }
-#endregion PowerShell version check
 
-#region load module variables
 Write-Verbose -Message "Creating modules variables"
 
-#region Handle Module Removal
 $OnRemoveScript = {
     Remove-Variable -Name SessionVariables -Scope Script -Force
     Remove-Variable -Name Guid -Scope Script -Force
@@ -20,12 +17,9 @@ $OnRemoveScript = {
 
 $ExecutionContext.SessionState.Module.OnRemove += $OnRemoveScript
 Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action $OnRemoveScript
-#endregion Handle Module Removal
 
-#region discover module name
 $ModuleName = $ExecutionContext.SessionState.Module
 Write-Verbose -Message "Loading module $ModuleName"
-#endregion discover module name
 
 if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
     Write-Verbose -Message "Az.Accounts module not found. Installing the latest version..."
@@ -50,45 +44,42 @@ foreach ($script in @($privateScripts + $publicScripts)) {
 Export-ModuleMember -Function $publicScripts.BaseName
 
 $helperPath = "$PSScriptRoot/Private/Reference"
-# Ensure the Private/Reference directory exists
 if (-not(Test-Path -Path $helperPath)) {
     Write-Verbose -Message "Creating Private/Reference directory"
     New-Item -Path $helperPath -ItemType Directory -Force | Out-Null
 
     Write-Verbose -Message "Fetching latest helper files for first-time setup"
-    # We need to wait until all module functions are loaded before calling Invoke-Update
-    # This will be done in the Initialize block below
-} elseif (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
+}
+elseif (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
     Write-Verbose -Message "Private/Reference directory exists but is empty. Fetching helper files"
-    # This will be done in the Initialize block below
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
 $script:SessionVariables = [ordered]@{
-    baseUri          = '';
-    graphUri         = 'https://graph.microsoft.com/beta';
-    batchUri         = 'https://management.azure.com/batch?api-version=2020-06-01';
-    resourceGraphUri = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01';
-    ExpiresOn        = '';
-    apiVersion       = '2023-06-01-preview';
-    AccessToken      = '';
-    UserAgent        = '';
-    Roles            = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv };
-    AzureRoles       = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv };
-    serviceTags      = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json };
-    appRoleIds       = if (Test-Path $helperPath\appRoleIds.csv) { Get-Content -Path $helperPath\appRoleIds.csv | ConvertFrom-Csv };
-    permutations     = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt };
-    subdomains       = if (Test-Path $helperPath\subdomains.json) { Get-Content -Path $helperPath\subdomains.json | ConvertFrom-Json -AsHashtable};
-    userAgents       = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json };
-    privilegedRoles  = if (Test-Path $helperPath\privileged-roles.json) { Get-Content -Path $helperPath\privileged-roles.json | ConvertFrom-Json };
+    baseUri                   = '';
+    graphUri                  = 'https://graph.microsoft.com/beta';
+    batchUri                  = 'https://management.azure.com/batch?api-version=2020-06-01';
+    resourceGraphUri          = 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01';
+    ExpiresOn                 = '';
+    apiVersion                = '2023-06-01-preview';
+    AccessToken               = '';
+    UserAgent                 = '';
+    Roles                     = if (Test-Path $helperPath\EntraRoles.csv) { Get-Content -Path $helperPath\EntraRoles.csv | ConvertFrom-Csv };
+    AzureRoles                = if (Test-Path $helperPath\AzureRoles.csv) { Get-Content -Path $helperPath\AzureRoles.csv | ConvertFrom-Csv };
+    serviceTags               = if (Test-Path $helperPath\ServiceTags.json) { Get-Content -Path $helperPath\ServiceTags.json | ConvertFrom-Json };
+    appRoleIds                = if (Test-Path $helperPath\appRoleIds.csv) { Get-Content -Path $helperPath\appRoleIds.csv | ConvertFrom-Csv };
+    permutations              = if (Test-Path $helperPath\permutations.txt) { Get-Content -Path $helperPath\permutations.txt };
+    subdomains                = if (Test-Path $helperPath\subdomains.json) { Get-Content -Path $helperPath\subdomains.json | ConvertFrom-Json -AsHashtable };
+    userAgents                = if (Test-Path $helperPath\userAgents.json) { Get-Content -Path $helperPath\userAgents.json | ConvertFrom-Json };
+    privilegedRoles           = if (Test-Path $helperPath\privileged-roles.json) { Get-Content -Path $helperPath\privileged-roles.json | ConvertFrom-Json };
 
     # User agent rotation tracking
-    CurrentUserAgent        = $null;
-    UserAgentLastChanged    = $null;
-    UserAgentRequestCount   = 0;
+    CurrentUserAgent          = $null;
+    UserAgentLastChanged      = $null;
+    UserAgentRequestCount     = 0;
     UserAgentRotationInterval = [TimeSpan]::FromMinutes(30);
-    MaxRequestsPerAgent     = 50;
-    default          = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM==';
+    MaxRequestsPerAgent       = 50;
+    default                   = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM==';
 }
 
 New-Variable -Name Guid -Value (New-Guid).Guid -Scope Script -Force
@@ -106,7 +97,8 @@ try {
 
     if ($latestVersion -gt $version) {
         $updateMessage = "A newer version of the module ($latestVersion) is available."
-    } else {
+    }
+    else {
         $updateMessage = "             v$version by Rogier Dijkman"
     }
 }
@@ -120,7 +112,6 @@ Update-AzConfig -LoginExperienceV2 Off
 
 Write-Verbose -Message "Disabling BreakingChangeWarning..."
 Update-AzConfig -DisplayBreakingChangeWarning $false
-# Clear-Host
 
 # Set the window title
 try {

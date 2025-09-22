@@ -1,0 +1,124 @@
+{
+    "privilegedRoles": [
+        {
+            "roleName": "Global Administrator",
+            "roleId": "62e90394-69f5-4237-9190-012177145e10",
+            "description": "Can manage all aspects of Entra ID and Microsoft services that use Entra identities.",
+            "criticality": "Critical"
+        },
+        {
+            "roleName": "Privileged Role Administrator",
+            "roleId": "e8611ab8-c189-46e8-94e1-60213ab1f814",
+            "description": "Can manage role assignments in Entra ID, and all aspects of Privileged Identity Management.",
+            "criticality": "Critical"
+        },
+        {
+            "roleName": "User Administrator",
+            "roleId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+            "description": "Can manage all aspects of users and groups, including resetting passwords.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Hybrid Identity Administrator",
+            "roleId": "8ac3fc64-6eca-42ea-9e69-59f4c7b60eb2",
+            "description": "Can manage Azure AD Connect and federation settings.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Application Administrator",
+            "roleId": "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3",
+            "description": "Can create and manage all aspects of app registrations and enterprise apps.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Cloud Application Administrator",
+            "roleId": "158c047a-c907-4556-b7ef-446551a6b5f7",
+            "description": "Can create and manage all aspects of app registrations and enterprise apps.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Exchange Administrator",
+            "roleId": "29232cdf-9323-42fd-ade2-1d097af3e4de",
+            "description": "Can manage all aspects of the Exchange product.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "SharePoint Administrator",
+            "roleId": "f28a1f50-f6e7-4571-818b-6a12f2af6b6c",
+            "description": "Can manage all aspects of SharePoint product.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Teams Administrator",
+            "roleId": "69091246-20e8-4a56-aa4d-066075b2a7a8",
+            "description": "Can manage Microsoft Teams service.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Intune Administrator",
+            "roleId": "3a2c62db-5318-420d-8d74-23affee5d9d5",
+            "description": "Can manage all aspects of the Intune product.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Security Administrator",
+            "roleId": "194ae4cb-b126-40b2-bd5b-6091b380977d",
+            "description": "Can manage security aspects of Identity and manage Microsoft 365 security features.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Conditional Access Administrator",
+            "roleId": "b1be1c3e-b65d-4f19-8427-f6fa0d97feb9",
+            "description": "Can manage Conditional Access capabilities.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Partner Tier1 Support",
+            "roleId": "4ba39ca4-527c-499a-b93d-d9b492c50246",
+            "description": "Do not use - not intended for general use.",
+            "criticality": "Medium"
+        },
+        {
+            "roleName": "Partner Tier2 Support",
+            "roleId": "e00e864a-17c5-4a4b-9c06-f5b95a8d5bd8",
+            "description": "Do not use - not intended for general use.",
+            "criticality": "Medium"
+        },
+        {
+            "roleName": "Directory Readers",
+            "roleId": "88d8e3e3-8f55-4a1e-953a-9b9898b8876b",
+            "description": "Can read basic directory information.",
+            "criticality": "Low"
+        },
+        {
+            "roleName": "Directory Writers",
+            "roleId": "9360feb5-f418-4baa-8175-e2a00bac4301",
+            "description": "Can read and write basic directory information.",
+            "criticality": "Medium"
+        },
+        {
+            "roleName": "Directory Synchronization Accounts",
+            "roleId": "d29b2b05-8046-44ba-8758-1e26182fcf32",
+            "description": "Only used by Azure AD Connect service.",
+            "criticality": "Medium"
+        },
+        {
+            "roleName": "Cloud Device Administrator",
+            "roleId": "7698a772-787b-4ac8-901f-60d6b08affd2",
+            "description": "Can enable, disable, and delete devices in Entra ID.",
+            "criticality": "Medium"
+        },
+        {
+            "roleName": "Authentication Administrator",
+            "roleId": "c4e39bd9-1100-46d3-8c65-fb160da0071f",
+            "description": "Can manage all aspects of authentication methods including MFA.",
+            "criticality": "High"
+        },
+        {
+            "roleName": "Compliance Administrator",
+            "roleId": "17315797-102d-40b4-93e0-432062caca18",
+            "description": "Can manage compliance features in Microsoft 365.",
+            "criticality": "Medium"
+        }
+    ]
+}
