@@ -103,8 +103,6 @@ function Find-DnsRecords {
             $EnumerateSubdomains = $true
         }
 
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'DnsRecon'
-
         $DNSProviders = @{
             "Cloudflare" = @{ URL = "https://cloudflare-dns.com/dns-query"; Region = "Global"; Type = "Commercial"; Reliability = 99.9 }
             "Google" = @{ URL = "https://dns.google/resolve"; Region = "Global"; Type = "Commercial"; Reliability = 99.8 }
