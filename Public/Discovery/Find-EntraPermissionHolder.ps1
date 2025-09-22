@@ -9,7 +9,7 @@ function Test-EntraPermissionMatch {
 
     .DESCRIPTION
         Helper function that determines whether a permission pattern (which may include wildcards)
-        matches a specific permission target.
+        matches a specific permission target. Supports various wildcard patterns and permission hierarchies.
     #>
     [CmdletBinding()]
     param (
@@ -20,7 +20,7 @@ function Test-EntraPermissionMatch {
         [string]$TargetPermission
     )
 
-    # Fast path: Exact match check
+    # Fast path: Exact match chec
     if ($PermissionPattern -eq $TargetPermission) {
         Write-Verbose "Permission match (exact): $PermissionPattern = $TargetPermission"
         return $true
@@ -33,7 +33,13 @@ function Test-EntraPermissionMatch {
             return $true
         }
     }
-
+    
+    # Handle full wildcard pattern (*)
+    if ($PermissionPattern -eq "*") {
+        Write-Verbose "Permission match (global wildcard): $PermissionPattern matches all permissions"
+        return $true
+    }
+    
     # Handle trailing wildcards (e.g., microsoft.directory/users/*)
     if ($PermissionPattern.EndsWith('/*')) {
         $parentPath = $PermissionPattern.TrimEnd('/*')
@@ -67,6 +73,27 @@ function Test-EntraPermissionMatch {
             return $true
         }
     }
+    
+    # Handle complex wildcard patterns with regex conversion
+    if ($PermissionPattern.Contains("*")) {
+        $regexPattern = '^' + [regex]::Escape($PermissionPattern).Replace('\*', '.*') + '$'
+        if ($TargetPermission -match $regexPattern) {
+            Write-Verbose "Permission match (complex wildcard): $TargetPermission matches pattern $PermissionPattern"
+            return $true
+        }
+    }
+    
+    # Handle prefix relationship - if target is more specific than pattern
+    if ($TargetPermission.StartsWith("$PermissionPattern/")) {
+        Write-Verbose "Permission match (prefix): $PermissionPattern is a prefix of $TargetPermission"
+        return $true
+    }
+    
+    # Handle prefix relationship - if pattern is more specific than target
+    if ($PermissionPattern.StartsWith("$TargetPermission/")) {
+        Write-Verbose "Permission match (prefix): $TargetPermission is a prefix of $PermissionPattern"
+        return $true
+    }
 
     # Handle special permission relationships (permission hierarchy)
     if ($PermissionPattern -eq 'microsoft.directory/applications/allProperties/allTasks') {
@@ -82,6 +109,35 @@ function Test-EntraPermissionMatch {
         if ($PermissionPattern -eq 'microsoft.directory/applications/allProperties/read' -or
             $PermissionPattern -eq 'microsoft.directory/applications/allProperties/update') {
             Write-Verbose "Permission match (hierarchy): $TargetPermission contains $PermissionPattern"
+            return $true
+        }
+    }
+    
+    # Handle action hierarchy (similar to Azure RBAC)
+    # In Entra ID, permissions often follow similar hierarchy patterns as in Azure
+    if ($PermissionPattern -match '^(.+)/([^/]+)$' -and $TargetPermission -match '^(.+)/([^/]+)$') {
+        $patternBase = $matches[1]
+        $patternAction = $matches[2].ToLower()
+        
+        # Reset $matches to avoid conflicts
+        $null = $TargetPermission -match '^(.+)/([^/]+)$'
+        $targetBase = $matches[1]
+        $targetAction = $matches[2].ToLower()
+        
+        # Common action hierarchy in Microsoft Directory permissions
+        $actionMapping = @{
+            'write'   = @('read')
+            'update'  = @('read') 
+            'delete'  = @('read')
+            'action'  = @('read')
+            'manage'  = @('read', 'write', 'update', 'delete')
+            'allTasks' = @('read', 'write', 'update', 'delete', 'action')
+        }
+        
+        if ($patternBase -eq $targetBase -and 
+            $actionMapping.ContainsKey($patternAction) -and 
+            $actionMapping[$patternAction] -contains $targetAction) {
+            Write-Verbose "Permission match (action hierarchy): $PermissionPattern implies $TargetPermission"
             return $true
         }
     }
@@ -123,26 +179,39 @@ function Find-RolesWithPermission {
 
     # Check if this permission exists in any role first
     $permissionExists = $false
-    foreach ($roleDef in $roleDefinitions) {
-        foreach ($rolePermission in $roleDef.rolePermissions) {
-            # Check exact matches first (fastest check)
-            if ($rolePermission.allowedResourceActions -contains $Permission) {
-                $permissionExists = $true
-                break
-            }
-
-            # Then check patterns
-            foreach ($action in $rolePermission.allowedResourceActions) {
-                if (Test-EntraPermissionMatch -PermissionPattern $action -TargetPermission $Permission) {
+    
+    # Special case: Global wildcard
+    if ($Permission -eq '*') {
+        Write-Verbose "Using global wildcard pattern - will match all permissions"
+        $permissionExists = $true
+    } else {
+        foreach ($roleDef in $roleDefinitions) {
+            foreach ($rolePermission in $roleDef.rolePermissions) {
+                # Check exact matches first (fastest check)
+                if ($rolePermission.allowedResourceActions -contains $Permission) {
                     $permissionExists = $true
                     break
                 }
+
+                # Then check patterns
+                foreach ($action in $rolePermission.allowedResourceActions) {
+                    if (Test-EntraPermissionMatch -PermissionPattern $action -TargetPermission $Permission) {
+                        $permissionExists = $true
+                        break
+                    }
+                    
+                    # Also check the reverse case - if our search pattern matches any actual permission
+                    if (Test-EntraPermissionMatch -PermissionPattern $Permission -TargetPermission $action) {
+                        $permissionExists = $true
+                        break
+                    }
+                }
+
+                if ($permissionExists) { break }
             }
 
             if ($permissionExists) { break }
         }
-
-        if ($permissionExists) { break }
     }
 
     if (-not $permissionExists) {
@@ -161,11 +230,25 @@ function Find-RolesWithPermission {
             Write-Verbose "Global Administrator role automatically matches all valid permissions"
             return $true
         }
+        
+        # Special handling for global wildcard pattern '*'
+        if ($Permission -eq '*') {
+            # Return all roles that have any permissions
+            $hasPermissions = $roleDefinition.rolePermissions | 
+                Where-Object { $_.allowedResourceActions -and $_.allowedResourceActions.Count -gt 0 }
+            return $null -ne $hasPermissions
+        }
 
         # Check all permissions in this role
         foreach ($rolePermission in $roleDefinition.rolePermissions) {
             foreach ($action in $rolePermission.allowedResourceActions) {
+                # Check if the role's permission satisfies our search pattern
                 if (Test-EntraPermissionMatch -PermissionPattern $action -TargetPermission $Permission) {
+                    return $true
+                }
+                
+                # Also check if our search pattern would match this role's permission
+                if (Test-EntraPermissionMatch -PermissionPattern $Permission -TargetPermission $action) {
                     return $true
                 }
             }
@@ -306,7 +389,11 @@ function Find-EntraPermissionHolder {
 
     .PARAMETER Permission
         The specific permission string to search for (e.g., "microsoft.directory/applications/create").
-        The function supports exact permission strings as well as wildcard patterns like "microsoft.directory/users/*".
+        The function supports exact permission strings as well as various wildcard patterns:
+        - Trailing wildcards: "microsoft.directory/users/*" (all user permissions)
+        - Embedded wildcards: "microsoft.directory/*/create" (all create permissions)
+        - Global wildcards: "*" (all permissions)
+        - Complex patterns: "microsoft.directory/*role*" (any permission containing "role")
 
     .PARAMETER IncludeEligible
         Include principals with eligible assignments (PIM) in addition to active assignments.
@@ -348,6 +435,12 @@ function Find-EntraPermissionHolder {
         Find-EntraPermissionHolder -Permission "microsoft.directory/*" -OutputFormat CSV -OutputPath "~/Desktop/all-admins.csv"
 
         Finds all principals with any Microsoft Directory permissions and exports results to a CSV file.
+        
+    .EXAMPLE
+        Find-EntraPermissionHolder -Permission "microsoft.directory/*role*/*" -ResolveGroups
+        
+        Uses wildcards to find all principals with any permission containing "role" anywhere in the path,
+        including resolving group memberships to show all users who have access.
 
     .EXAMPLE
         Find-EntraPermissionHolder -Permission "microsoft.directory/users/delete" -IncludeEligible -IncludeAUScope

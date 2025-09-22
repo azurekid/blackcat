@@ -14,8 +14,8 @@ function Invoke-Update {
             'userAgents.json',
             'ServiceTags.json',
             'appRoleIds.csv',
-            'EntraRoles.csv'
-            'AzureRoles.csv'
+            'EntraRoles.csv',
+            'AzureRoles.csv',
             'subdomains.json'
         )
     }

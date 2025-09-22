@@ -5,7 +5,7 @@ function Connect-ServicePrincipal {
         [Alias('ApplicationId', 'ClientId', 'AppId')]
         [string]$ServicePrincipalId,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
@@ -25,25 +25,6 @@ function Connect-ServicePrincipal {
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
-        
-        # If TenantId is not provided, try to get it from current Azure context
-        if (-not $TenantId) {
-            try {
-                $currentContext = Get-AzContext -ErrorAction SilentlyContinue
-                if ($currentContext -and $currentContext.Tenant.Id) {
-                    $TenantId = $currentContext.Tenant.Id
-                    Write-Verbose "Using current tenant ID from Azure context: $TenantId"
-                }
-                else {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No current Azure context found and TenantId not provided. Please provide TenantId parameter or establish an Azure context first." -Severity 'Error'
-                    return
-                }
-            }
-            catch {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Could not retrieve current tenant ID and TenantId not provided. Please provide TenantId parameter. Error: $($_.Exception.Message)" -Severity 'Error'
-                return
-            }
-        }
     }
 
     process {
@@ -65,28 +46,23 @@ function Connect-ServicePrincipal {
                     Environment      = $Environment
                 }
 
-                # Add subscription if provided
                 if ($SubscriptionId) {
                     $connectParams.Subscription = $SubscriptionId
                     Write-Verbose "Subscription ID: $SubscriptionId"
                 }
 
-                # Add Force parameter if specified
                 if ($Force) {
                     $connectParams.Force = $true
                 }
 
-                # Connect to Azure
                 Write-Verbose "Connecting to Azure..."
                 $context = Connect-AzAccount @connectParams
 
                 if ($context) {
                     Write-Verbose "Successfully connected to Azure"
                     
-                    # Get the current context details
                     $currentContext = Get-AzContext
                     
-                    # Create result object with connection details
                     $result = [PSCustomObject]@{
                         ServicePrincipalId = $ServicePrincipalId
                         TenantId           = $currentContext.Tenant.Id
@@ -96,22 +72,6 @@ function Connect-ServicePrincipal {
                         Environment        = $currentContext.Environment.Name
                         Account            = $currentContext.Account.Id
                         ConnectedAt        = Get-Date
-                    }
-
-
-                    # Test basic functionality by getting access token
-                    try {
-                        Write-Verbose "Testing access token retrieval..."
-                        $testToken = Get-AzAccessToken -ResourceTypeName MSGraph -ErrorAction SilentlyContinue
-                        if ($testToken) {
-                            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Microsoft Graph API access confirmed" -Severity 'Information'
-                        }
-                        else {
-                            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Microsoft Graph API access token could not be retrieved" -Severity 'Warning'
-                        }
-                    }
-                    catch {
-                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Could not test Microsoft Graph API access: $($_.Exception.Message)" -Severity 'Warning'
                     }
 
                     return $result
@@ -124,13 +84,13 @@ function Connect-ServicePrincipal {
         }
         catch {
             $errorMessage = switch -Wildcard ($_.Exception.Message) {
-                "*AADSTS70002*" { "Invalid client credentials. Please verify the Service Principal ID and Client Secret." }
-                "*AADSTS90002*" { "Invalid tenant ID. Please verify the Tenant ID is correct." }
-                "*AADSTS700016*" { "Application not found in the directory. Please verify the Service Principal ID." }
+                "*AADSTS70002*"   { "Invalid client credentials. Please verify the Service Principal ID and Client Secret." }
+                "*AADSTS90002*"   { "Invalid tenant ID. Please verify the Tenant ID is correct." }
+                "*AADSTS700016*"  { "Application not found in the directory. Please verify the Service Principal ID." }
                 "*AADSTS7000215*" { "Invalid client secret provided. Please verify the Client Secret." }
-                "*AADSTS50034*" { "The user account doesn't exist in the tenant. Please verify the Service Principal ID and Tenant ID." }
-                "*AADSTS900971*" { "No reply address provided. This might indicate an application configuration issue." }
-                default { "Authentication failed: $($_.Exception.Message)" }
+                "*AADSTS50034*"   { "The user account doesn't exist in the tenant. Please verify the Service Principal ID and Tenant ID." }
+                "*AADSTS900971*"  { "No reply address provided. This might indicate an application configuration issue." }
+                default           { "Authentication failed: $($_.Exception.Message)" }
             }
             
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $errorMessage -Severity 'Error'

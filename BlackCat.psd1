@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.23.0'
+    ModuleVersion     = '0.23.1'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -35,6 +35,7 @@
         'Get-AppRolePermission',
         'Get-FederatedAppCredential',
         'Get-PrivilegedApp',
+        'Get-PrivilegedServicePrincipal',
         'Get-ServicePrincipalCredential',
         'Get-ServicePrincipalsPermission',
         'Get-ResourcePermission',
@@ -137,6 +138,7 @@
         'Public\Discovery\Get-AppRolePermission.ps1',
         'Public\Discovery\Get-FederatedAppCredential.ps1',
         'Public\Discovery\Get-PrivilegedApp.ps1',
+        'Public\Discovery\Get-PrivilegedServicePrincipal.ps1',
         'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
