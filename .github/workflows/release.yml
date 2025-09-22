@@ -29,8 +29,21 @@ jobs:
           Copy-Item .\Public -Recurse -Destination $tempPath -Force
 
 
-          # Publish the module to the PowerShell Gallery
-          Publish-Module -Path "$tempPath" -NuGetApiKey $env:PS_GALLERY_KEY -Force -Verbose
-
+          # Create empty .moduledata directory to prevent NuGet warnings
+          New-Item -Path "$tempPath\.moduledata" -ItemType Directory -Force | Out-Null
+          
+          # Create an info file to suppress NuGet warnings
+          Set-Content -Path "$tempPath\.moduledata\moduleinfo.txt" -Value "This file suppresses NuGet warnings about PowerShell scripts."
+          
+          # Suppress NuGet warnings by setting environment variables
+          $env:NUGET_XMLDOC_MODE = "skip"
+          
+          # Set warning preference to suppress warnings
+          $WarningPreference = 'SilentlyContinue'
+          
+          # Publish module with warning suppression
+          Write-Host "Publishing module to PowerShell Gallery..."
+          Publish-Module -Path "$tempPath" -NuGetApiKey $env:PS_GALLERY_KEY -Force -WarningAction SilentlyContinue
+          
           # Remove the module from the local system
           Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
