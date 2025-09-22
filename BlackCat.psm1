@@ -1,3 +1,11 @@
+
+#region PowerShell version check
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    throw "BlackCat module requires PowerShell 7.0 or higher. Current version: $($PSVersionTable.PSVersion)"
+    return
+}
+#endregion PowerShell version check
+
 #region load module variables
 Write-Verbose -Message "Creating modules variables"
 
@@ -39,9 +47,17 @@ foreach ($script in @($privateScripts + $publicScripts)) {
 Export-ModuleMember -Function $publicScripts.BaseName
 
 $helperPath = "$PSScriptRoot/Private/Reference"
-if (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
-    Write-Verbose -Message "Fetching latest helper files"
-    Invoke-Update
+# Ensure the Private/Reference directory exists
+if (-not(Test-Path -Path $helperPath)) {
+    Write-Verbose -Message "Creating Private/Reference directory"
+    New-Item -Path $helperPath -ItemType Directory -Force | Out-Null
+
+    Write-Verbose -Message "Fetching latest helper files for first-time setup"
+    # We need to wait until all module functions are loaded before calling Invoke-Update
+    # This will be done in the Initialize block below
+} elseif (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue)) {
+    Write-Verbose -Message "Private/Reference directory exists but is empty. Fetching helper files"
+    # This will be done in the Initialize block below
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssigments', '')]
@@ -118,9 +134,28 @@ $logo = `
      |   |   /   ___ __|  (       <   |      | (   |  |
     ____/  _/       _|   \___| _|\_\ \____| \ \__,_| \__|
                                              \____/
-    
+
     $updateMessage
 
 "@
 
 Write-Host $logo -ForegroundColor Blue
+
+$initializeBlock = {
+    $helperPath = "$PSScriptRoot/Private/Reference"
+
+    $needsUpdate = (-not(Test-Path -Path $helperPath)) -or (-not(Get-ChildItem -Path $helperPath -ErrorAction SilentlyContinue))
+
+    if ($needsUpdate) {
+        Write-Verbose -Message "Initializing reference files"
+        try {
+            Invoke-Update
+        }
+        catch {
+            Write-Warning "Failed to download reference files. Some module functionality may be limited."
+            Write-Warning "Error: $_"
+        }
+    }
+}
+
+& $initializeBlock
