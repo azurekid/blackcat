@@ -4,6 +4,22 @@
 
 # CHANGELOG
 
+## v0.24.0 [2025-09-22] 🛡️ Compatibility & Security Updates
+
+_PowerShell 7 Compatibility Enforcement_
+
+**Compatibility Improvements:**
+* **Enhanced PowerShell Version Validation**: Fixed critical issue that prevented proper PowerShell 7+ enforcement
+  - **Improved Error Handling**: Clear error messages when attempting to load in PowerShell 5.1
+  - **Syntax Compatibility**: Modified module initialization to ensure PS 5.1 can parse version check
+  - **Technical Debt**: Refactored hashtable declarations to maintain PS7-specific format while enabling validation
+  - **Security**: Strengthened module integrity by preventing partial loading in unsupported environments
+
+**Bug Fixes:**
+* Fixed hashtable formatting issues that caused syntax errors during module import in PowerShell 5.1
+* Improved exception handling for version validation to prevent cryptic error messages
+* Enhanced module loading sequence to ensure proper environment validation
+
 ## v0.23.0 [2025-09-09] 🔍 Discovery & Output Enhancements
 
 _Improvements & Function Standardization_
