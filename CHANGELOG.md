@@ -4,7 +4,29 @@
 
 # CHANGELOG
 
-## v0.24.0 [2025-09-22] 🛡️ Compatibility & Security Updates
+## v0.23.2 [2025-09-22] 🛠️ PowerShell Compatibility & First-time Setup Fixes
+
+_Reliability & Compatibility Enhancements_
+
+**Compatibility Improvements:**
+* **PowerShell Version Check Enhancement**: Updated version validation to execute in PowerShell 5.1
+  - Modified SessionVariables hashtable format for compatibility with PowerShell 5.1
+  - Added early termination with clear error message when incompatible PowerShell version is detected
+  - Ensures proper version check happens before module attempts to load
+
+**First-time Installation Fixes:**
+* **Module Directory Structure**: Fixed issue with missing `Private/Reference` directory
+  - Added automatic directory creation during first-time module import
+  - Enhanced `Invoke-Update` function with proper path handling and error management
+  - Added initialization block to ensure reference files are downloaded after functions are loaded
+  - Improved error handling during first-time setup with graceful fallbacks
+
+**Module Import Process Improvements:**
+* Added more robust initialization sequence for reliable first-time setup
+* Enhanced error messages with clear instructions for PowerShell version requirements
+* Improved module loading flow with better directory management
+
+## v0.23.1 [2025-09-22] 🛡️ Compatibility & Security Updates
 
 _PowerShell 7 Compatibility Enforcement_
 
