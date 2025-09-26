@@ -31,6 +31,10 @@ function Find-AzurePermissionHolder {
         - Table: Returns results in formatted table
         Aliases: output, o
 
+    .PARAMETER ResolvePrincipalNames
+        When specified, resolves principal IDs to their display names using Microsoft Graph API.
+        For users, includes both display name and UPN.
+        
     .PARAMETER SkipCache
         Skips using the cache and forces a fresh API call.
 
@@ -38,6 +42,7 @@ function Find-AzurePermissionHolder {
         Returns a collection of custom objects with the following properties:
         - PrincipalId: The Azure AD Object ID of the principal
         - PrincipalType: The type of principal (User, Group, ServicePrincipal)
+        - PrincipalName: The display name of the principal (only when ResolvePrincipalNames is used)
         - RoleName: The display name of the RBAC role
         - RoleDefinitionId: The ID of the role definition
         - Scope: The resource scope of the role assignment
