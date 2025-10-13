@@ -41,6 +41,8 @@ function Select-AzureContext {
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
+
+        Clear-BlackCatCache -All
     }
 
     process {
