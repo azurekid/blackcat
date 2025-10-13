@@ -113,6 +113,14 @@ Update-AzConfig -LoginExperienceV2 Off
 Write-Verbose -Message "Disabling BreakingChangeWarning..."
 Update-AzConfig -DisplayBreakingChangeWarning $false
 
+# Safely import module manifest
+try {
+	$ModuleInfo = Import-PowerShellDataFile -Path "$PsScriptRoot/blackcat.psd1" -ErrorAction Stop
+} catch {
+	Write-Warning "Failed to load module manifest: $($_.Exception.Message)"
+	$ModuleInfo = $null
+}
+
 # Set the window title
 try {
     $host.UI.RawUI.WindowTitle = "BlackCat $version"
