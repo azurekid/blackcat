@@ -4,6 +4,26 @@
 
 # CHANGELOG
 
+## v0.24.0 [2025-10-15] 🚀 Performance Optimization & Usability Improvements
+
+_Enhanced Service Principal Analysis & Permission Management_
+
+**Optimized Service Principal Functions:**
+* **`Get-ServicePrincipalsPermission` Major Enhancement**:
+  - **Performance Boost**: Implemented Microsoft Graph batch API support, reducing multiple API calls to a single HTTP request
+  - **Token Management**: Added intelligent token reuse to prevent unnecessary module reloads
+  - **Comprehensive Data**: Now includes permission names along with IDs for better readability
+  - **Complete Security Profile**: Added owned objects with type information for better attack surface analysis
+  - **Enhanced Documentation**: Completely rewritten function documentation with security-focused examples
+
+**Improved Permission Management:**
+* **`Set-ManagedIdentityPermission` Usability Enhancement**:
+  - **Common Resource Support**: Added `CommonResource` parameter with predefined values for popular Azure services
+  - **Simplified Syntax**: Eliminated need to manually look up resource IDs for common services
+  - **Built-in Mapping**: Added support for Microsoft Graph, Azure Key Vault, Storage, and other common resources
+  - **Improved Examples**: Added documentation showing simplified permission assignment patterns
+
+
 ## v0.23.2 [2025-09-22] 🛠️ PowerShell Compatibility & First-time Setup Fixes
 
 _Reliability & Compatibility Enhancements_
