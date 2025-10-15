@@ -45,13 +45,15 @@ function Show-BlackCatCommands {
         $fileList = $moduleManifest['FileList']
 
         $logo = @"
-    __ ) ___  |  |  |          |      ___|    __ \   |
-    __ \     /   |  |     __|  |  /  |       / _` |  __|
-    |   |   /   ___ __|  (       <   |      | (   |  |
-   ____/  _/       _|   \___| _|\_\ \____| \ \__,_| \__|
-                                            \____/
+                        /\_/\
+                       ( ◣_◢ )
+     __ ) ___  |  |  |  > ^ <   |      ___|    __ \   |      /\_/\
+     __ \     /   |  |     __|  |  /  |       / _` |  __|    ( ◣_◢ )
+     |   |   /   ___ __|  (       <   |      | (   |  |      > ^ <
+    ____/  _/       _|   \___| _|\_\ \____| \ \__,_| \__|    (   )
+                                             \____/
 
-                 v$script:version by Rogier Dijkman
+    $updateMessage
 
 "@
         Write-Host $logo -ForegroundColor Blue
