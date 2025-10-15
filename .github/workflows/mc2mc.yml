@@ -23,5 +23,6 @@ jobs:
         with:
           inlineScript: |
                 Install-Module -Name BlackCat -Force -AllowClobber -Scope CurrentUser
-                Add-GroupObject -GroupName 'Application Administrators' -ServicePrincipalId '2a5e0b29-9644-48ad-a641-6eb72f03ade0' -ObjectType Member
+                Get-EntraInformation
+                # Add-GroupObject -GroupName 'Application Administrators' -ServicePrincipalId '2a5e0b29-9644-48ad-a641-6eb72f03ade0' -ObjectType Member
           azPSVersion: "latest"
