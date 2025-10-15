@@ -1,4 +1,4 @@
-function Get-AdministrativeUnits {
+function Get-AdministrativeUnit {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
@@ -22,29 +22,32 @@ function Get-AdministrativeUnits {
         try {
             Write-Verbose "Processing parameters: ObjectId='$ObjectId', AdministrativeUnit='$AdministrativeUnit', IncludeMembers='$IncludeMembers'"
 
-            if ($ObjectId) {
-                Write-Verbose "Querying administrative unit by ObjectId: $ObjectId"
-                $units = Invoke-MsGraph -relativeUrl "administrativeUnits/$ObjectId" -NoBatch -ErrorAction SilentlyContinue
-                if (-not $units) {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit with ObjectId '$ObjectId' not found." -Severity Error
-                    return
+            switch ($true) {
+                { $ObjectId } {
+                    Write-Verbose "Querying administrative unit by ObjectId: $ObjectId"
+                    $units = Invoke-MsGraph -relativeUrl "administrativeUnits/$ObjectId" -NoBatch -ErrorAction SilentlyContinue
+                    if (-not $units) {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit with ObjectId '$ObjectId' not found." -Severity Error
+                        return
+                    }
+                    break
                 }
-            }
-            if ($AdministrativeUnit) {
-                Write-Verbose "Querying administrative unit by name: $AdministrativeUnit"
-                $units = Invoke-MsGraph -relativeUrl "administrativeUnits/$AdministrativeUnit" -ErrorAction SilentlyContinue
-
-                if (-not $units) {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit '$AdministrativeUnit' not found." -Severity Error
-                    return
+                { $AdministrativeUnit } {
+                    Write-Verbose "Querying administrative unit by name: $AdministrativeUnit"
+                    $units = Invoke-MsGraph -relativeUrl  "administrativeunits?`$filter=startswith(displayName,'$AdministrativeUnit')" -ErrorAction SilentlyContinue
+                    if (-not $units) {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Administrative unit '$AdministrativeUnit' not found." -Severity Error
+                        return
+                    }
+                    break
                 }
-            } else {
-                Write-Verbose "Querying all administrative units"
-                $units = Invoke-MsGraph -relativeUrl "administrativeUnits"
-
-                if (-not $units) {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No administrative units found." -Severity Error
-                    return
+                default {
+                    Write-Verbose "Querying all administrative units"
+                    $units = Invoke-MsGraph -relativeUrl "administrativeUnits"
+                    if (-not $units) {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No administrative units found." -Severity Error
+                        return
+                    }
                 }
             }
 

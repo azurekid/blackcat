@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.23.2'
+    ModuleVersion     = '0.24.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -83,7 +83,7 @@
         'Set-UserCredential',
 
         # Reconnaissance
-        'Get-AdministrativeUnits',
+        'Get-AdministrativeUnit',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
         'Get-EntraRoleMember',
@@ -186,7 +186,7 @@
         'Public\Persistence\Set-UserCredential.ps1',
 
         # Reconnaissance
-        'Public\Reconnaissance\Get-AdministrativeUnits.Ps1',
+        'Public\Reconnaissance\Get-AdministrativeUnit.ps1',
         'Public\Reconnaissance\Get-EntraInformation.ps1',
         'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
         'Public\Reconnaissance\Get-ManagedIdentity.ps1',

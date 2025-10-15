@@ -18,7 +18,6 @@ function Get-AppRolePermission {
 
     begin {
         Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
         # Validate appRoleName parameter against available permissions
         if ($appRoleName -and $script:SessionVariables -and $script:SessionVariables.appRoleIds) {
