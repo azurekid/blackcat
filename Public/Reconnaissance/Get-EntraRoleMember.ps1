@@ -477,31 +477,6 @@ function Get-EntraRoleMember {
         }
     } # End of process block
 
-    end {
-        # Calculate performance metrics
-        $endTime = Get-Date
-        $duration = $endTime - $startTime
-        $totalSeconds = $duration.TotalSeconds
-
-        # Log completion metrics
-        if (-not $ShowSummary) {
-            Write-Verbose "Function completed in $($totalSeconds.ToString('F2')) seconds"
-
-            # Write detailed metrics to log if available
-            $metrics = @{
-                FunctionName = $MyInvocation.MyCommand.Name
-                DurationSeconds = $totalSeconds
-                RoleName = $script:RoleName
-                RoleId = $script:RoleId
-                MemberCount = $script:roleMembers?.Count ?? 0
-                UserCount = $script:principalTypes["User"]
-                GroupCount = $script:principalTypes["Group"]
-                ServicePrincipalCount = $script:principalTypes["ServicePrincipal"]
-                UnknownCount = $script:principalTypes["Unknown"]
-            }
-        }
-    }
-
 <#
 .SYNOPSIS
     Gets all members of a specified Microsoft Entra ID (Azure AD) role.
