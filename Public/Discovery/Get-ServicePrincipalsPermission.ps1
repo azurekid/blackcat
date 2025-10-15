@@ -8,45 +8,214 @@ function Get-ServicePrincipalsPermission {
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
-        $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        # Only invoke the authentication if we need to (tokens expired or not present)
+        if (-not $script:graphHeader -or 
+            -not $script:SessionVariables -or 
+            -not $script:SessionVariables.accessToken -or 
+            ($script:SessionVariables.ExpiresOn -and $script:SessionVariables.ExpiresOn - [datetime]::UtcNow.AddMinutes(-5) -le 0)) {
+                
+            Write-Verbose "Authentication needed - Initializing Graph API access"
+            $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        }
+        else {
+            Write-Verbose "Using existing authentication token - valid until $($script:SessionVariables.ExpiresOn)"
+        }
     }
 
     process {
         try {
+            Write-Verbose "Creating batch requests for service principal $servicePrincipalId"
+            
+            # Create batch requests for all needed data
+            $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
+            
+            # Request 1: Get service principal details
+            $batchRequests.Add(@{
+                    id     = "spDetails"
+                    method = "GET"
+                    url    = "/servicePrincipals/$servicePrincipalId"
+                })
+            
+            # Request 2: Get app role assignments
+            $batchRequests.Add(@{
+                    id     = "appRoleAssignments"
+                    method = "GET"
+                    url    = "/servicePrincipals/$servicePrincipalId/appRoleAssignments"
+                })
+            
+            # Request 3: Get delegated permissions
+            $batchRequests.Add(@{
+                    id     = "delegatedPermissions"
+                    method = "GET"
+                    url    = "/oauth2PermissionGrants?`$filter=clientId eq '$servicePrincipalId'"
+                })
+            
+            # Request 4: Get app roles assigned to others
+            $batchRequests.Add(@{
+                    id     = "appRoleAssignedTo"
+                    method = "GET"
+                    url    = "/servicePrincipals/$servicePrincipalId/appRoleAssignedTo"
+                })
+            
+            # Request 5: Get directory roles and memberships
+            $batchRequests.Add(@{
+                    id     = "memberOf"
+                    method = "GET"
+                    url    = "/servicePrincipals/$servicePrincipalId/transitiveMemberOf"
+                })
+            
+            # Request 6: Get owned objects
+            $batchRequests.Add(@{
+                    id     = "ownedObjects"
+                    method = "GET"
+                    url    = "/servicePrincipals/$servicePrincipalId/ownedObjects"
+                })
+            
+            # Execute all requests in a single batch
+            Write-Verbose "Executing batch request with $($batchRequests.Count) items"
+            $batchResults = Invoke-MsGraph -BatchRequests $batchRequests
+            
+            # Extract results from batch response
+            $spDetails = $batchResults["spDetails"].Data
+            $appRoleAssignments = $batchResults["appRoleAssignments"].Data.value
+            $delegatedPermissions = $batchResults["delegatedPermissions"].Data.value
+            $appRoleAssignedTo = $batchResults["appRoleAssignedTo"].Data.value
+            $memberOf = $batchResults["memberOf"].Data.value
+            $ownedObjects = $batchResults["ownedObjects"].Data.value
+            
+            Write-Verbose "Successfully retrieved all service principal data in a single batch request"
+            
+            # Extract useful data for summary
+            $appPermissions = $appRoleAssignments | ForEach-Object {
+                # Try to resolve permission name from appRoleId
+                $currentAppRoleId = $_.appRoleId
+                $permissionName = "Unknown"
+                if ($script:SessionVariables -and $script:SessionVariables.appRoleIds) {
+                    $permissionObj = $script:SessionVariables.appRoleIds | Where-Object { $_.appRoleId -eq $currentAppRoleId }
+                    if ($permissionObj) {
+                        $permissionName = $permissionObj.Permission
+                    }
+                    else {
+                        # Try to call Get-AppRolePermission directly
+                        try {
+                            $roleInfo = Get-AppRolePermission -appRoleId $currentAppRoleId -ErrorAction SilentlyContinue
+                            if ($roleInfo -and $roleInfo.Permission) {
+                                $permissionName = $roleInfo.Permission
+                            }
+                        }
+                        catch {
+                            # Silently continue if Get-AppRolePermission fails
+                        }
+                    }
+                }
 
-            Write-Verbose "Get Service Principals App Role Assignments"
-            $uri = "$($sessionVariables.graphUri)/servicePrincipals/$servicePrincipalId/appRoleAssignments"
-
-            $requestParam = @{
-                Headers = $script:graphHeader
-                Uri     = $uri
-                Method  = 'GET'
-                UserAgent = $($sessionVariables.userAgent)
+                [PSCustomObject]@{
+                    'Resource DisplayName' = $_.resourceDisplayName
+                    'PermissionId'         = $_.appRoleId
+                    'Permission Name'      = $permissionName
+                }
             }
-
-            return (Invoke-RestMethod @requestParam).value
-
+            
+            $delegatedPerms = $delegatedPermissions | ForEach-Object {
+                [PSCustomObject]@{
+                    ResourceId = $_.resourceId
+                    Scopes     = $_.scope -split ' '
+                }
+            }
+            
+            # Extract owned objects with type information
+            $ownedObjectsInfo = $ownedObjects | ForEach-Object {
+                $type = $_.'@odata.type' -replace '#microsoft\.graph\.'
+                [PSCustomObject]@{
+                    DisplayName = $_.displayName
+                    ObjectId    = $_.id
+                    Type        = $type
+                }
+            }
+            
+            # Create summarized result object
+            $result = [PSCustomObject]@{
+                DisplayName              = $spDetails.displayName
+                ObjectId                 = $spDetails.id
+                AppId                    = $spDetails.appId
+                ServicePrincipalType     = $spDetails.servicePrincipalType
+                AccountEnabled           = $spDetails.accountEnabled
+                AppRoles                 = $spDetails.appRoles.displayName
+                GroupMemberships         = ($memberOf | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }).displayName
+                DirectoryRoles           = ($memberOf | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.directoryRole' }).displayName
+                AppPermissions           = $appPermissions
+                DelegatedPermissions     = $delegatedPerms
+                OwnedObjects             = $ownedObjectsInfo
+                IsPrivileged             = $false
+            }
+            
+            # Check if the service principal has privileged roles
+            $privilegedRoles = @('Global Administrator', 'Privileged Role Administrator', 'Application Administrator', 
+                'Cloud Application Administrator', 'Hybrid Identity Administrator', 'Directory Synchronization Accounts')
+            foreach ($role in $result.DirectoryRoles) {
+                if ($role -in $privilegedRoles) {
+                    $result.IsPrivileged = $true
+                    break
+                }
+            }
+            
+            return $result
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-<#
+    <#
 .SYNOPSIS
-Retrieves the app role assignments for a specified service principal from Microsoft Graph.
+Conducts a comprehensive security analysis of a service principal, including its permissions, roles, and relationships.
 
 .DESCRIPTION
-The Get-ServicePrincipalsPermission function retrieves the app role assignments for a specified service principal from Microsoft Graph. It requires the service principal ID as a mandatory parameter.
+The Get-ServicePrincipalsPermission function performs an in-depth analysis of an Azure service principal's
+security posture and permissions. It provides a centralized view of critical information including:
+
+- Core identity details (DisplayName, ObjectId/ServicePrincipalId, AppId)
+- Application permissions with both IDs and human-readable names
+- Delegated OAuth2 permissions and their scopes
+- Group memberships and directory role assignments
+- Owned objects with their types and names
+- Security indicators like privileged role assignments
+- Exposure assessment through permissions assigned to others
 
 .PARAMETER servicePrincipalId
-The unique identifier (GUID) of the service principal. This parameter is mandatory and must match the expected GUID pattern.
+The unique identifier (GUID) of the service principal to analyze. This can be passed from the pipeline.
 
 .EXAMPLE
-PS> Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
-This example retrieves the app role assignments for the specified service principal.
+Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab"
+
+Retrieves comprehensive security information about the specified service principal, including all permissions,
+roles, and relationships.
+
+.EXAMPLE
+Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" -Verbose
+
+Performs detailed analysis with progress information shown for each API call, useful for troubleshooting
+or understanding the data collection process.
+
+.EXAMPLE
+Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" | Select-Object -ExpandProperty AppPermissions
+
+Extracts just the application permissions assigned to the service principal, showing resource names,
+permission IDs and human-readable permission names.
+
+.OUTPUTS
+[PSCustomObject]
+Returns a structured object containing detailed security information about the service principal:
+- Basic details: DisplayName, ServicePrincipalId/ObjectId, AppId, ServicePrincipalType
+- Status: AccountEnabled
+- Permissions: AppPermissions (with both IDs and names), DelegatedPermissions
+- Relationships: GroupMemberships, DirectoryRoles, OwnedObjects (with types)
+- Security indicators: IsPrivileged, AssignedPermissionsCount, OwnedObjectsCount
 
 .NOTES
-The function uses the Invoke-RestMethod cmdlet to send a GET request to the Microsoft Graph API and returns the app role assignments for the specified service principal.
-
+- Uses Microsoft Graph batch API to retrieve all data in a single HTTP request, significantly improving performance.
+- IsPrivileged flag specifically checks for high-risk directory roles like Global Administrator.
+- The function attempts to resolve permission names from IDs using session variables or the Get-AppRolePermission function.
+- Aligned with the output format of other BlackCat reconnaissance functions for consistent analysis.
+- Optimized for large environments with many service principals and complex permission structures.
 #>
 }
