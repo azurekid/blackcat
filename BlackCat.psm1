@@ -115,7 +115,7 @@ Update-AzConfig -DisplayBreakingChangeWarning $false
 
 # Safely import module manifest
 try {
-	$ModuleInfo = Import-PowerShellDataFile -Path "$PsScriptRoot/blackcat.psd1" -ErrorAction Stop
+	$ModuleInfo = Import-PowerShellDataFile -Path "$PsScriptRoot/BlackCat.psd1" -ErrorAction Stop
 } catch {
 	Write-Warning "Failed to load module manifest: $($_.Exception.Message)"
 	$ModuleInfo = $null
