@@ -14,7 +14,7 @@ _Enhanced Service Principal Analysis & Permission Management_
   - **Token Management**: Added intelligent token reuse to prevent unnecessary module reloads
   - **Comprehensive Data**: Now includes permission names along with IDs for better readability
   - **Complete Security Profile**: Added owned objects with type information for better attack surface analysis
-  - **Enhanced Documentation**: Completely rewritten function documentation with security-focused examples
+  - **Enhanced Documentation**: Completely rewritten function documentation with security-focused examples.
 
 **Improved Permission Management:**
 * **`Set-ManagedIdentityPermission` Usability Enhancement**:
