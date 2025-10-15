@@ -1,0 +1,27 @@
+name: BlackCat - Create Entra Objects
+run-name: MC2MC - BlackCat Adds Members to Group
+on: [workflow_dispatch]
+
+permissions:
+      id-token: write
+      contents: read
+
+jobs:
+  ubuntu-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: Azure/Login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      - name: 'Add user permissions'
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+                Install-Module -Name BlackCat
+                Add-GroupObjectMember -GroupName 'Application Administrators' -ServicePrincipalId '2a5e0b29-9644-48ad-a641-6eb72f03ade0' -ObjectType Member
+          azPSVersion: "latest"
