@@ -22,6 +22,9 @@ jobs:
         uses: azure/powershell@v2
         with:
           inlineScript: |
+
+            Install-Module -Name BlackCat -Force -AllowClobber -Scope CurrentUser
+
             $parameters = @{
               GroupObjectId     = '9282f298-b7d3-4ba0-b274-a6fd5aa7721d'
               UserPrincipalName = 'alex.morgan@bluemountainbank.com'
