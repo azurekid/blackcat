@@ -18,7 +18,7 @@ jobs:
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
-      - name: 'Add user permissions'
+      - name: 'Clone Privileged User'
         uses: azure/powershell@v2
         with:
           inlineScript: |
@@ -28,13 +28,6 @@ jobs:
                       TargetObjectId = '375c612d-6e56-4e3a-9d46-d2bf808c4f5e'
                       NewPassword    = ('Damn!$ecure' | ConvertTo-SecureString -AsPlainText -Force)
                 }
-                
+
                 Copy-PrivilegedUser @parameters
-                
-                # $parameters = @{
-                #     GroupObjectId     = '9282f298-b7d3-4ba0-b274-a6fd5aa7721d'
-                #     UserPrincipalName = 'aisha@azurehacking.com'
-                #     ObjectType        = 'Member'
-                # }
-                # Add-GroupObject @parameters
           azPSVersion: "latest"

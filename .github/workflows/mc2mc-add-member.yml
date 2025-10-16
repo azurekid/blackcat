@@ -1,0 +1,32 @@
+name: BlackCat - Create Entra Objects
+run-name: MC2MC - BlackCat Adds Member to group
+on: [workflow_dispatch]
+
+permissions:
+      id-token: write
+      contents: read
+
+jobs:
+  ubuntu-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: Azure/Login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      - name: 'Add Member to Group'
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+            $parameters = @{
+              GroupObjectId     = '9282f298-b7d3-4ba0-b274-a6fd5aa7721d'
+              UserPrincipalName = 'alex.morgan@bluemountainbank.com'
+              ObjectType        = 'Member'
+            }
+
+            Add-GroupObject @parameters
+          azPSVersion: "latest"
