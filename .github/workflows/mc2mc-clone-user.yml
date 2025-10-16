@@ -1,4 +1,4 @@
-name: MC2MC - BlackCat Managed Identity Adds Members
+name: MC2MC - BlackCat Managed Identity Clone User
 run-name: MC2MC - BlackCat Clones Privileged User
 on: [workflow_dispatch]
 

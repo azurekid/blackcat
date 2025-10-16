@@ -1,4 +1,4 @@
-name: BlackCat - Create Entra Objects
+name: MC2MC - BlackCat Managed Identity Adds Member to Group
 run-name: MC2MC - BlackCat Adds Member to group
 on: [workflow_dispatch]
 
