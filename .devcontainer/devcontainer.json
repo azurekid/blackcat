@@ -12,14 +12,14 @@
         "debug.javascript.terminal.activateWithCurrentFile": false,
         "debug.javascript.autoAttachFilter": "disabled",
         "debug.javascript.automaticallyTunnelRemoteServer": false,
-        "terminal.integrated.profiles.linux": {
-          "bash": {
-            "path": "bash",
-            "icon": "terminal-bash"
-          },
+        "terminal.integrated.profiles.linux": {  
           "BlackCat": {
             "path": "/opt/microsoft/powershell/7/pwsh",
             "icon": "terminal-powershell"
+          },
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
           }
         },
         "terminal.integrated.defaultProfile.linux": "BlackCat"
