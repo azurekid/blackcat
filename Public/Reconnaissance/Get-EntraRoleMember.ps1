@@ -3,14 +3,9 @@ using namespace System.Management.Automation
 class EntraRoleNames : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
         try {
-            if ($null -ne $script:SessionVariables -and $null -ne $script:SessionVariables.Roles) {
-                return ($script:SessionVariables.Roles |
-                       Select-Object -ExpandProperty DisplayName |
-                       Sort-Object)
-            }
-            else {
-                return @('Global Administrator', 'User Administrator', 'Privileged Role Administrator')
-            }
+            return ($script:SessionVariables.Roles |
+                Select-Object -ExpandProperty DisplayName |
+                Sort-Object)
         }
         catch {
             Write-Warning "Error retrieving role names: $_"
@@ -47,7 +42,7 @@ function Get-PrincipalDetails {
                 }
 
                 $ResultHashtable[$principalId] = @{
-                    Type = $principalType
+                    Type    = $principalType
                     Details = $objectInfo
                 }
                 return
@@ -60,7 +55,7 @@ function Get-PrincipalDetails {
         try {
             $userInfo = Invoke-MsGraph -relativeUrl "users/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
-                Type = "User"
+                Type    = "User"
                 Details = $userInfo
             }
             return
@@ -72,7 +67,7 @@ function Get-PrincipalDetails {
         try {
             $groupInfo = Invoke-MsGraph -relativeUrl "groups/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
-                Type = "Group"
+                Type    = "Group"
                 Details = $groupInfo
             }
             return
@@ -84,7 +79,7 @@ function Get-PrincipalDetails {
         try {
             $spInfo = Invoke-MsGraph -relativeUrl "servicePrincipals/$principalId" -NoBatch -OutputFormat Object -ErrorAction Stop
             $ResultHashtable[$principalId] = @{
-                Type = "ServicePrincipal"
+                Type    = "ServicePrincipal"
                 Details = $spInfo
             }
             return
@@ -94,7 +89,7 @@ function Get-PrincipalDetails {
         }
 
         $ResultHashtable[$principalId] = @{
-            Type = "Unknown"
+            Type    = "Unknown"
             Details = $null
         }
         return
@@ -103,10 +98,10 @@ function Get-PrincipalDetails {
     $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
     foreach ($principalId in $PrincipalIds) {
         $batchRequests.Add(@{
-            id = $principalId
-            method = "GET"
-            url = "/directoryObjects/$principalId"
-        })
+                id     = $principalId
+                method = "GET"
+                url    = "/directoryObjects/$principalId"
+            })
     }
 
     if ($batchRequests.Count -gt 0) {
@@ -130,7 +125,7 @@ function Get-PrincipalDetails {
                 }
 
                 $ResultHashtable[$principalId] = @{
-                    Type = $principalType
+                    Type    = $principalType
                     Details = $objectInfo
                 }
             }
@@ -140,7 +135,7 @@ function Get-PrincipalDetails {
                 try {
                     $userInfo = Get-MgUser -UserId $principalId -ErrorAction Stop
                     $ResultHashtable[$principalId] = @{
-                        Type = "User"
+                        Type    = "User"
                         Details = $userInfo
                     }
                     $wasFound = $true
@@ -153,7 +148,7 @@ function Get-PrincipalDetails {
                     try {
                         $groupInfo = Get-MgGroup -GroupId $principalId -ErrorAction Stop
                         $ResultHashtable[$principalId] = @{
-                            Type = "Group"
+                            Type    = "Group"
                             Details = $groupInfo
                         }
                         $wasFound = $true
@@ -167,7 +162,7 @@ function Get-PrincipalDetails {
                     try {
                         $spInfo = Get-MgServicePrincipal -ServicePrincipalId $principalId -ErrorAction Stop
                         $ResultHashtable[$principalId] = @{
-                            Type = "ServicePrincipal"
+                            Type    = "ServicePrincipal"
                             Details = $spInfo
                         }
                         $wasFound = $true
@@ -179,7 +174,7 @@ function Get-PrincipalDetails {
 
                 if (-not $wasFound) {
                     $ResultHashtable[$principalId] = @{
-                        Type = "Unknown"
+                        Type    = "Unknown"
                         Details = $null
                     }
                 }
@@ -202,6 +197,9 @@ function Get-EntraRoleMember {
 
         [Parameter(Mandatory = $false)]
         [switch]$ShowSummary,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ExpandGroups,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV", "Table")]
@@ -218,10 +216,10 @@ function Get-EntraRoleMember {
         $script:RoleId = $RoleId
         $script:roleMembers = $null
         $script:principalTypes = @{
-            "User" = 0
-            "Group" = 0
+            "User"             = 0
+            "Group"            = 0
             "ServicePrincipal" = 0
-            "Unknown" = 0
+            "Unknown"          = 0
         }
     }
 
@@ -269,7 +267,8 @@ function Get-EntraRoleMember {
                 }
 
                 Write-Host "Using role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
-            } else {
+            }
+            else {
                 $roleId = $RoleId
                 $roleDefinition = $null
 
@@ -337,10 +336,10 @@ function Get-EntraRoleMember {
             }
             $script:roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
             $script:principalTypes = @{
-                "User" = 0
-                "Group" = 0
+                "User"             = 0
+                "Group"            = 0
                 "ServicePrincipal" = 0
-                "Unknown" = 0
+                "Unknown"          = 0
             }
 
             $principalIdToAssignment = @{}
@@ -359,10 +358,10 @@ function Get-EntraRoleMember {
             $script:roleMembers = [System.Collections.Generic.List[PSCustomObject]]::new()
             $principalDetails = @{}
             $script:principalTypes = @{
-                "User" = 0
-                "Group" = 0
+                "User"             = 0
+                "Group"            = 0
                 "ServicePrincipal" = 0
-                "Unknown" = 0
+                "Unknown"          = 0
             }
 
             $batchSize = 20
@@ -387,20 +386,80 @@ function Get-EntraRoleMember {
                     $isUnknown = ($principalInfo.Type -eq "Unknown" -or $null -eq $details)
 
                     $roleMember = [PSCustomObject]@{
-                        PrincipalId          = $principalId
-                        PrincipalType        = $isUnknown ? "Unknown" : $principalInfo.Type
-                        DisplayName          = $isUnknown ? "Possibly Deleted or Inaccessible Object" : $details.displayName
-                        UserPrincipalName    = ($principalInfo.Type -eq "User" -and $details) ? $details.userPrincipalName : $null
-                        Email                = $details ? $details.mail : $null
-                        AccountEnabled       = ($principalInfo.Type -eq "User" -and $details) ? $details.accountEnabled : $null
-                        AssignmentId         = $assignment.id
-                        AssignmentScope      = $assignment.directoryScopeId
-                        RoleName             = $RoleName
-                        RoleId               = $roleId
-                        Status               = $isUnknown ? "Possibly Deleted or Inaccessible" : "Active"
+                        PrincipalId       = $principalId
+                        PrincipalType     = $isUnknown ? "Unknown" : $principalInfo.Type
+                        DisplayName       = $isUnknown ? "Possibly Deleted or Inaccessible Object" : $details.displayName
+                        UserPrincipalName = ($principalInfo.Type -eq "User" -and $details) ? $details.userPrincipalName : $null
+                        Email             = $details ? $details.mail : $null
+                        AccountEnabled    = ($principalInfo.Type -eq "User" -and $details) ? $details.accountEnabled : $null
+                        AssignmentId      = $assignment.id
+                        AssignmentScope   = $assignment.directoryScopeId
+                        RoleName          = $RoleName
+                        RoleId            = $roleId
+                        Status            = $isUnknown ? "Possibly Deleted or Inaccessible" : "Active"
+                        IsMemberOfGroup   = $false
+                        ParentGroupId     = $null
+                        ParentGroupName   = $null
+                        MembershipPath    = $null
                     }
 
                     $script:roleMembers.Add($roleMember)
+                    
+                    if ($ExpandGroups -and $principalInfo.Type -eq "Group" -and -not $isUnknown) {
+                        Write-Verbose "Expanding members for group: $($details.displayName) ($principalId)"
+                        
+                        try {
+                            # First try to get members with transitive option if available
+                            try {
+                                $groupMembers = Invoke-MsGraph -relativeUrl "groups/$principalId/transitiveMembers" -NoBatch -ErrorAction Stop
+                            } 
+                            catch {
+                                # Fall back to direct members if transitive fails
+                                $groupMembers = Invoke-MsGraph -relativeUrl "groups/$principalId/members" -NoBatch -ErrorAction Stop
+                            }
+                            
+                            if ($groupMembers -and $groupMembers.value) {
+                                foreach ($member in $groupMembers.value) {
+                                    $memberType = "Unknown"
+                                    if ($member.'@odata.type' -match '#microsoft.graph.user') {
+                                        $memberType = "User"
+                                    }
+                                    elseif ($member.'@odata.type' -match '#microsoft.graph.group') {
+                                        $memberType = "Group"
+                                    }
+                                    elseif ($member.'@odata.type' -match '#microsoft.graph.servicePrincipal') {
+                                        $memberType = "ServicePrincipal"
+                                    }
+                                    
+                                    # Create member object with reference to parent group
+                                    $groupMember = [PSCustomObject]@{
+                                        PrincipalId       = $member.id
+                                        PrincipalType     = $memberType
+                                        DisplayName       = $member.displayName
+                                        UserPrincipalName = $memberType -eq "User" ? $member.userPrincipalName : $null
+                                        Email             = $member.mail
+                                        AccountEnabled    = $memberType -eq "User" ? $member.accountEnabled : $null
+                                        AssignmentId      = $assignment.id
+                                        AssignmentScope   = $assignment.directoryScopeId
+                                        RoleName          = $RoleName
+                                        RoleId            = $roleId
+                                        Status            = "Active"
+                                        IsMemberOfGroup   = $true
+                                        ParentGroupId     = $principalId
+                                        ParentGroupName   = $details.displayName
+                                        MembershipPath    = "$($details.displayName) > $($member.displayName)"
+                                    }
+                                    
+                                    $script:roleMembers.Add($groupMember)
+                                }
+                                
+                                Write-Verbose "Added $($groupMembers.value.Count) members from group $($details.displayName)"
+                            }
+                        }
+                        catch {
+                            Write-Verbose "Error retrieving members for group $($details.displayName): $_"
+                        }
+                    }
                 }
             }
 
@@ -414,11 +473,11 @@ function Get-EntraRoleMember {
                 $principalTypeSummary = $script:roleMembers | Group-Object PrincipalType
                 foreach ($group in $principalTypeSummary) {
                     $color = switch ($group.Name) {
-                        "User"             { "Green" }
-                        "Group"            { "Yellow" }
+                        "User" { "Green" }
+                        "Group" { "Yellow" }
                         "ServicePrincipal" { "Cyan" }
-                        "Unknown"          { "Red" }
-                        default            { "White" }
+                        "Unknown" { "Red" }
+                        default { "White" }
                     }
                     Write-Host "   $($group.Name): $($group.Count)" -ForegroundColor $color
                 }
@@ -440,8 +499,41 @@ function Get-EntraRoleMember {
                     Write-Host "   Scoped Assignments: $($directoryScopes.Count)" -ForegroundColor Yellow
                 }
 
-                if ($script:principalTypes["Group"] -gt 0) {
+                if ($script:principalTypes["Group"] -gt 0 -and -not $ExpandGroups) {
                     Write-Host "`n⚠️  Note: Group members also inherit this role but are not included in this count" -ForegroundColor Yellow
+                    Write-Host "      Use -ExpandGroups parameter to include group members in the results" -ForegroundColor Gray
+                }
+                
+                if ($ExpandGroups) {
+                    # Count direct vs nested members
+                    $directMembers = $script:roleMembers | Where-Object { -not ($_.IsMemberOfGroup) }
+                    $groupMembers = $script:roleMembers | Where-Object { $_.IsMemberOfGroup }
+                    
+                    if ($groupMembers.Count -gt 0) {
+                        Write-Host "`n🔍 Group Expansion Summary:" -ForegroundColor Magenta
+                        Write-Host "   Direct Role Members: $($directMembers.Count)" -ForegroundColor Green
+                        Write-Host "   Nested Group Members: $($groupMembers.Count)" -ForegroundColor Yellow
+                        
+                        # Count by principal type within group members
+                        $nestedPrincipalTypeSummary = $groupMembers | Group-Object PrincipalType
+                        foreach ($group in $nestedPrincipalTypeSummary) {
+                            $color = switch ($group.Name) {
+                                "User" { "Green" }
+                                "Group" { "Yellow" }
+                                "ServicePrincipal" { "Cyan" }
+                                "Unknown" { "Red" }
+                                default { "White" }
+                            }
+                            Write-Host "   Nested $($group.Name): $($group.Count)" -ForegroundColor $color
+                        }
+                        
+                        # Get unique group sources
+                        $groupSources = $groupMembers | Group-Object ParentGroupName | Sort-Object Count -Descending
+                        Write-Host "`n   Group Sources:" -ForegroundColor Cyan
+                        foreach ($group in $groupSources) {
+                            Write-Host "    - $($group.Name): $($group.Count) members" -ForegroundColor White
+                        }
+                    }
                 }
 
                 Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
@@ -452,7 +544,8 @@ function Get-EntraRoleMember {
 
             $processingRate = if ($script:roleMembers.Count -gt 0 -and $duration.TotalSeconds -gt 0) {
                 [math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)
-            } else { 0 }
+            }
+            else { 0 }
 
             Write-Verbose "Processed $($script:roleMembers.Count) role members at $processingRate items/second"
 
@@ -477,7 +570,7 @@ function Get-EntraRoleMember {
         }
     } # End of process block
 
-<#
+    <#
 .SYNOPSIS
     Gets all members of a specified Microsoft Entra ID (Azure AD) role.
 
@@ -498,12 +591,22 @@ function Get-EntraRoleMember {
     When specified, displays a summary of the role members including counts by principal type
     and execution duration.
 
+.PARAMETER ExpandGroups
+    When specified, expands any groups found as role members to include the individual members
+    of those groups. This helps identify all users who have access through group-based role assignments.
+
 .PARAMETER OutputFormat
     Specifies the output format of the results. Valid values are:
     - Object: Returns PowerShell objects (default for pipeline operations)
     - JSON: Returns a JSON string
     - CSV: Returns a CSV string
     - Table: Displays the results as a formatted table (default)
+    
+    When used with -ExpandGroups, the output will include properties that identify group membership relationships:
+    - IsMemberOfGroup: Indicates if this principal is a member of a group with the role
+    - ParentGroupId: The object ID of the parent group (for group members)
+    - ParentGroupName: The display name of the parent group (for group members)
+    - MembershipPath: Shows the path from the parent group to the member
 
 .EXAMPLE
     Get-EntraRoleMember
@@ -520,5 +623,9 @@ function Get-EntraRoleMember {
 .EXAMPLE
     Get-EntraRoleMember -RoleId "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3" -OutputFormat Object
     Retrieves members of the role with the specified ID and returns them as PowerShell objects.
+
+.EXAMPLE
+    Get-EntraRoleMember -RoleName "Privileged Role Administrator" -ExpandGroups
+    Retrieves all Privileged Role Administrators, including nested members of any groups that have this role.
 #>
 }
