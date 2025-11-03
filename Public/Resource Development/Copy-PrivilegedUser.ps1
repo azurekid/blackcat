@@ -81,7 +81,7 @@ function Copy-PrivilegedUser {
                 Write-Verbose "Target user is external: $isExternal"
                 
                 Write-Verbose "Getting sample users to determine organization naming convention..."
-                $internalUsers = Invoke-MsGraph -relativeUrl "users?`$filter=userType eq 'Member'&`$top=5"
+                $internalUsers = Invoke-MsGraph -relativeUrl "users?`$filter=userType eq 'Member'&`$top=5" -NoBatch
                 
                 if ($internalUsers -and $internalUsers.Count -gt 0) {
                     $upnPattern = $null
