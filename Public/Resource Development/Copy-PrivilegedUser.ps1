@@ -25,9 +25,6 @@ function Copy-PrivilegedUser {
         [switch]$IncludeEntraRoles,
         
         [Parameter(Mandatory = $false)]
-        [switch]$IncludeAzureRbacRoles,
-        
-        [Parameter(Mandatory = $false)]
         [switch]$IncludeGroupMemberships,
 
         [Parameter(Mandatory = $false)]
@@ -69,7 +66,7 @@ function Copy-PrivilegedUser {
             }
             
             $results.TargetUser = $targetUser
-            Write-Host "✅ Target user identified: $($targetUser.DisplayName) ($($targetUser.UserPrincipalName))" -ForegroundColor Green
+            Write-Host "✅  Target user identified: $($targetUser.DisplayName) ($($targetUser.UserPrincipalName))" -ForegroundColor Green
             
             if (-not $NewDisplayName) {
                 $NewDisplayName = $targetUser.DisplayName
@@ -81,7 +78,7 @@ function Copy-PrivilegedUser {
                 Write-Verbose "Target user is external: $isExternal"
                 
                 Write-Verbose "Getting sample users to determine organization naming convention..."
-                $internalUsers = Invoke-MsGraph -relativeUrl "users?`$filter=userType eq 'Member'&`$top=5" -NoBatch
+                $internalUsers = (Invoke-MsGraph -relativeUrl "users?`$filter=userType eq 'Member'&`$top=5" -NoBatch).value
                 
                 if ($internalUsers -and $internalUsers.Count -gt 0) {
                     $upnPattern = $null
@@ -176,6 +173,26 @@ function Copy-PrivilegedUser {
             # Step 2: Create the new user account
             Write-Host "👤 Creating new user account..." -ForegroundColor Cyan
             
+            # Check if user already exists
+            Write-Verbose "Checking if user with UPN '$NewUserPrincipalName' already exists..."
+            try {
+                $existingUser = Invoke-MsGraph -relativeUrl "users?`$filter=userPrincipalName eq '$NewUserPrincipalName'&`$select=id,userPrincipalName,displayName"
+                
+                if ($existingUser -and $existingUser.id) {
+                    Write-Host "  ⚠️  User with UPN '$NewUserPrincipalName' already exists!" -ForegroundColor Yellow
+                    Write-Host "  ℹ️  Display Name: $($existingUser.displayName)" -ForegroundColor Blue
+                    Write-Host "  ℹ️  Object ID: $($existingUser.id)" -ForegroundColor Blue
+                    throw "A user with the UPN '$NewUserPrincipalName' already exists. Please choose a different UPN or delete the existing user first."
+                }
+                Write-Verbose "No existing user found with UPN '$NewUserPrincipalName', proceeding with creation..."
+            }
+            catch {
+                if ($_.Exception.Message -match "already exists") {
+                    throw
+                }
+                Write-Verbose "Error checking for existing user (will proceed): $($_.Exception.Message)"
+            }
+            
             $createUserBody = @{
                 accountEnabled    = $true
                 displayName       = $NewDisplayName
@@ -243,15 +260,14 @@ function Copy-PrivilegedUser {
             $newUserResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/users" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $createUserBodyJson
             
             $newUser = Get-EntraInformation -ObjectId $newUserResponse.id
-            Write-Host "✅ New user created: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor Green
+            Write-Host "✅  New user created: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor Green
             
             $results.NewUser = $newUser
             
             # Step 3: Process Entra ID (Azure AD) roles
             if ($IncludeEntraRoles) {
-                Write-Host "👑 Processing Entra ID roles..." -ForegroundColor Cyan
-                $targetRoles = Get-EntraIDPermissions -ObjectId $targetUser.ObjectId
-                $results.EntraRoles = $targetRoles
+                Write-Host "👑  Processing Entra ID roles..." -ForegroundColor Cyan
+                $targetRoles = $targetUser.Roles
                 
                 if ($targetRoles) {
                     foreach ($role in $targetRoles) {
@@ -277,40 +293,14 @@ function Copy-PrivilegedUser {
                             Write-Host "  ⚠️ Could not find role definition for: $($role.RoleName)" -ForegroundColor Yellow
                         }
                     }
+                    $results.EntraRoles = $targetRoles
                 }
                 else {
                     Write-Host "  ℹ️ No Entra ID roles found for target user." -ForegroundColor Blue
                 }
             }
             
-            # Step 4: Process Azure RBAC role assignments
-            if ($IncludeAzureRbacRoles) {
-                Write-Host "🔑 Processing Azure RBAC role assignments..." -ForegroundColor Cyan
-                $rbacRoles = Get-RoleAssignment -ObjectId $targetUser.ObjectId
-                $results.AzureRbacRoles = $rbacRoles
-                
-                if ($rbacRoles) {
-                    foreach ($role in $rbacRoles) {
-                        # Create the role assignment using Az PowerShell or Azure CLI
-                        $scope = $role.Scope
-                        $roleName = $role.RoleName
-                        
-                        try {
-                            # Use Az PowerShell module
-                            New-AzRoleAssignment -ObjectId $newUser.id -RoleDefinitionName $roleName -Scope $scope | Out-Null
-                            Write-Host "  ✅ Assigned RBAC role: $roleName at scope: $scope" -ForegroundColor Green
-                        }
-                        catch {
-                            Write-Host "  ❌ Failed to assign RBAC role: $roleName. Error: $($_.Exception.Message)" -ForegroundColor Red
-                        }
-                    }
-                }
-                else {
-                    Write-Host "  ℹ️ No Azure RBAC role assignments found for target user." -ForegroundColor Blue
-                }
-            }
-            
-            # Step 5: Process group memberships
+            # Step 4: Process group memberships
             if ($IncludeGroupMemberships) {
                 Write-Host "👥 Processing group memberships..." -ForegroundColor Cyan
                 $groups = $targetUser.GroupMemberships
