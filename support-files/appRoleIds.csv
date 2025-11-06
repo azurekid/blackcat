@@ -1,4 +1,5 @@
 Permission,Type,appRoleId
+AdvancedQuery.Read.All,Application,b0a1a3c3-5c6c-430f-9c1d-e1f2556e6f33
 AccessReview.Read.All,Application,d07a8cc0-3d51-4b77-b3b0-32704d1f69fa
 AccessReview.ReadWrite.All,Application,ef5f7d5c-338f-44b0-86c3-351f46c8bb5f
 AccessReview.ReadWrite.Membership,Application,18228521-a591-40f1-b215-5fad4488c117
