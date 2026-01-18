@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.24.1'
+    ModuleVersion     = '0.25.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
