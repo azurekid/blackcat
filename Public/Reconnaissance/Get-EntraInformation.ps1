@@ -58,8 +58,57 @@ function Get-EntraInformation {
                     $isGroup = $false
                 }
                 'Other' {
-                    $response = Invoke-MsGraph -relativeUrl "me" -NoBatch
                     $isGroup = $false
+                    $response = $null
+
+                    if ($CurrentUser) {
+                        # Detect service principal context first (GUID account or token AppId), then fall back to /me for users
+                        $spAppId = $null
+
+                        # Try from current access token
+                        try {
+                            if ($script:SessionVariables -and $script:SessionVariables.accessToken) {
+                                $rawToken = $script:SessionVariables.accessToken
+                                if ($rawToken -and ($rawToken -split '\.').Count -ge 2) {
+                                    $tokenInfo = ConvertFrom-JWT -Base64JWT $rawToken
+                                    if ($tokenInfo.AppId) { $spAppId = $tokenInfo.AppId }
+                                }
+                            }
+                        }
+                        catch {
+                            Write-Verbose "Could not parse access token for AppId: $($_.Exception.Message)"
+                        }
+
+                        # Try from Az context account Id (GUID implies SPN)
+                        if (-not $spAppId) {
+                            try {
+                                $ctx = Get-AzContext -ErrorAction SilentlyContinue
+                                if ($ctx -and $ctx.Account -and $ctx.Account.Id -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+                                    $spAppId = $ctx.Account.Id
+                                }
+                            }
+                            catch {
+                                Write-Verbose "Az context lookup failed: $($_.Exception.Message)"
+                            }
+                        }
+
+                        if ($spAppId) {
+                            Write-Verbose "Current context appears to be a service principal (AppId: $spAppId). Fetching permissions."
+                            return Get-ServicePrincipalsPermission -AppId $spAppId
+                        }
+
+                        # User context fallback
+                        try {
+                            $response = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                        }
+                        catch {
+                            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "'/me' request failed and no service principal AppId could be determined for -CurrentUser" -Severity 'Error'
+                            return
+                        }
+                    }
+                    else {
+                        $response = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                    }
                 }
             }
             $roleDetails = Invoke-MsGraph -relativeUrl 'roleManagement/directory/roleDefinitions'
