@@ -36,7 +36,8 @@ function Connect-ServicePrincipal {
 
                 $SecureStringPwd = $ClientSecret | ConvertTo-SecureString -AsPlainText -Force
 
-                $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $clientId, $SecureStringPwd
+                # Use the provided ServicePrincipalId for credential username (was previously referencing an undefined $clientId)
+                $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $ServicePrincipalId, $SecureStringPwd
 
                 # Build connection parameters
                 $connectParams = @{
