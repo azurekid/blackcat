@@ -22,8 +22,25 @@ function ConvertFrom-JWT {
         }
 
         $jwtroles = @()
-        foreach ($Role in $token.Payload.wids) {
-            $jwtRoles += ($SessionVariables.Roles | Where-Object { $_.ID -eq $Role }).displayName
+        
+        # Handle wids (Well-Known IDs for directory roles)
+        if ($token.Payload.wids) {
+            foreach ($Role in $token.Payload.wids) {
+                $jwtRoles += ($SessionVariables.Roles | Where-Object { $_.ID -eq $Role }).displayName
+            }
+        }
+        
+        # Handle roles claim (application permissions or role names)
+        if ($token.Payload.roles) {
+            foreach ($Role in $token.Payload.roles) {
+                $jwtRoles += $Role
+            }
+        }
+        
+        # Handle scp claim (delegated scopes/permissions)
+        $scopes = @()
+        if ($token.Payload.scp) {
+            $scopes = $token.Payload.scp -split ' '
         }
     }
     End {
@@ -40,8 +57,11 @@ function ConvertFrom-JWT {
             "Auth. Method"   = $token.Payload.amr
             "IP Address"     = $token.Payload.ipaddr
             "Tenant ID"      = $token.Payload.tid
-            Scope            = $token.Payload.scp
-            Roles            = $jwtRoles
+            AppId            = $token.Payload.appid
+            AppDisplayName   = $token.Payload.app_displayname
+            IdentityProvider = $token.Payload.idp
+            Scope            = if ($scopes.Count -gt 0) { $scopes } else { $token.Payload.scp }
+            Roles            = if ($jwtRoles.Count -gt 0) { $jwtRoles } else { $null }
         }
 
         return $result

@@ -40,6 +40,7 @@
         'Get-ServicePrincipalsPermission',
         'Get-ResourcePermission',
         'Get-RoleAssignment',
+        'Get-EntraRoleAssignmentMap',
 
         # Exfiltration
         'Export-AzAccessToken',
@@ -86,6 +87,7 @@
         'Get-AdministrativeUnit',
         'Get-EntraInformation',
         'Get-EntraIDPermissions',
+        'Get-EntraRoleAssignment',
         'Get-EntraRoleMember',
         'Get-ManagedIdentity',
         'Get-StorageContainerList',
@@ -101,6 +103,7 @@
         'Copy-PrivilegedUser',
         'Restore-DeletedIdentity',
         'Connect-ServicePrincipal',
+        'Connect-EntraApplication',
 
         # Other (functions not found in FileList)
         'Get-AzResourceSecretList',
@@ -143,6 +146,7 @@
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Discovery\Get-RoleAssignment.ps1',
+        'Public\Reconnaissance\Get-EntraRoleAssignmentMap.ps1',
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
@@ -189,6 +193,7 @@
         'Public\Reconnaissance\Get-AdministrativeUnit.ps1',
         'Public\Reconnaissance\Get-EntraInformation.ps1',
         'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
+        'Public\Reconnaissance\Get-EntraRoleAssignment.ps1',
         'Public\Reconnaissance\Get-ManagedIdentity.ps1',
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
@@ -206,6 +211,7 @@
         'Public\Resource Development\Copy-PrivilegedUser.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
         'Public\Resource Development\Connect-ServicePrincipal.ps1',
+        'Public\Resource Development\Connect-EntraApplication.ps1',
 
         # Module files
         'BlackCat.psd1',

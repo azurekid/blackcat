@@ -37,9 +37,18 @@ function Find-AzurePublicResource {
 
             if ($sessionVariables.permutations) {
                 Write-Host "  📊 Loading session permutations..." -ForegroundColor Cyan
-                $permutations += $sessionVariables.permutations
+                foreach ($item in $sessionVariables.permutations) { [void]$permutations.Add($item) }
                 Write-Host "    ✅ Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
             }
+
+            # Always include the base name without any suffix
+            if (-not $permutations.Contains('')) { [void]$permutations.Add('') }
+
+            # Add CAF resource abbreviations (https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations)
+            $resourceAbbreviations = @(
+                'st', 'sa', 'kv', 'acr', 'app', 'func', 'web', 'api', 'apim', 'sql', 'sqlmi', 'sqlsrv', 'mysql', 'psql', 'cosmos', 'mongo', 'redis', 'sb', 'evh', 'cdn', 'edge', 'ai', 'ml', 'syn', 'synw', 'synp', 'vh', 'aks', 'aksnode', 'vm', 'vmss', 'vnet', 'subnet', 'nsg', 'fw', 'appgw', 'bastion', 'dns', 'pip'
+            )
+            $resourceAbbreviations | ForEach-Object { [void]$permutations.Add("-$_") ; [void]$permutations.Add("$_") }
 
             Write-Host "  🌐 Generating Azure service DNS names..." -ForegroundColor Yellow
 
@@ -87,7 +96,6 @@ function Find-AzurePublicResource {
                 'eventgrid.azure.net',             # Event Grid
                 'azuremicroservices.io',           # Spring Apps
                 'azuresynapse.net',                # Synapse Analytics
-                'atlas.microsoft.com',             # Azure Maps
                 'batch.azure.com'                  # Azure Batch
             )
 
@@ -154,7 +162,6 @@ function Find-AzurePublicResource {
                         '\.eventgrid\.azure\.net$'            { return 'EventGrid' }
                         '\.azuremicroservices\.io$'           { return 'SpringApps' }
                         '\.azuresynapse\.net$'                { return 'SynapseAnalytics' }
-                        '\.atlas\.microsoft\.com$'            { return 'AzureMaps' }
                         '\.batch\.azure\.com$'                { return 'AzureBatch' }
 
                         default                               { return 'Unknown' }
