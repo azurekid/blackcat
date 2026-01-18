@@ -2,6 +2,7 @@ function Get-ServicePrincipalsPermission {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [Alias('AppId','ApplicationId')]
         # [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [string]$servicePrincipalId
     )
@@ -24,7 +25,34 @@ function Get-ServicePrincipalsPermission {
 
     process {
         try {
-            Write-Verbose "Creating batch requests for service principal $servicePrincipalId"
+            # Resolve input that could be either service principal objectId or applicationId
+            $resolvedSp = $null
+            $resolvedSpId = $null
+
+            # First try treating input as service principal objectId
+            try {
+                $resolvedSp = Invoke-MsGraph -relativeUrl "servicePrincipals/$servicePrincipalId" -NoBatch -ErrorAction Stop
+                $resolvedSpId = $resolvedSp.id
+                Write-Verbose "Resolved service principal by objectId: $resolvedSpId"
+            }
+            catch {
+                Write-Verbose "Direct servicePrincipalId lookup failed, attempting appId lookup"
+            }
+
+            if (-not $resolvedSp) {
+                $spByAppId = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$servicePrincipalId'" -NoBatch
+                if ($spByAppId.value -and $spByAppId.value.Count -gt 0) {
+                    $resolvedSp = $spByAppId.value[0]
+                    $resolvedSpId = $resolvedSp.id
+                    Write-Verbose "Resolved service principal by applicationId to objectId: $resolvedSpId"
+                }
+            }
+
+            if (-not $resolvedSpId) {
+                throw "Unable to resolve service principal from identifier '$servicePrincipalId'"
+            }
+
+            Write-Verbose "Creating batch requests for service principal $resolvedSpId"
             
             # Create batch requests for all needed data
             $batchRequests = [System.Collections.Generic.List[hashtable]]::new()
@@ -33,42 +61,42 @@ function Get-ServicePrincipalsPermission {
             $batchRequests.Add(@{
                     id     = "spDetails"
                     method = "GET"
-                    url    = "/servicePrincipals/$servicePrincipalId"
+                    url    = "/servicePrincipals/$resolvedSpId"
                 })
             
             # Request 2: Get app role assignments
             $batchRequests.Add(@{
                     id     = "appRoleAssignments"
                     method = "GET"
-                    url    = "/servicePrincipals/$servicePrincipalId/appRoleAssignments"
+                    url    = "/servicePrincipals/$resolvedSpId/appRoleAssignments"
                 })
             
             # Request 3: Get delegated permissions
             $batchRequests.Add(@{
                     id     = "delegatedPermissions"
                     method = "GET"
-                    url    = "/oauth2PermissionGrants?`$filter=clientId eq '$servicePrincipalId'"
+                    url    = "/oauth2PermissionGrants?`$filter=clientId eq '$resolvedSpId'"
                 })
             
             # Request 4: Get app roles assigned to others
             $batchRequests.Add(@{
                     id     = "appRoleAssignedTo"
                     method = "GET"
-                    url    = "/servicePrincipals/$servicePrincipalId/appRoleAssignedTo"
+                    url    = "/servicePrincipals/$resolvedSpId/appRoleAssignedTo"
                 })
             
             # Request 5: Get directory roles and memberships
             $batchRequests.Add(@{
                     id     = "memberOf"
                     method = "GET"
-                    url    = "/servicePrincipals/$servicePrincipalId/transitiveMemberOf"
+                    url    = "/servicePrincipals/$resolvedSpId/transitiveMemberOf"
                 })
             
             # Request 6: Get owned objects
             $batchRequests.Add(@{
                     id     = "ownedObjects"
                     method = "GET"
-                    url    = "/servicePrincipals/$servicePrincipalId/ownedObjects"
+                    url    = "/servicePrincipals/$resolvedSpId/ownedObjects"
                 })
             
             # Execute all requests in a single batch
