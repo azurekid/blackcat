@@ -89,11 +89,15 @@ function Get-EntraInformation {
                     }
 
                 } else {
-                    # Get group memberships
+                    # Get group memberships and filter out null/empty display names
                     $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf"
+                    $groupDisplayNames = @()
+                    foreach ($g in $groups) { if ($g.displayName) { $groupDisplayNames += $g.displayName } }
 
-                    # Get directory roles
+                    # Get directory roles and filter out null/empty display names
                     $roles = Invoke-MsGraph -relativeUrl "users/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"
+                    $roleDisplayNames = @()
+                    foreach ($r in $roles) { if ($r.displayName) { $roleDisplayNames += $r.displayName } }
 
                     $currentItem = [PSCustomObject]@{
                         DisplayName       = $item.displayName
@@ -101,8 +105,8 @@ function Get-EntraInformation {
                         UserPrincipalName = $item.userPrincipalName
                         JobTitle          = $item.jobTitle
                         Department        = $item.department
-                        GroupMemberships  = $groups.displayName
-                        Roles             = $roles.displayName
+                        GroupMemberships  = $groupDisplayNames
+                        Roles             = $roleDisplayNames
                         Mail              = $item.mail
                         AccountEnabled    = $item.accountEnabled
                         IsPrivileged      = $False
