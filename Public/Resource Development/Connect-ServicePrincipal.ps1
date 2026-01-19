@@ -64,7 +64,18 @@ function Connect-ServicePrincipal {
                     
                     $currentContext = Get-AzContext
                     
+                    # Retrieve SP permissions with the connected AppId (simple pass-through)
+                    $spPermissions = $null
+                    try {
+                        $spPermissions = Get-ServicePrincipalsPermission -AppId $ServicePrincipalId
+                        Write-Verbose "Retrieved service principal permissions"
+                    }
+                    catch {
+                        Write-Verbose "Unable to retrieve service principal permissions: $($_.Exception.Message)"
+                    }
+
                     $result = [PSCustomObject]@{
+                        DisplayName        = $spPermissions.DisplayName
                         ServicePrincipalId = $ServicePrincipalId
                         TenantId           = $currentContext.Tenant.Id
                         TenantName         = $currentContext.Tenant.Directory
@@ -73,6 +84,9 @@ function Connect-ServicePrincipal {
                         Environment        = $currentContext.Environment.Name
                         Account            = $currentContext.Account.Id
                         ConnectedAt        = Get-Date
+                        GroupMemberships   = $spPermissions.GroupMemberships
+                        AppRoles           = $spPermissions.AppRoles
+                        AppPermissions     = $spPermissions.AppPermissions
                     }
 
                     return $result
@@ -84,14 +98,17 @@ function Connect-ServicePrincipal {
             }
         }
         catch {
-            $errorMessage = switch -Wildcard ($_.Exception.Message) {
+            $rawMessage = $_.Exception.Message
+            if (-not $rawMessage) { $rawMessage = $_.Exception.ToString() }
+
+            $errorMessage = switch -Wildcard ($rawMessage) {
                 "*AADSTS70002*"   { "Invalid client credentials. Please verify the Service Principal ID and Client Secret." }
                 "*AADSTS90002*"   { "Invalid tenant ID. Please verify the Tenant ID is correct." }
                 "*AADSTS700016*"  { "Application not found in the directory. Please verify the Service Principal ID." }
                 "*AADSTS7000215*" { "Invalid client secret provided. Please verify the Client Secret." }
                 "*AADSTS50034*"   { "The user account doesn't exist in the tenant. Please verify the Service Principal ID and Tenant ID." }
                 "*AADSTS900971*"  { "No reply address provided. This might indicate an application configuration issue." }
-                default           { "Authentication failed: $($_.Exception.Message)" }
+                default           { "Authentication failed: $rawMessage" }
             }
             
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $errorMessage -Severity 'Error'
