@@ -41,6 +41,14 @@ _Enhanced `-CurrentUser` functionality for Service Principal authentication_
 * **`-IncludeEmpty` Now Defaults to `$true`**: Empty containers are now included by default
   - Previously required explicit `-IncludeEmpty` flag
 
+**`Get-PublicBlobContent` Improvements:**
+* **Breaking Change: Listing is Now Default Behavior**: The function now lists blobs by default
+  - Replaced `-ListOnly` switch with `-Download` switch
+  - Use `-Download -OutputPath <path>` to download files
+  - Safer default behavior - no accidental downloads
+  - Example: `Get-PublicBlobContent -BlobUrl $url` (lists files)
+  - Example: `Get-PublicBlobContent -BlobUrl $url -OutputPath ./loot -Download` (downloads files)
+
 
 ## v0.24.0 [2025-10-15] 🚀 Performance Optimization & Usability Improvements
 
