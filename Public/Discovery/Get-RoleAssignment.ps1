@@ -136,7 +136,7 @@ function Get-RoleAssignment {
                         return
                     }
                     "Object" { return $cachedResults }
-                    "Table" { return $cachedResults | Format-Table -AutoSize }
+                    "Table" { return $cachedResults | Format-Table -Property PrincipalType, PrincipalId, RoleName, Scope -AutoSize }
                 }
             }
         }
@@ -196,20 +196,63 @@ function Get-RoleAssignment {
 
             try {
                 $ObjectId = $ObjectIdParam
+                $Groups = @()
+                $principalType = $null
+                
                 if ($CurrentUserFlag) {
-                    Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
-                    $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
-                    $ObjectId = $userObject.id
-                    Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
+                    # Detect authentication type from Azure context
+                    $azContext = Get-AzContext
+                    $accountType = $azContext.Account.Type
+                    
+                    if ($accountType -eq 'ServicePrincipal') {
+                        # Service Principal authentication - use Graph API to get SP's object ID
+                        Write-Host "  🤖 Retrieving current Service Principal's object ID..." -ForegroundColor Yellow
+                        $appId = $azContext.Account.Id
+                        $spObject = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$appId'" -NoBatch
+                        $ObjectId = $spObject.value[0].id
+                        $principalType = 'ServicePrincipal'
+                        Write-Host "    ✅ Current Service Principal ID: $ObjectId" -ForegroundColor Green
+                        
+                        # Service Principals can also be members of groups
+                        Write-Host "  👥 Retrieving group memberships for Service Principal..." -ForegroundColor Yellow
+                        try {
+                            $Groups = @(Invoke-MsGraph -relativeUrl "servicePrincipals/$ObjectId/memberOf").id
+                            Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Verbose "Could not retrieve group memberships for Service Principal: $($_.Exception.Message)"
+                        }
+                    }
+                    else {
+                        # User authentication - use /me endpoint
+                        Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
+                        $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
+                        $ObjectId = $userObject.id
+                        $principalType = 'User'
+                        Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
+                        
+                        # Get user's group memberships
+                        Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
+                        $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
+                        Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                    }
                 }
-
-                if ($ObjectId) {
-                    Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
-                    $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
-                    Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
-                }
-                else {
-                    $Groups = @()
+                elseif ($ObjectId) {
+                    Write-Host "  👥 Retrieving group memberships for principal: $ObjectId..." -ForegroundColor Yellow
+                    # Try user first, then service principal
+                    try {
+                        $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
+                        Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                    }
+                    catch {
+                        try {
+                            $Groups = @(Invoke-MsGraph -relativeUrl "servicePrincipals/$ObjectId/memberOf").id
+                            Write-Host "    ✅ Found $($Groups.Count) group memberships (Service Principal)" -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Verbose "Could not retrieve group memberships: $($_.Exception.Message)"
+                        }
+                    }
                 }
 
                 Write-Host "  🔍 Analyzing role assignments across $($SubscriptionsParam.Count) subscriptions with $ThrottleLimitParam concurrent threads..." -ForegroundColor Cyan
@@ -501,7 +544,7 @@ function Get-RoleAssignment {
                 return
             }
             "Object" { return $result }
-            "Table" { return $result | Format-Table -AutoSize }
+            "Table" { return $result | Format-Table -Property PrincipalType, PrincipalId, RoleName, Scope -AutoSize }
         }
     }
     <#
