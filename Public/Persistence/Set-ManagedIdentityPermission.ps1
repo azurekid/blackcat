@@ -34,7 +34,10 @@ function Set-ManagedIdentityPermission {
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('app-role-name')]
-        [string]$appRoleName
+        [string]$appRoleName,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Remove
     )
 
     begin {
@@ -95,7 +98,8 @@ function Set-ManagedIdentityPermission {
     }
 
     process {
-        if ($PSCmdlet.ShouldProcess("Service Principal ID: $servicePrincipalId, Resource ID: $resourceId, App Role ID: $appRoleId")) {
+        $action = if ($Remove) { "Remove" } else { "Assign" }
+        if ($PSCmdlet.ShouldProcess("Service Principal ID: $servicePrincipalId, Resource ID: $resourceId, App Role Name: $appRoleName", $action)) {
             try {
                 if (-not $appRoleId) {
                     $appRoleId = (Get-AppRolePermission -appRoleName $appRoleName).appRoleId
@@ -104,25 +108,68 @@ function Set-ManagedIdentityPermission {
                 Write-Verbose "Get Service Principals App Role Assignments"
                 $uri = "$($sessionVariables.graphUri)/servicePrincipals/$servicePrincipalId/appRoleAssignments"
 
-                $requestParam = @{
-                    Headers     = $script:graphHeader
-                    Uri         = $uri
-                    Method      = 'POST'
-                    ContentType = 'application/json'
-                    UserAgent   = $($sessionVariables.userAgent)
-                    Body        = @{
-                        principalId = $servicePrincipalId
-                        resourceId  = $resourceId
-                        appRoleId   = $appRoleId
-                    } | ConvertTo-Json
+                if ($Remove) {
+                    # Get existing app role assignments to find the one to remove
+                    try {
+                        Write-Verbose "Getting existing app role assignments to find assignment ID"
+                        $getParam = @{
+                            Headers     = $script:graphHeader
+                            Uri         = $uri
+                            Method      = 'GET'
+                            ContentType = 'application/json'
+                            UserAgent   = $($sessionVariables.userAgent)
+                        }
+                        
+                        $existingAssignments = Invoke-RestMethod @getParam
+                        
+                        # Find the assignment that matches the appRoleId
+                        $assignmentToRemove = $existingAssignments.value | Where-Object { $_.appRoleId -eq $appRoleId }
+                        
+                        if (-not $assignmentToRemove) {
+                            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "App role assignment '$appRoleName' not found on service principal" -Severity 'Warning'
+                            return
+                        }
+                        
+                        # Delete the assignment
+                        $deleteUri = "$uri/$($assignmentToRemove.id)"
+                        $deleteParam = @{
+                            Headers     = $script:graphHeader
+                            Uri         = $deleteUri
+                            Method      = 'DELETE'
+                            ContentType = 'application/json'
+                            UserAgent   = $($sessionVariables.userAgent)
+                        }
+                        
+                        Write-Verbose "Removing App Role '$appRoleName' from Service Principal"
+                        Invoke-RestMethod @deleteParam
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Successfully removed app role '$appRoleName' from service principal" -Severity 'Information'
+                    }
+                    catch {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Error'
+                    }
                 }
+                else {
+                    # Add the app role assignment
+                    $requestParam = @{
+                        Headers     = $script:graphHeader
+                        Uri         = $uri
+                        Method      = 'POST'
+                        ContentType = 'application/json'
+                        UserAgent   = $($sessionVariables.userAgent)
+                        Body        = @{
+                            principalId = $servicePrincipalId
+                            resourceId  = $resourceId
+                            appRoleId   = $appRoleId
+                        } | ConvertTo-Json
+                    }
 
-                try {
-                    Write-Verbose "Assigning App Role to Service Principal"
-                    Invoke-RestMethod @requestParam
-                }
-                catch {
-                    Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Information'
+                    try {
+                        Write-Verbose "Assigning App Role to Service Principal"
+                        Invoke-RestMethod @requestParam
+                    }
+                    catch {
+                        Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Information'
+                    }
                 }
             }
             catch {
@@ -132,12 +179,14 @@ function Set-ManagedIdentityPermission {
     }
     <#
 .SYNOPSIS
-Assigns a specific app role to a managed identity (service principal) in Azure using Microsoft Graph API.
+Assigns or removes a specific app role to/from a managed identity (service principal) in Azure using Microsoft Graph API.
 
 .DESCRIPTION
-The `Set-ManagedIdentityPermission` function assigns an app role to a service principal by making a POST request to the Microsoft Graph API.
+The `Set-ManagedIdentityPermission` function assigns or removes an app role to/from a service principal using the Microsoft Graph API.
 It supports specifying the service principal ID, resource ID, app role ID, and app role name. If the app role ID is not provided, it will
 be resolved based on the app role name.
+
+Use the -Remove switch to delete an existing app role assignment instead of adding one.
 
 The function includes intelligent tab completion for the appRoleName parameter, showing all available Microsoft Graph application permissions.
 If the BlackCat session data is not available, it falls back to common permissions.
@@ -166,9 +215,13 @@ resolve the appropriate service principal ID. Valid options include:
 The unique identifier (GUID) of the app role to be assigned. This parameter is optional. If not provided, it will be resolved using the `appRoleName` parameter.
 
 .PARAMETER appRoleName
-The name of the app role to be assigned. This parameter is mandatory and must match one of the predefined app role names.
+The name of the app role to be assigned or removed. This parameter is mandatory and must match one of the predefined app role names.
 
 Use tab completion to see all available permissions when the module is properly loaded.
+
+.PARAMETER Remove
+A switch parameter that, when specified, removes the app role assignment instead of adding it.
+The function will look up existing assignments and delete the one matching the specified appRoleName.
 
 .EXAMPLE
 Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-123456789abc" `
@@ -176,6 +229,15 @@ Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-12345
                               -appRoleName "Application.ReadWrite.All"
 
 This example assigns the "Application.ReadWrite.All" app role to the specified service principal for the given resource.
+
+.EXAMPLE
+# Remove an app role assignment from a managed identity
+Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-123456789abc" `
+                              -CommonResource MicrosoftGraph `
+                              -appRoleName "Application.ReadWrite.All" `
+                              -Remove
+
+This example removes the "Application.ReadWrite.All" app role from the specified service principal.
 
 .EXAMPLE
 # Using a common resource name instead of looking up the resource ID
