@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.25.0'
+    ModuleVersion     = '0.26.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -89,6 +89,7 @@
         'Get-EntraIDPermissions',
         'Get-EntraRoleAssignment',
         'Get-EntraRoleMember',
+        'Get-FederatedIdentityCredential',
         'Get-ManagedIdentity',
         'Get-StorageContainerList',
         'Invoke-AzBatch',
@@ -194,6 +195,7 @@
         'Public\Reconnaissance\Get-EntraInformation.ps1',
         'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
         'Public\Reconnaissance\Get-EntraRoleAssignment.ps1',
+        'Public\Reconnaissance\Get-FederatedIdentityCredential.ps1',
         'Public\Reconnaissance\Get-ManagedIdentity.ps1',
         'Public\Reconnaissance\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Invoke-AzBatch.ps1',
