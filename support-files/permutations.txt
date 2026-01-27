@@ -87,6 +87,8 @@ terraform-state
 test
 themes
 tmp
+temp
+templates
 uploads
 userfiles
 useast
