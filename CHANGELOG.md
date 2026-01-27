@@ -37,6 +37,14 @@ _Enhanced `-CurrentUser` functionality for Service Principal authentication_
   - Automatically looks up existing assignments and deletes the matching one
   - Example: `Set-ManagedIdentityPermission -servicePrincipalId $id -CommonResource MicrosoftGraph -appRoleName "User.Read.All" -Remove`
 
+**`Find-PublicStorageContainer` Improvements:**
+* **New `-IncludeDeleted` Switch**: Discover soft-deleted containers via anonymous access
+  - Uses Azure Storage List Containers API with `include=deleted` parameter
+  - Reveals containers that were "deleted" but are still within soft-delete retention period
+  - Useful for finding misconfigured storage accounts where deleted data is still accessible
+* **`-IncludeEmpty` Now Defaults to `$true`**: Empty containers are now included by default
+  - Previously required explicit `-IncludeEmpty` flag
+
 
 ## v0.24.0 [2025-10-15] 🚀 Performance Optimization & Usability Improvements
 
