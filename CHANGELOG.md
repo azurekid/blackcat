@@ -4,6 +4,40 @@
 
 # CHANGELOG
 
+## v0.26.0 [2026-01-26] 🔧 Service Principal Support & Output Improvements
+
+_Enhanced `-CurrentUser` functionality for Service Principal authentication_
+
+**`Get-RoleAssignment` Improvements:**
+* **Service Principal Authentication Support**: Fixed `-CurrentUser` parameter to work with Service Principal authentication
+  - Previously failed with `/me request is only valid with delegated authentication flow` error
+  - Now automatically detects authentication type (User vs Service Principal)
+  - Uses Graph API to retrieve Service Principal's object ID when authenticated as SP
+  - Retrieves group memberships for Service Principals for complete role enumeration
+* **Improved Table Output**: Default table output now displays `RoleName` instead of `RoleId`
+  - Table columns: `PrincipalType`, `PrincipalId`, `RoleName`, `Scope`
+  - More readable output showing role names like "Contributor" instead of GUIDs
+
+**New Function: `Get-FederatedIdentityCredential`**
+* Retrieves federated identity credentials from User Assigned Managed Identities
+* Supports querying all UAMIs or filtering by name/resource ID
+* Highlights GitHub Actions trust relationships for security review
+* Pipeline support: `Get-ManagedIdentity | Get-FederatedIdentityCredential`
+* Multiple output formats: Table, JSON, CSV, Object
+
+**`Set-FederatedIdentity` Improvements:**
+* **New `-ManagedIdentityName` Parameter**: Specify managed identity by name instead of full resource ID
+  - Automatically resolves the name to resource ID
+  - Includes argument completer for tab-completion of available managed identities
+  - Pipeline support: `Get-ManagedIdentity | Set-FederatedIdentity ...`
+* Original `-Id` parameter still supported for full resource ID
+
+**`Set-ManagedIdentityPermission` Improvements:**
+* **New `-Remove` Switch**: Remove app role assignments from service principals
+  - Automatically looks up existing assignments and deletes the matching one
+  - Example: `Set-ManagedIdentityPermission -servicePrincipalId $id -CommonResource MicrosoftGraph -appRoleName "User.Read.All" -Remove`
+
+
 ## v0.24.0 [2025-10-15] 🚀 Performance Optimization & Usability Improvements
 
 _Enhanced Service Principal Analysis & Permission Management_
