@@ -29,10 +29,6 @@ function Find-PublicStorageContainer {
         [switch]$IncludeMetadata,
 
         [Parameter(Mandatory = $false)]
-        [Alias("include-deleted")]
-        [switch]$IncludeDeleted,
-
-        [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV")]
         [Alias("output", "o")]
         [string]$OutputFormat
@@ -87,44 +83,6 @@ function Find-PublicStorageContainer {
 
             if ($validDnsNames.Count -gt 0) {
                 Write-Host "    Found $($validDnsNames.Count) valid storage accounts" -ForegroundColor Green
-                
-                # Try to list containers (including deleted if requested) via List Containers API
-                if ($IncludeDeleted) {
-                    Write-Host "  Checking for soft-deleted containers..." -ForegroundColor Cyan
-                    foreach ($dns in $validDnsNames) {
-                        try {
-                            $listContainersUri = "https://$dns/?comp=list&include=deleted"
-                            $listResponse = Invoke-WebRequest -Uri $listContainersUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 10
-                            
-                            if ($listResponse.StatusCode -eq 200) {
-                                # Parse deleted containers from XML response
-                                $deletedContainers = [regex]::Matches($listResponse.Content, '<Container><Name>(.*?)</Name>.*?<Deleted>true</Deleted>.*?</Container>', 'Singleline')
-                                
-                                foreach ($match in $deletedContainers) {
-                                    $containerName = $match.Groups[1].Value
-                                    $deletedItem = [PSCustomObject]@{
-                                        "StorageAccountName" = $dns.split('.')[0]
-                                        "Container"          = $containerName
-                                        "FileCount"          = 0
-                                        "IsDeleted"          = $true
-                                        "Status"             = "🗑️ Soft-Deleted"
-                                        "Uri"                = "https://$dns/$containerName"
-                                    }
-                                    [void] $result.Add($deletedItem)
-                                    $foundContainers.Add("      🗑️ $($dns.split('.')[0])/$containerName -> Soft-deleted container")
-                                }
-                                
-                                if ($deletedContainers.Count -gt 0) {
-                                    Write-Host "    🗑️ Found $($deletedContainers.Count) soft-deleted containers on $($dns.split('.')[0])" -ForegroundColor Yellow
-                                }
-                            }
-                        }
-                        catch {
-                            Write-Verbose "Could not list containers for $dns : $_"
-                        }
-                    }
-                }
-                
                 $totalContainers = $validDnsNames.Count * $permutations.Count
                 Write-Host "  🔍 Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
 
@@ -294,11 +252,6 @@ function Find-PublicStorageContainer {
 .PARAMETER IncludeMetadata
     Switch to include container metadata in the results by making an additional metadata request for each discovered container.
 
-.PARAMETER IncludeDeleted
-    Switch to include soft-deleted containers in the results. This uses the Azure Storage List Containers API with 
-    the 'include=deleted' parameter to discover containers that have been deleted but are still within the soft-delete
-    retention period. This can reveal containers that administrators thought were removed but are still recoverable.
-
 .PARAMETER OutputFormat
     Optional. Specifies the output format for results. Valid values are:
     - Object: Returns PowerShell objects (default when piping)
@@ -325,17 +278,9 @@ function Find-PublicStorageContainer {
 
     Searches for public file storage containers using 100 concurrent threads and returns results in CSV format.
 
-.EXAMPLE
-    Find-PublicStorageContainer -StorageAccountName "contoso" -IncludeDeleted
-
-    Searches for public blob containers including soft-deleted containers that are still within the retention period.
-    Useful for discovering containers that were "deleted" but can still be recovered or accessed.
-
 .NOTES
     - Requires appropriate permissions to perform DNS resolution and HTTP requests.
     - Uses parallel processing for improved performance; adjust ThrottleLimit based on system resources.
     - Designed for reconnaissance and security assessment purposes.
-    - Soft-deleted containers (via -IncludeDeleted) require the storage account to have container soft-delete enabled
-      and anonymous access allowed at the account level for the List Containers API.
 #>
 }
