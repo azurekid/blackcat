@@ -74,13 +74,13 @@ function Connect-EntraApplication {
                     Write-Verbose "Requesting device code from: $deviceCodeEndpoint"
                     $deviceCodeResponse = Invoke-RestMethod -Uri $deviceCodeEndpoint -Method Post -Body $deviceCodeBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
 
-                    Write-Host "🔐 To sign in, use a web browser to open the page:" -ForegroundColor Yellow
+                    Write-Host " To sign in, use a web browser to open the page:" -ForegroundColor Yellow
                     Write-Host "   $($deviceCodeResponse.verification_uri)" -ForegroundColor Cyan
                     Write-Host ""
-                    Write-Host "📝 And enter the code:" -ForegroundColor Yellow
+                    Write-Host " And enter the code:" -ForegroundColor Yellow
                     Write-Host "   $($deviceCodeResponse.user_code)" -ForegroundColor Green
                     Write-Host ""
-                    Write-Host "⏳ Waiting for authentication..." -ForegroundColor Gray
+                    Write-Host " Waiting for authentication..." -ForegroundColor Gray
                     Write-Host ""
 
                     # Poll for token
@@ -140,7 +140,7 @@ function Connect-EntraApplication {
                     Write-Host "  Interactive Authentication" -ForegroundColor Yellow
                     Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
                     Write-Host ""
-                    Write-Host "🌐 A browser window will open for authentication." -ForegroundColor Yellow
+                    Write-Host " A browser window will open for authentication." -ForegroundColor Yellow
                     Write-Host "   Please complete the sign-in process." -ForegroundColor Yellow
                     Write-Host ""
 
@@ -272,7 +272,7 @@ function Connect-EntraApplication {
                 Write-Verbose "Successfully authenticated to Microsoft Graph"
                 
                 Write-Host ""
-                Write-Host "✅ Successfully authenticated!" -ForegroundColor Green
+                Write-Host " Successfully authenticated!" -ForegroundColor Green
                 Write-Host ""
                 Write-Host "Connection Details:" -ForegroundColor Cyan
                 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Gray
@@ -302,7 +302,7 @@ function Connect-EntraApplication {
                 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Gray
                 Write-Host ""
                 
-                Write-Host "ℹ️  Using delegated permissions - operations run as: $($result.Account)" -ForegroundColor Cyan
+                Write-Host "  Using delegated permissions - operations run as: $($result.Account)" -ForegroundColor Cyan
                 Write-Host ""
 
                 return $result
@@ -353,7 +353,7 @@ function Connect-EntraApplication {
             }
             
             Write-Host ""
-            Write-Host "❌ Authentication Failed" -ForegroundColor Red
+            Write-Host " Authentication Failed" -ForegroundColor Red
             Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Gray
             Write-Host $errorMessage -ForegroundColor Red
             
@@ -368,7 +368,7 @@ function Connect-EntraApplication {
             }
             
             Write-Host ""
-            Write-Host "🔧 Troubleshooting Steps:" -ForegroundColor Yellow
+            Write-Host " Troubleshooting Steps:" -ForegroundColor Yellow
             Write-Host "  1. Verify the Client ID and Tenant ID are correct" -ForegroundColor Gray
             Write-Host "  2. Ensure delegated permissions are granted in the app registration" -ForegroundColor Gray
             Write-Host "  3. Check that admin consent has been granted (if required)" -ForegroundColor Gray

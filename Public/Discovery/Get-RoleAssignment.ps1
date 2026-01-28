@@ -69,28 +69,28 @@ function Get-RoleAssignment {
         }
 
         $startTime = Get-Date
-        Write-Host "🎯 Starting Azure RBAC Role Assignment Analysis..." -ForegroundColor Green
+        Write-Host " Starting Azure RBAC Role Assignment Analysis..." -ForegroundColor Green
         
         if ($CurrentUser) {
-            Write-Host "  👤 Mode: Current User Analysis" -ForegroundColor Cyan
+            Write-Host "   Mode: Current User Analysis" -ForegroundColor Cyan
         }
         if ($PrincipalType) {
-            Write-Host "  🎭 Filter: Principal Type = $PrincipalType" -ForegroundColor Cyan
+            Write-Host "   Filter: Principal Type = $PrincipalType" -ForegroundColor Cyan
         }
         if ($ObjectId) {
             Write-Host "  🆔 Filter: Object ID = $ObjectId" -ForegroundColor Cyan
         }
         if ($SubscriptionId) {
-            Write-Host "  🔒 Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
         }
         if ($IsCustom) {
-            Write-Host "  🛠️ Filter: Custom Roles Only" -ForegroundColor Cyan
+            Write-Host "   Filter: Custom Roles Only" -ForegroundColor Cyan
         }
         if ($ExcludeCustom) {
-            Write-Host "  🚫 Filter: Excluding Custom Role Details" -ForegroundColor Cyan
+            Write-Host "   Filter: Excluding Custom Role Details" -ForegroundColor Cyan
         }
         if ($IncludeEligible) {
-            Write-Host "  🔐 Include: PIM Eligible Role Assignments" -ForegroundColor Cyan
+            Write-Host "   Include: PIM Eligible Role Assignments" -ForegroundColor Cyan
         }
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
@@ -115,7 +115,7 @@ function Get-RoleAssignment {
         if (-not $SkipCache) {
             $cachedResults = Get-BlackCatCache -Key $cacheKey -CacheType 'MSGraph'
             if ($null -ne $cachedResults) {
-                Write-Host "📋 Retrieved role assignments from cache" -ForegroundColor Green
+                Write-Host " Retrieved role assignments from cache" -ForegroundColor Green
                 
                 # Return cached results in requested format
                 switch ($OutputFormat) {
@@ -124,7 +124,7 @@ function Get-RoleAssignment {
                         $jsonOutput = $cachedResults | ConvertTo-Json -Depth 3
                         $jsonFilePath = "RoleAssignments_$timestamp.json"
                         $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                        Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                        Write-Host " JSON output saved to: $jsonFilePath" -ForegroundColor Green
                         return
                     }
                     "CSV" {
@@ -132,7 +132,7 @@ function Get-RoleAssignment {
                         $csvOutput = $cachedResults | ConvertTo-Csv -NoTypeInformation
                         $csvFilePath = "RoleAssignments_$timestamp.csv"
                         $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                        Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                        Write-Host " CSV output saved to: $csvFilePath" -ForegroundColor Green
                         return
                     }
                     "Object" { return $cachedResults }
@@ -148,7 +148,7 @@ function Get-RoleAssignment {
             }
             
             $subscriptionOperation = {
-                Write-Host "🎯 Retrieving all subscriptions for the current user context..." -ForegroundColor Green
+                Write-Host " Retrieving all subscriptions for the current user context..." -ForegroundColor Green
                 $baseUri = 'https://management.azure.com'
                 
                 if ($SubscriptionId) {
@@ -174,7 +174,7 @@ function Get-RoleAssignment {
                     $retrievedSubscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
                 }
                 
-                Write-Host "  📊 Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
+                Write-Host "   Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
                 return $retrievedSubscriptions
             }
 
@@ -182,7 +182,7 @@ function Get-RoleAssignment {
 
         }
         catch {
-            Write-Host "❌ Error retrieving subscriptions: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host " Error retrieving subscriptions: $($_.Exception.Message)" -ForegroundColor Red
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
@@ -206,18 +206,18 @@ function Get-RoleAssignment {
                     
                     if ($accountType -eq 'ServicePrincipal') {
                         # Service Principal authentication - use Graph API to get SP's object ID
-                        Write-Host "  🤖 Retrieving current Service Principal's object ID..." -ForegroundColor Yellow
+                        Write-Host "   Retrieving current Service Principal's object ID..." -ForegroundColor Yellow
                         $appId = $azContext.Account.Id
                         $spObject = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$appId'" -NoBatch
                         $ObjectId = $spObject.value[0].id
                         $principalType = 'ServicePrincipal'
-                        Write-Host "    ✅ Current Service Principal ID: $ObjectId" -ForegroundColor Green
+                        Write-Host "     Current Service Principal ID: $ObjectId" -ForegroundColor Green
                         
                         # Service Principals can also be members of groups
-                        Write-Host "  👥 Retrieving group memberships for Service Principal..." -ForegroundColor Yellow
+                        Write-Host "   Retrieving group memberships for Service Principal..." -ForegroundColor Yellow
                         try {
                             $Groups = @(Invoke-MsGraph -relativeUrl "servicePrincipals/$ObjectId/memberOf").id
-                            Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                            Write-Host "     Found $($Groups.Count) group memberships" -ForegroundColor Green
                         }
                         catch {
                             Write-Verbose "Could not retrieve group memberships for Service Principal: $($_.Exception.Message)"
@@ -225,29 +225,29 @@ function Get-RoleAssignment {
                     }
                     else {
                         # User authentication - use /me endpoint
-                        Write-Host "  👤 Retrieving current user's object ID..." -ForegroundColor Yellow
+                        Write-Host "   Retrieving current user's object ID..." -ForegroundColor Yellow
                         $userObject = Invoke-MsGraph -relativeUrl "me" -NoBatch
                         $ObjectId = $userObject.id
                         $principalType = 'User'
-                        Write-Host "    ✅ Current user ID: $ObjectId" -ForegroundColor Green
+                        Write-Host "     Current user ID: $ObjectId" -ForegroundColor Green
                         
                         # Get user's group memberships
-                        Write-Host "  👥 Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
+                        Write-Host "   Retrieving group memberships for user: $ObjectId..." -ForegroundColor Yellow
                         $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
-                        Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                        Write-Host "     Found $($Groups.Count) group memberships" -ForegroundColor Green
                     }
                 }
                 elseif ($ObjectId) {
-                    Write-Host "  👥 Retrieving group memberships for principal: $ObjectId..." -ForegroundColor Yellow
+                    Write-Host "   Retrieving group memberships for principal: $ObjectId..." -ForegroundColor Yellow
                     # Try user first, then service principal
                     try {
                         $Groups = @(Invoke-MsGraph -relativeUrl "users/$ObjectId/memberOf").id
-                        Write-Host "    ✅ Found $($Groups.Count) group memberships" -ForegroundColor Green
+                        Write-Host "     Found $($Groups.Count) group memberships" -ForegroundColor Green
                     }
                     catch {
                         try {
                             $Groups = @(Invoke-MsGraph -relativeUrl "servicePrincipals/$ObjectId/memberOf").id
-                            Write-Host "    ✅ Found $($Groups.Count) group memberships (Service Principal)" -ForegroundColor Green
+                            Write-Host "     Found $($Groups.Count) group memberships (Service Principal)" -ForegroundColor Green
                         }
                         catch {
                             Write-Verbose "Could not retrieve group memberships: $($_.Exception.Message)"
@@ -255,7 +255,7 @@ function Get-RoleAssignment {
                     }
                 }
 
-                Write-Host "  🔍 Analyzing role assignments across $($SubscriptionsParam.Count) subscriptions with $ThrottleLimitParam concurrent threads..." -ForegroundColor Cyan
+                Write-Host "   Analyzing role assignments across $($SubscriptionsParam.Count) subscriptions with $ThrottleLimitParam concurrent threads..." -ForegroundColor Cyan
                 $SubscriptionsParam | ForEach-Object -Parallel {
                 try {
                     $baseUri             = $using:baseUri
@@ -270,7 +270,7 @@ function Get-RoleAssignment {
                     $ExcludeCustom       = $using:ExcludeCustom
                     $subscriptionId      = $_
 
-                    Write-Verbose "🔍 Processing subscription: $subscriptionId"
+                    Write-Verbose " Processing subscription: $subscriptionId"
                     $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
 
                     $principalIds = @()
@@ -326,7 +326,7 @@ function Get-RoleAssignment {
                                 }
 
                                 if (-not $ExcludeCustom) {
-                                    Write-Verbose "🔍 Retrieving custom role definition for subscription: $subscriptionId"
+                                    Write-Verbose " Retrieving custom role definition for subscription: $subscriptionId"
                                     $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
                                 }
 
@@ -343,19 +343,19 @@ function Get-RoleAssignment {
 
                                 if (-not $IsCustom -or $roleAssignmentObject.IsCustom) {
                                     $roleAssignmentsList.Add($roleAssignmentObject)
-                                    Write-Verbose "✅ Found: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
+                                    Write-Verbose " Found: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
                                 }
                             }
                         }
                     }
                 }
                 catch {
-                    Write-Information "❌ Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
+                    Write-Information " Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
                 }                } -ThrottleLimit $ThrottleLimitParam
 
             # Process PIM eligible role assignments if requested
             if ($IncludeEligibleParam) {
-                Write-Host "  🔐 Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
+                Write-Host "   Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
                 
                 $SubscriptionsParam | ForEach-Object -Parallel {
                     try {
@@ -371,7 +371,7 @@ function Get-RoleAssignment {
                         $ExcludeCustom       = $using:ExcludeCustom
                         $subscriptionId      = $_
 
-                        Write-Verbose "🔐 Processing PIM eligible assignments for subscription: $subscriptionId"
+                        Write-Verbose " Processing PIM eligible assignments for subscription: $subscriptionId"
                         
                         # Query PIM eligible role assignments
                         $pimUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
@@ -399,7 +399,7 @@ function Get-RoleAssignment {
                                     $pimResponse += (Invoke-RestMethod @pimRequestParam).value
                                 }
                                 catch {
-                                    Write-Verbose "⚠️ No PIM eligible assignments found for principal $principalId in subscription $subscriptionId"
+                                    Write-Verbose " No PIM eligible assignments found for principal $principalId in subscription $subscriptionId"
                                 }
                             }
                         } else {
@@ -407,7 +407,7 @@ function Get-RoleAssignment {
                                 $pimResponse += @(Invoke-RestMethod @pimRequestParam).value
                             }
                             catch {
-                                Write-Verbose "⚠️ No PIM eligible assignments found in subscription $subscriptionId or insufficient permissions"
+                                Write-Verbose " No PIM eligible assignments found in subscription $subscriptionId or insufficient permissions"
                             }
                         }
 
@@ -442,7 +442,7 @@ function Get-RoleAssignment {
                                     }
 
                                     if (-not $ExcludeCustom) {
-                                        Write-Verbose "🔍 Retrieving custom role definition for PIM assignment in subscription: $subscriptionId"
+                                        Write-Verbose " Retrieving custom role definition for PIM assignment in subscription: $subscriptionId"
                                         try {
                                             $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
                                         }
@@ -464,14 +464,14 @@ function Get-RoleAssignment {
 
                                     if (-not $IsCustom -or $roleAssignmentObject.IsCustom) {
                                         $roleAssignmentsList.Add($roleAssignmentObject)
-                                        Write-Verbose "✅ Found PIM Eligible: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
+                                        Write-Verbose " Found PIM Eligible: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
                                     }
                                 }
                             }
                         }
                     }
                     catch {
-                        Write-Information "❌ Error processing PIM eligible assignments for subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
+                        Write-Information " Error processing PIM eligible assignments for subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
                     }
                 } -ThrottleLimit $ThrottleLimitParam
             }
@@ -480,7 +480,7 @@ function Get-RoleAssignment {
             return @($roleAssignmentsList)
             }
             catch {
-                Write-Host "❌ Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host " Error processing role assignments: $($_.Exception.Message)" -ForegroundColor Red
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
                 return @()
             }
@@ -492,10 +492,10 @@ function Get-RoleAssignment {
         } -SkipCache $SkipCache -CacheExpirationMinutes $CacheExpirationMinutes -MaxCacheSize $MaxCacheSize -CompressCache $CompressCache -OperationName "role assignment retrieval"
 
         if ($result.Count -eq 0) {
-            Write-Host "⚠️ No role assignments found for the specified criteria" -ForegroundColor Yellow
+            Write-Host " No role assignments found for the specified criteria" -ForegroundColor Yellow
         } else {
             $duration = (Get-Date) - $startTime
-            Write-Host "`n📊 Role Assignment Discovery Summary:" -ForegroundColor Magenta
+            Write-Host "`n Role Assignment Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Role Assignments Found: $($result.Count)" -ForegroundColor Green
             
             # Show active vs eligible assignment breakdown if IncludeEligible was used
@@ -521,7 +521,7 @@ function Get-RoleAssignment {
             Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
         }
 
-        Write-Host "✅ Role assignment analysis completed successfully!" -ForegroundColor Green
+        Write-Host " Role assignment analysis completed successfully!" -ForegroundColor Green
         
         # Return results in requested format
         switch ($OutputFormat) {
@@ -530,7 +530,7 @@ function Get-RoleAssignment {
                 $jsonOutput = $result | ConvertTo-Json -Depth 3
                 $jsonFilePath = "RoleAssignments_$timestamp.json"
                 $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                Write-Host " JSON output saved to: $jsonFilePath" -ForegroundColor Green
                 # File created, no console output needed
                 return
             }
@@ -539,7 +539,7 @@ function Get-RoleAssignment {
                 $csvOutput = $result | ConvertTo-Csv -NoTypeInformation
                 $csvFilePath = "RoleAssignments_$timestamp.csv"
                 $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                Write-Host " CSV output saved to: $csvFilePath" -ForegroundColor Green
                 # File created, no console output needed
                 return
             }

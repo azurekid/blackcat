@@ -466,7 +466,7 @@ function Get-EntraRoleMember {
             if ($ShowSummary) {
                 $duration = (Get-Date) - $startTime
 
-                Write-Host "`n📊 Role Member Discovery Summary:" -ForegroundColor Magenta
+                Write-Host "`n Role Member Discovery Summary:" -ForegroundColor Magenta
                 Write-Host "   Role: $RoleName (ID: $roleId)" -ForegroundColor Cyan
                 Write-Host "   Total Members Found: $($script:roleMembers.Count)" -ForegroundColor Green
 
@@ -500,7 +500,7 @@ function Get-EntraRoleMember {
                 }
 
                 if ($script:principalTypes["Group"] -gt 0 -and -not $ExpandGroups) {
-                    Write-Host "`n⚠️  Note: Group members also inherit this role but are not included in this count" -ForegroundColor Yellow
+                    Write-Host "`n  Note: Group members also inherit this role but are not included in this count" -ForegroundColor Yellow
                     Write-Host "      Use -ExpandGroups parameter to include group members in the results" -ForegroundColor Gray
                 }
                 
@@ -510,7 +510,7 @@ function Get-EntraRoleMember {
                     $groupMembers = $script:roleMembers | Where-Object { $_.IsMemberOfGroup }
                     
                     if ($groupMembers.Count -gt 0) {
-                        Write-Host "`n🔍 Group Expansion Summary:" -ForegroundColor Magenta
+                        Write-Host "`n Group Expansion Summary:" -ForegroundColor Magenta
                         Write-Host "   Direct Role Members: $($directMembers.Count)" -ForegroundColor Green
                         Write-Host "   Nested Group Members: $($groupMembers.Count)" -ForegroundColor Yellow
                         
@@ -539,7 +539,7 @@ function Get-EntraRoleMember {
                 Write-Host "   Duration: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
                 Write-Host "   Processing Rate: $([math]::Round($script:roleMembers.Count / $duration.TotalSeconds, 2)) principals/second" -ForegroundColor White
 
-                Write-Host "`n✅ Role member analysis completed successfully!" -ForegroundColor Green
+                Write-Host "`n Role member analysis completed successfully!" -ForegroundColor Green
             }
 
             $processingRate = if ($script:roleMembers.Count -gt 0 -and $duration.TotalSeconds -gt 0) {

@@ -47,7 +47,7 @@ function Copy-PrivilegedUser {
 
     process {
         try {
-            Write-Host "🔍 Identifying target user..." -ForegroundColor Cyan
+            Write-Host " Identifying target user..." -ForegroundColor Cyan
             
             switch ($PSCmdlet.ParameterSetName) {
                 'TargetObjectId' {
@@ -66,11 +66,11 @@ function Copy-PrivilegedUser {
             }
             
             $results.TargetUser = $targetUser
-            Write-Host "✅  Target user identified: $($targetUser.DisplayName) ($($targetUser.UserPrincipalName))" -ForegroundColor Green
+            Write-Host "  Target user identified: $($targetUser.DisplayName) ($($targetUser.UserPrincipalName))" -ForegroundColor Green
             
             if (-not $NewDisplayName) {
                 $NewDisplayName = $targetUser.DisplayName
-                Write-Host "  📝 Using target user's display name: $NewDisplayName" -ForegroundColor Cyan
+                Write-Host "   Using target user's display name: $NewDisplayName" -ForegroundColor Cyan
             }
             
             if (-not $NewUserPrincipalName) {
@@ -151,7 +151,7 @@ function Copy-PrivilegedUser {
                     
                     $NewUserPrincipalName = "$username@$orgDomain"
                     
-                    Write-Host "  📝 Auto-generated UPN following organization standards: $NewUserPrincipalName" -ForegroundColor Cyan
+                    Write-Host "   Auto-generated UPN following organization standards: $NewUserPrincipalName" -ForegroundColor Cyan
                 }
                 else {
                     # Extract domain from target user
@@ -166,12 +166,12 @@ function Copy-PrivilegedUser {
                     $randomSuffix = -join ((65..90) | Get-Random -Count 4 | ForEach-Object { [char]$_ }).ToLower()
                     $NewUserPrincipalName = "$username$randomSuffix@$targetDomain"
                     
-                    Write-Host "  📝 Auto-generated UPN: $NewUserPrincipalName" -ForegroundColor Cyan
+                    Write-Host "   Auto-generated UPN: $NewUserPrincipalName" -ForegroundColor Cyan
                 }
             }
             
             # Step 2: Create the new user account
-            Write-Host "👤 Creating new user account..." -ForegroundColor Cyan
+            Write-Host " Creating new user account..." -ForegroundColor Cyan
             
             # Check if user already exists
             Write-Verbose "Checking if user with UPN '$NewUserPrincipalName' already exists..."
@@ -179,9 +179,9 @@ function Copy-PrivilegedUser {
                 $existingUser = Invoke-MsGraph -relativeUrl "users?`$filter=userPrincipalName eq '$NewUserPrincipalName'&`$select=id,userPrincipalName,displayName"
                 
                 if ($existingUser -and $existingUser.id) {
-                    Write-Host "  ⚠️  User with UPN '$NewUserPrincipalName' already exists!" -ForegroundColor Yellow
-                    Write-Host "  ℹ️  Display Name: $($existingUser.displayName)" -ForegroundColor Blue
-                    Write-Host "  ℹ️  Object ID: $($existingUser.id)" -ForegroundColor Blue
+                    Write-Host "    User with UPN '$NewUserPrincipalName' already exists!" -ForegroundColor Yellow
+                    Write-Host "    Display Name: $($existingUser.displayName)" -ForegroundColor Blue
+                    Write-Host "    Object ID: $($existingUser.id)" -ForegroundColor Blue
                     throw "A user with the UPN '$NewUserPrincipalName' already exists. Please choose a different UPN or delete the existing user first."
                 }
                 Write-Verbose "No existing user found with UPN '$NewUserPrincipalName', proceeding with creation..."
@@ -251,8 +251,8 @@ function Copy-PrivilegedUser {
                     $createUserBody['showInAddressList'] = $false
                 }
                 
-                Write-Host "  ✓ All user properties copied from target" -ForegroundColor Green
-                Write-Host "  ✓ Set showInAddressList to false for security" -ForegroundColor Green
+                Write-Host "   All user properties copied from target" -ForegroundColor Green
+                Write-Host "   Set showInAddressList to false for security" -ForegroundColor Green
             }
             
             $createUserBodyJson = $createUserBody | ConvertTo-Json
@@ -260,13 +260,13 @@ function Copy-PrivilegedUser {
             $newUserResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/users" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $createUserBodyJson
             
             $newUser = Get-EntraInformation -ObjectId $newUserResponse.id
-            Write-Host "✅  New user created: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor Green
+            Write-Host "  New user created: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor Green
             
             $results.NewUser = $newUser
             
             # Step 3: Process Entra ID (Azure AD) roles
             if ($IncludeEntraRoles) {
-                Write-Host "👑  Processing Entra ID roles..." -ForegroundColor Cyan
+                Write-Host "  Processing Entra ID roles..." -ForegroundColor Cyan
                 $targetRoles = $targetUser.Roles
                 
                 if ($targetRoles) {
@@ -283,26 +283,26 @@ function Copy-PrivilegedUser {
 
                             try {
                                 Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/roleManagement/directory/roleAssignments" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $roleAssignmentBody
-                                Write-Host "  ✅ Assigned role: $($role.RoleName)" -ForegroundColor Green
+                                Write-Host "   Assigned role: $($role.RoleName)" -ForegroundColor Green
                             }
                             catch {
-                                Write-Host "  ❌ Failed to assign role: $($role.RoleName). Error: $($_.Exception.Message)" -ForegroundColor Red
+                                Write-Host "   Failed to assign role: $($role.RoleName). Error: $($_.Exception.Message)" -ForegroundColor Red
                             }
                         }
                         else {
-                            Write-Host "  ⚠️ Could not find role definition for: $($role.RoleName)" -ForegroundColor Yellow
+                            Write-Host "   Could not find role definition for: $($role.RoleName)" -ForegroundColor Yellow
                         }
                     }
                     $results.EntraRoles = $targetRoles
                 }
                 else {
-                    Write-Host "  ℹ️ No Entra ID roles found for target user." -ForegroundColor Blue
+                    Write-Host "   No Entra ID roles found for target user." -ForegroundColor Blue
                 }
             }
             
             # Step 4: Process group memberships
             if ($IncludeGroupMemberships) {
-                Write-Host "👥 Processing group memberships..." -ForegroundColor Cyan
+                Write-Host " Processing group memberships..." -ForegroundColor Cyan
                 $groups = $targetUser.GroupMemberships
                 $results.GroupMemberships = $groups
                 
@@ -319,7 +319,7 @@ function Copy-PrivilegedUser {
                         $processedGroups[$groupName] = $true
                         
                         if ($roleNames -contains $groupName) {
-                            Write-Host "  ⚠️ Skipping '$groupName' as it appears to be a role, not a group" -ForegroundColor Yellow
+                            Write-Host "   Skipping '$groupName' as it appears to be a role, not a group" -ForegroundColor Yellow
                             continue
                         }
                         
@@ -330,27 +330,27 @@ function Copy-PrivilegedUser {
                             if ($group -and $group.ObjectId) {
 
                                 Add-GroupObject -GroupObjectId $group.ObjectId -UserPrincipalName $newUser.UserPrincipalName -ObjectType "Member"
-                                Write-Host "  ✅ Added to group: $groupName" -ForegroundColor Green
+                                Write-Host "   Added to group: $groupName" -ForegroundColor Green
                             }
                             else {
-                                Write-Host "  ⚠️ Could not find group: $groupName" -ForegroundColor Yellow
+                                Write-Host "   Could not find group: $groupName" -ForegroundColor Yellow
                             }
                         }
                         catch {
-                            Write-Host "  ❌ Failed to add to group: $groupName. Error: $($_.Exception.Message)" -ForegroundColor Red
+                            Write-Host "   Failed to add to group: $groupName. Error: $($_.Exception.Message)" -ForegroundColor Red
                         }
                     }
                 }
                 else {
-                    Write-Host "  ℹ️ No group memberships found for the user" -ForegroundColor Blue
+                    Write-Host "   No group memberships found for the user" -ForegroundColor Blue
                 }
             }
             
             # Final summary
-            Write-Host "`n📊 Operation Summary:" -ForegroundColor Cyan
+            Write-Host "`n Operation Summary:" -ForegroundColor Cyan
             Write-Host "  Target user: $($targetUser.DisplayName) ($($targetUser.UserPrincipalName))" -ForegroundColor White
             Write-Host "  Cloned user: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor White
-            Write-Host "  ✅ User cloned successfully with selected permissions" -ForegroundColor Green
+            Write-Host "   User cloned successfully with selected permissions" -ForegroundColor Green
             
             return $results
         }

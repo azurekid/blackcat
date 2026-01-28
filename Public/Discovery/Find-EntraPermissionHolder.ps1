@@ -287,7 +287,7 @@ function Resolve-GroupMembers {
         return $resolvedMembers
     }
 
-    Write-Host "  👥 Resolving $($groupsToResolve.Count) groups..." -ForegroundColor Cyan
+    Write-Host "  Resolving $($groupsToResolve.Count) groups..." -ForegroundColor Cyan
 
     # Process each group with parallel processing (but ensure module functions are available)
     foreach ($group in $groupsToResolve) {
@@ -501,7 +501,7 @@ function Find-EntraPermissionHolder {
         # Create collection for results
         $permissionHolders = [System.Collections.Generic.List[PSCustomObject]]::new()
 
-        Write-Host "🔍 Finding Entra ID principals with permission: $Permission" -ForegroundColor Green
+        Write-Host " Finding Entra ID principals with permission: $Permission" -ForegroundColor Green
         Write-Host "   Started at: $($startTime.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor DarkGray
     }
 
@@ -510,11 +510,11 @@ function Find-EntraPermissionHolder {
         $matchingRoles = Find-RolesWithPermission -Permission $Permission
 
         if (-not $matchingRoles -or $matchingRoles.Count -eq 0) {
-            Write-Host "  ⚠️ No roles found containing the permission: $Permission" -ForegroundColor Yellow
+            Write-Host "  No roles found containing the permission: $Permission" -ForegroundColor Yellow
             return
         }
 
-        Write-Host "  ✅ Found $($matchingRoles.Count) roles containing the permission: $Permission" -ForegroundColor Green
+        Write-Host "  Found $($matchingRoles.Count) roles containing the permission: $Permission" -ForegroundColor Green
 
         # List the identified roles in verbose mode
         if ($VerbosePreference -eq 'Continue') {
@@ -662,9 +662,9 @@ function Find-EntraPermissionHolder {
                 $resolvedSPs = ($resolvedGroups.Values | ForEach-Object { $_ } | Where-Object { $_.PrincipalType -eq "servicePrincipal" }).Count
                 $nestedGroups = ($resolvedGroups.Values | ForEach-Object { $_ } | Where-Object { $_.PrincipalType -eq "group" -or $_.PrincipalType -eq "NestedGroup" -or $_.PrincipalType -eq "DirectGroup" }).Count
 
-                Write-Host "     ✅ Resolved $resolvedUsers users and $resolvedSPs service principals from $($groupPrincipals.Count) groups" -ForegroundColor Green
+                Write-Host "     Resolved $resolvedUsers users and $resolvedSPs service principals from $($groupPrincipals.Count) groups" -ForegroundColor Green
                 if ($nestedGroups -gt 0) {
-                    Write-Host "     ℹ️ Found $nestedGroups nested groups in the permission chain" -ForegroundColor Cyan
+                    Write-Host "     Found $nestedGroups nested groups in the permission chain" -ForegroundColor Cyan
                 }
             }
         }
@@ -678,7 +678,7 @@ function Find-EntraPermissionHolder {
         # Summarize findings
         $groupedResults = $permissionHolders | Group-Object -Property PrincipalType
 
-        Write-Host "`n📊 Permission Analysis Complete" -ForegroundColor Green
+        Write-Host "`nPermission Analysis Complete" -ForegroundColor Green
         Write-Host "  Permission searched: $Permission"
         Write-Host "  Execution time: $formattedTime" -ForegroundColor DarkGray
 
@@ -690,12 +690,12 @@ function Find-EntraPermissionHolder {
                 "servicePrincipal" { "Cyan" }
                 default            { "White" }
             }
-            Write-Host "  ✅ Found $($group.Count) $($group.Name)$pluralSuffix with the permission" -ForegroundColor $color
+            Write-Host "  Found $($group.Count) $($group.Name)$pluralSuffix with the permission" -ForegroundColor $color
         }
 
         # Handle direct export to file if requested
         if ($OutputPath) {
-            Write-Host "  💾 Exporting results to $OutputPath" -ForegroundColor Cyan
+            Write-Host "  Exporting results to $OutputPath" -ForegroundColor Cyan
             try {
                 # Create directory if it doesn't exist
                 $directory = Split-Path -Parent $OutputPath

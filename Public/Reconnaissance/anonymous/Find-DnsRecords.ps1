@@ -169,7 +169,7 @@ function Find-DnsRecords {
                 }
             }
         
-            Write-Host "🎯 Analyzing domain: $Domain" -ForegroundColor Green
+            Write-Host " Analyzing domain: $Domain" -ForegroundColor Green
             
             # Rotate through providers for load balancing
             $ProviderNames = $DNSProviders.Keys | Sort-Object { Get-Random }
@@ -179,7 +179,7 @@ function Find-DnsRecords {
             
             # Add subdomain enumeration for CNAME discovery
             if ($EnumerateSubdomains -and $RecordTypes -contains "CNAME") {
-                Write-Host "  🔍 Enumerating subdomains for CNAME discovery..." -ForegroundColor Cyan
+                Write-Host "   Enumerating subdomains for CNAME discovery..." -ForegroundColor Cyan
                 
                 # Determine subdomain type based on DeepSubdomainSearch parameter
                 $SubdomainType = if ($DeepSubdomainSearch) { 'deep' } else { 'default' }
@@ -217,7 +217,7 @@ function Find-DnsRecords {
                 }
                 
                 if (-not $SubdomainList) {
-                    Write-Host "    ⚠️ Subdomain enumeration skipped - no subdomain data available" -ForegroundColor Yellow
+                    Write-Host "     Subdomain enumeration skipped - no subdomain data available" -ForegroundColor Yellow
                     continue
                 }
                 
@@ -228,7 +228,7 @@ function Find-DnsRecords {
                 }
                 
                 $SearchTypeMsg = if ($DeepSubdomainSearch) { "deep search" } else { "standard search" }
-                Write-Host "    🎯 Testing $($SubdomainCandidates.Count) subdomain candidates ($SearchTypeMsg, category: $SubdomainCategory)..." -ForegroundColor Yellow
+                Write-Host "     Testing $($SubdomainCandidates.Count) subdomain candidates ($SearchTypeMsg, category: $SubdomainCategory)..." -ForegroundColor Yellow
                 
                 # Test subdomains in parallel for existence first (faster DNS resolution check)
                 $ValidSubdomains = $SubdomainCandidates | ForEach-Object -Parallel {
@@ -243,11 +243,11 @@ function Find-DnsRecords {
                 } -ThrottleLimit $SubdomainThrottleLimit | Where-Object { $_ -ne $null }
                 
                 $DomainsToQuery += $ValidSubdomains
-                Write-Host "    ✅ Found $($ValidSubdomains.Count) valid subdomains" -ForegroundColor Green
+                Write-Host "     Found $($ValidSubdomains.Count) valid subdomains" -ForegroundColor Green
             }
             
             foreach ($RecordType in $RecordTypes) {
-                Write-Host "  🔍 Querying $RecordType records..." -ForegroundColor Yellow
+                Write-Host "   Querying $RecordType records..." -ForegroundColor Yellow
                 
                 # Query each domain (root + valid subdomains)
                 foreach ($QueryDomain in $DomainsToQuery) {
@@ -257,14 +257,14 @@ function Find-DnsRecords {
                     }
                     
                     if ($DNSInfoLevel -eq "Detailed" -and $QueryDomain -ne $Domain) {
-                        Write-Host "    🔍 Querying $RecordType for subdomain: $QueryDomain" -ForegroundColor Gray
+                        Write-Host "     Querying $RecordType for subdomain: $QueryDomain" -ForegroundColor Gray
                     }
                     
                     foreach ($ProviderName in $ProviderNames) {
                         $Provider = $DNSProviders[$ProviderName]
                         
                         if ($DNSInfoLevel -eq "Detailed") {
-                            Write-Host "    📡 Using $ProviderName ($($Provider.Reliability)%)" -ForegroundColor Cyan
+                            Write-Host "     Using $ProviderName ($($Provider.Reliability)%)" -ForegroundColor Cyan
                         }
                         
                         try {
@@ -281,8 +281,8 @@ function Find-DnsRecords {
                             
                             # Debug output for CNAME queries
                             if ($DNSInfoLevel -eq "Detailed" -and $RecordType -eq "CNAME") {
-                                Write-Host "      🔍 Query URL: $QueryUrl" -ForegroundColor Gray
-                                Write-Host "      🔍 Response has $($Response.Answer.Count) answers" -ForegroundColor Gray
+                                Write-Host "       Query URL: $QueryUrl" -ForegroundColor Gray
+                                Write-Host "       Response has $($Response.Answer.Count) answers" -ForegroundColor Gray
                             }
                             
                             # ... existing code for processing Response.Answer ...
@@ -296,13 +296,13 @@ function Find-DnsRecords {
                                     if ($DnssecResponse.Answer) {
                                         $Response = $DnssecResponse
                                         if ($DNSInfoLevel -eq "Detailed") {
-                                            Write-Host "      🔍 DNSSEC query returned $($Response.Answer.Count) answers" -ForegroundColor Gray
+                                            Write-Host "       DNSSEC query returned $($Response.Answer.Count) answers" -ForegroundColor Gray
                                         }
                                     }
                                 } catch {
                                     # DNSSEC query failed, continue with original response
                                     if ($DNSInfoLevel -eq "Detailed") {
-                                        Write-Host "      🔍 DNSSEC query failed: $($_.Exception.Message)" -ForegroundColor Gray
+                                        Write-Host "       DNSSEC query failed: $($_.Exception.Message)" -ForegroundColor Gray
                                     }
                                 }
                                 
@@ -332,13 +332,13 @@ function Find-DnsRecords {
                                             if ($CDNRecords) {
                                                 $Response = $AResponse
                                                 if ($DNSInfoLevel -eq "Detailed") {
-                                                    Write-Host "      🔍 A record query returned $($CDNRecords.Count) CDN records (likely flattened CNAME)" -ForegroundColor Gray
+                                                    Write-Host "       A record query returned $($CDNRecords.Count) CDN records (likely flattened CNAME)" -ForegroundColor Gray
                                                 }
                                             }
                                         }
                                     } catch {
                                         if ($DNSInfoLevel -eq "Detailed") {
-                                            Write-Host "      🔍 A record fallback query failed: $($_.Exception.Message)" -ForegroundColor Gray
+                                            Write-Host "       A record fallback query failed: $($_.Exception.Message)" -ForegroundColor Gray
                                         }
                                     }
                                 }
@@ -353,7 +353,7 @@ function Find-DnsRecords {
                                     
                                     # Debug output for CNAME queries when in detailed mode
                                     if ($DNSInfoLevel -eq "Detailed" -and $RecordType -eq "CNAME") {
-                                        Write-Host "      🔍 Answer type: $($Answer.type), Expected: $ExpectedType, Data: $($Answer.data)" -ForegroundColor Gray
+                                        Write-Host "       Answer type: $($Answer.type), Expected: $ExpectedType, Data: $($Answer.data)" -ForegroundColor Gray
                                     }
                                     
                                     # For CNAME queries, check if this is actually a CNAME record
@@ -374,7 +374,7 @@ function Find-DnsRecords {
                                         
                                         $Stats.SuccessfulQueries++
                                         $DisplayDomain = if ($QueryDomain -ne $Domain) { $QueryDomain } else { $QueryDomain }
-                                        Write-Host "      ✅ $DisplayDomain -> $($Answer.data) (TTL: $($Answer.TTL))" -ForegroundColor Green
+                                        Write-Host "       $DisplayDomain -> $($Answer.data) (TTL: $($Answer.TTL))" -ForegroundColor Green
                                         $FoundRecord = $true
                                     }
                                     # For non-CNAME queries or exact type matches
@@ -395,7 +395,7 @@ function Find-DnsRecords {
                                         
                                         $Stats.SuccessfulQueries++
                                         $DisplayDomain = if ($QueryDomain -ne $Domain) { $QueryDomain } else { $QueryDomain }
-                                        Write-Host "      ✅ $DisplayDomain -> $($Answer.data) (TTL: $($Answer.TTL))" -ForegroundColor Green
+                                        Write-Host "       $DisplayDomain -> $($Answer.data) (TTL: $($Answer.TTL))" -ForegroundColor Green
                                         $FoundRecord = $true
                                     }
                                 }
@@ -444,7 +444,7 @@ function Find-DnsRecords {
                                                 
                                                 $Stats.SuccessfulQueries++
                                                 $DisplayDomain = if ($QueryDomain -ne $Domain) { $QueryDomain } else { $QueryDomain }
-                                                Write-Host "      🔶 $DisplayDomain -> $($ProxiedRecord.data) [$ProxyService Flattened CNAME] (TTL: $($ProxiedRecord.TTL))" -ForegroundColor DarkYellow
+                                                Write-Host "       $DisplayDomain -> $($ProxiedRecord.data) [$ProxyService Flattened CNAME] (TTL: $($ProxiedRecord.TTL))" -ForegroundColor DarkYellow
                                                 $FoundRecord = $true
                                             }
                                         }
@@ -453,7 +453,7 @@ function Find-DnsRecords {
                             } else {
                                 # Handle case where no records are found
                                 if ($DNSInfoLevel -ne "Minimal" -and $QueryDomain -eq $Domain) {
-                                        Write-Host "      ℹ️ No $RecordType records found" -ForegroundColor Gray
+                                        Write-Host "       No $RecordType records found" -ForegroundColor Gray
                                 }
                             }
                             
@@ -471,7 +471,7 @@ function Find-DnsRecords {
                             $Stats.FailedQueries++
                             
                             if ($DNSInfoLevel -eq "Detailed") {
-                                Write-Host "      ❌ Query failed: $($_.Exception.Message)" -ForegroundColor Red
+                                Write-Host "       Query failed: $($_.Exception.Message)" -ForegroundColor Red
                             }
                         }
                     }
@@ -501,7 +501,7 @@ function Find-DnsRecords {
     end {
         $Duration = (Get-Date) - $Stats.StartTime
         
-        Write-Host "`n📊 Reconnaissance Summary:" -ForegroundColor Magenta
+        Write-Host "`n Reconnaissance Summary:" -ForegroundColor Magenta
         Write-Host "   Total Queries: $($Stats.TotalQueries)" -ForegroundColor White
         Write-Host "   Successful: $($Stats.SuccessfulQueries)" -ForegroundColor Green
         Write-Host "   Failed: $($Stats.FailedQueries)" -ForegroundColor Red

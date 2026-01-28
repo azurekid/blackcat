@@ -18,7 +18,7 @@ function Get-FederatedAppCredential {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
     }
 
@@ -29,25 +29,25 @@ function Get-FederatedAppCredential {
                 $app = $null
 
                 if ($AppId) {
-                    Write-Host "🔍 Resolving Application ID to Object ID..." -ForegroundColor Cyan
-                    Write-Verbose "🔍 Get Application with Application Id $($AppId)"
+                    Write-Host " Resolving Application ID to Object ID..." -ForegroundColor Cyan
+                    Write-Verbose " Get Application with Application Id $($AppId)"
                     $app = Invoke-MsGraph -relativeUrl "applications(appId='$AppId')" -NoBatch
                     $ObjectId = $app.id
-                    Write-Host "    ✅ Resolved to application: $($app.displayName)" -ForegroundColor Green
+                    Write-Host "     Resolved to application: $($app.displayName)" -ForegroundColor Green
                 }
                 elseif ($ObjectId) {
-                    Write-Host "📱 Retrieving application details..." -ForegroundColor Cyan
-                    Write-Verbose "📱 Get Application with Object Id $($ObjectId)"
+                    Write-Host " Retrieving application details..." -ForegroundColor Cyan
+                    Write-Verbose " Get Application with Object Id $($ObjectId)"
                     $app = Invoke-MsGraph -relativeUrl "applications/$ObjectId" -NoBatch
-                    Write-Host "    ✅ Found application: $($app.displayName)" -ForegroundColor Green
+                    Write-Host "     Found application: $($app.displayName)" -ForegroundColor Green
                 }
 
-                Write-Host "🔐 Analyzing federated identity credentials..." -ForegroundColor Yellow
-                Write-Verbose "🔐 Get Federated Identity Credentials for Application: $($app.displayName)"
+                Write-Host " Analyzing federated identity credentials..." -ForegroundColor Yellow
+                Write-Verbose " Get Federated Identity Credentials for Application: $($app.displayName)"
                 $federatedCreds = Invoke-MsGraph -relativeUrl "applications/$ObjectId/federatedIdentityCredentials"
 
                 if ($federatedCreds -and $federatedCreds.Count -gt 0) {
-                    Write-Host "    ✅ Found $($federatedCreds.Count) federated credential(s)" -ForegroundColor Green
+                    Write-Host "     Found $($federatedCreds.Count) federated credential(s)" -ForegroundColor Green
                     
                     # Enhance output with application context and emojis
                     foreach ($cred in $federatedCreds) {
@@ -65,7 +65,7 @@ function Get-FederatedAppCredential {
                         $results += $enhancedCred
                     }
 
-                    Write-Host "`n📊 Federated Credential Analysis Summary:" -ForegroundColor Magenta
+                    Write-Host "`n Federated Credential Analysis Summary:" -ForegroundColor Magenta
                     Write-Host "   Application: $($app.displayName)" -ForegroundColor White
                     Write-Host "   Total Credentials: $($federatedCreds.Count)" -ForegroundColor Yellow
 
@@ -75,23 +75,23 @@ function Get-FederatedAppCredential {
                     foreach ($group in $issuerCounts) {
                         $issuerName = $group.Name
                         if ($issuerName -eq 'https://token.actions.githubusercontent.com') {
-                            $issuerName = "🐙 GitHub Actions"
+                            $issuerName = " GitHub Actions"
                         } elseif ($issuerName -match 'sts\.windows\.net') {
-                            $issuerName = "🏢 Azure AD"
+                            $issuerName = " Azure AD"
                         } elseif ($issuerName -match 'login\.microsoftonline\.com') {
-                            $issuerName = "🔵 Microsoft Identity Platform"
+                            $issuerName = " Microsoft Identity Platform"
                         }
                         Write-Host "     $($issuerName): $($group.Count)" -ForegroundColor White
                     }
                 } else {
-                    Write-Host "    ❌ No federated identity credentials found" -ForegroundColor Red
+                    Write-Host "     No federated identity credentials found" -ForegroundColor Red
                 }
 
                 # Format and return results using the standardized output formatter
                 Format-BlackCatOutput -Data $results -OutputFormat $OutputFormat -FunctionName $MyInvocation.MyCommand.Name
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "⚠️ $($_.Exception.Message)" -Severity 'Error'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message " $($_.Exception.Message)" -Severity 'Error'
         }
     }
 

@@ -35,11 +35,11 @@ function Format-BlackCatOutput {
                 $Data | ConvertTo-Json -Depth 10 | Out-File -FilePath $fileName -Encoding UTF8
                 
                 if (-not $Silent) {
-                    Write-Host "💾 Results exported to: $fileName" -ForegroundColor Green
+                    Write-Host " Results exported to: $fileName" -ForegroundColor Green
                 }
             }
             catch {
-                Write-Warning "⚠️  Failed to export JSON: $($_.Exception.Message)"
+                Write-Warning "  Failed to export JSON: $($_.Exception.Message)"
                 return $Data
             }
         }
@@ -50,11 +50,11 @@ function Format-BlackCatOutput {
                 $Data | Export-Csv -Path $fileName -NoTypeInformation -Encoding UTF8
                 
                 if (-not $Silent) {
-                    Write-Host "📊 Results exported to: $fileName" -ForegroundColor Green
+                    Write-Host " Results exported to: $fileName" -ForegroundColor Green
                 }
             }
             catch {
-                Write-Warning "⚠️  Failed to export CSV: $($_.Exception.Message)"
+                Write-Warning "  Failed to export CSV: $($_.Exception.Message)"
                 return $Data
             }
         }
@@ -63,7 +63,7 @@ function Format-BlackCatOutput {
                 $Data | Format-Table -AutoSize
             }
             catch {
-                Write-Warning "⚠️  Failed to format table: $($_.Exception.Message)"
+                Write-Warning "  Failed to format table: $($_.Exception.Message)"
                 return $Data
             }
         }

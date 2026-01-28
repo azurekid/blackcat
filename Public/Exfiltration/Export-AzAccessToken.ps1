@@ -16,16 +16,16 @@ function Export-AzAccessToken {
     )
 
     begin {
-        Write-Host "🚀 Starting function $($MyInvocation.MyCommand.Name)" -ForegroundColor Cyan
+        Write-Host "Starting function $($MyInvocation.MyCommand.Name)" -ForegroundColor Cyan
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
     }
 
     process {
         try {
-            Write-Host "🔐 Requesting access tokens for specified audiences" -ForegroundColor Yellow
+            Write-Host "Requesting access tokens for specified audiences" -ForegroundColor Yellow
             Write-Verbose "Requesting access tokens for specified audiences"
             
-            Write-Host "🔄 Processing $($ResourceTypeNames.Count) resource types..." -ForegroundColor Magenta
+            Write-Host "Processing $($ResourceTypeNames.Count) resource types..." -ForegroundColor Magenta
             
             $tokens = @()
             $processingSummary = @()
@@ -37,7 +37,7 @@ function Export-AzAccessToken {
                 $currentIndex++
                 $progressPercent = [math]::Round(($currentIndex / $totalResources) * 100)
                 
-                Write-Host "⚡ [$currentIndex/$totalResources] Processing $resourceTypeName... ($progressPercent%)" -ForegroundColor Blue
+                Write-Host " [$currentIndex/$totalResources] Processing $resourceTypeName... ($progressPercent%)" -ForegroundColor Blue
                 
                 $startTime = Get-Date
                 try {
@@ -102,7 +102,7 @@ function Export-AzAccessToken {
                     $processingTime = (Get-Date) - $startTime
                     $processingSummary += [PSCustomObject]@{
                         Resource = $resourceTypeName
-                        Status = "✅ Success"
+                        Status = "Success"
                         UPN = $tokenObject.UPN
                         Tenant = $tokenObject.Tenant
                         ProcessingTime = "$([math]::Round($processingTime.TotalMilliseconds))ms"
@@ -113,7 +113,7 @@ function Export-AzAccessToken {
                     $processingTime = (Get-Date) - $startTime
                     $processingSummary += [PSCustomObject]@{
                         Resource = $resourceTypeName
-                        Status = "❌ Failed"
+                        Status = "Failed"
                         UPN = "N/A"
                         Tenant = "N/A"
                         ProcessingTime = "$([math]::Round($processingTime.TotalMilliseconds))ms"
@@ -124,18 +124,18 @@ function Export-AzAccessToken {
             }
 
             # Display comprehensive summary
-            Write-Host "`n🎯 PROCESSING SUMMARY" -ForegroundColor Cyan
+            Write-Host "`nPROCESSING SUMMARY" -ForegroundColor Cyan
             Write-Host "----------------------------------------" -ForegroundColor Cyan
             $successCount = ($processingSummary | Where-Object { $_.Status -like "*Success*" }).Count
             $failureCount = ($processingSummary | Where-Object { $_.Status -like "*Failed*" }).Count
             
-            Write-Host "📊 FINAL RESULTS" -ForegroundColor Cyan
-            Write-Host "✅ Successful: $successCount tokens" -ForegroundColor Green
-            Write-Host "❌ Failed: $failureCount requests" -ForegroundColor Red
-            Write-Host "🔢 Total Processed: $totalResources resource types" -ForegroundColor Blue
+            Write-Host "FINAL RESULTS" -ForegroundColor Cyan
+            Write-Host "Successful: $successCount tokens" -ForegroundColor Green
+            Write-Host "Failed: $failureCount requests" -ForegroundColor Red
+            Write-Host "Total Processed: $totalResources resource types" -ForegroundColor Blue
 
             if ($Publish) {
-                Write-Host "`n🌐 Publishing tokens to secure sharing service..." -ForegroundColor Cyan
+                Write-Host "`nPublishing tokens to secure sharing service..." -ForegroundColor Cyan
                 $requestParam = @{
                     Uri         = 'https://us.onetimesecret.com/api/v1/share'
                     Method      = 'POST'
@@ -147,26 +147,26 @@ function Export-AzAccessToken {
 
                 $response = Invoke-RestMethod @requestParam
                 $secretUrl = "https://us.onetimesecret.com/secret/$($response.secret_key)"
-                Write-Host "🔗 Tokens published successfully!" -ForegroundColor Green
-                Write-Host "🌐 Secure URL: $secretUrl" -ForegroundColor Cyan
+                Write-Host "Tokens published successfully!" -ForegroundColor Green
+                Write-Host "Secure URL: $secretUrl" -ForegroundColor Cyan
                 return $secretUrl
 
             } else {
-                Write-Host "`n💾 Exporting tokens to file..." -ForegroundColor Cyan
+                Write-Host "`nExporting tokens to file..." -ForegroundColor Cyan
                 Write-Verbose "Exporting tokens to file $OutputFile"
                 $tokens | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputFile
-                Write-Host "✅ Export completed!" -ForegroundColor Green
-                Write-Host "📁 File location: $OutputFile" -ForegroundColor Cyan
+                Write-Host "Export completed!" -ForegroundColor Green
+                Write-Host "File location: $OutputFile" -ForegroundColor Cyan
             }
         }
         catch {
-            Write-Host "💥 An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)" -ForegroundColor Red
             Write-Error "An error occurred in function $($MyInvocation.MyCommand.Name): $($_.Exception.Message)"
         }
     }
 
     end {
-        Write-Host "🎉 Function $($MyInvocation.MyCommand.Name) completed successfully!" -ForegroundColor Green
+        Write-Host "Function $($MyInvocation.MyCommand.Name) completed successfully!" -ForegroundColor Green
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
     }
     <#

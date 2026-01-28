@@ -24,7 +24,7 @@ function Get-KeyVaultSecret {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
         $result  = New-Object System.Collections.ArrayList
@@ -65,12 +65,12 @@ function Get-KeyVaultSecret {
                     try {
                         $apiResponse = Invoke-RestMethod @requestParam
                         if ($apiResponse.value.Count -gt 0) {
-                            Write-Host "    ✅ Found $($apiResponse.value.Count) secrets in vault: $vaultName" -ForegroundColor Green
+                            Write-Host "    Found $($apiResponse.value.Count) secrets in vault: $vaultName" -ForegroundColor Green
                             foreach ($value in $apiResponse.value) {
                                 ($using:secretUris).Add($value)
                             }
                         } else {
-                            Write-Host "    ℹ️ No secrets found in vault: $vaultName" -ForegroundColor Gray
+                            Write-Host "    No secrets found in vault: $vaultName" -ForegroundColor Gray
                         }
                     }
                     catch {
@@ -78,7 +78,7 @@ function Get-KeyVaultSecret {
                         Write-Verbose "Full vault access error: $errorMsg"
                         
                         if ($errorMsg -match "NotFound") {
-                            Write-Host "    ❌ Key Vault not found: $vaultName" -ForegroundColor Red
+                            Write-Host "    Key Vault not found: $vaultName" -ForegroundColor Red
                             ($using:generalErrorsBag).Add(1)
                         } 
                         elseif ($errorMsg -match "Forbidden|AccessDenied|Unauthorized") {
@@ -104,7 +104,7 @@ function Get-KeyVaultSecret {
                 $permissionForbidden = $permissionForbiddenBag.Count
                 $generalErrors = $generalErrorsBag.Count
                 
-                Write-Host "    📊 Vault access summary: $policyForbidden policy denials, $permissionForbidden permission denials" -ForegroundColor Cyan
+                Write-Host "    Vault access summary: $policyForbidden policy denials, $permissionForbidden permission denials" -ForegroundColor Cyan
                 
                 return @{
                     SecretUris = $secretUris
@@ -177,24 +177,24 @@ function Get-KeyVaultSecret {
                 }
             }
 
-            Write-Host "🎯 Analyzing Key Vault secrets..." -ForegroundColor Green
+            Write-Host "Analyzing Key Vault secrets..." -ForegroundColor Green
 
             if ($Name) {
                 $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults' | Where-Object Name -in $Name)
-                Write-Host "  📋 Processing specified Key Vault(s): $($Name -join ', ')" -ForegroundColor Cyan
+                Write-Host "  Processing specified Key Vault(s): $($Name -join ', ')" -ForegroundColor Cyan
             } else {
                 $vaults = (Invoke-AzBatch -ResourceType 'Microsoft.KeyVault/Vaults')
-                Write-Host "  🌐 Processing all available Key Vaults ($($vaults.Count) found)" -ForegroundColor Cyan
+                Write-Host "  Processing all available Key Vaults ($($vaults.Count) found)" -ForegroundColor Cyan
             }
 
             $stats.TotalVaults = $vaults.Count
 
             if ($vaults.Count -eq 0) {
-                Write-Host "  ⚠️ No Key Vaults found to process" -ForegroundColor Yellow
+                Write-Host "  No Key Vaults found to process" -ForegroundColor Yellow
                 return
             }
 
-            Write-Host "  🔍 Discovering secrets in $($vaults.Count) Key Vault(s)..." -ForegroundColor Yellow
+            Write-Host "  Discovering secrets in $($vaults.Count) Key Vault(s)..." -ForegroundColor Yellow
 
             $requestParam = @{
                 VaultNames    = $vaults.name
@@ -216,7 +216,7 @@ function Get-KeyVaultSecret {
             Write-Verbose "  TotalAccessDenied: $($stats.TotalAccessDenied)"
 
             if ($uris.Count -gt 0) {
-                Write-Host "  🔐 Retrieving $($uris.Count) secret value(s)..." -ForegroundColor Yellow
+                Write-Host "  Retrieving $($uris.Count) secret value(s)..." -ForegroundColor Yellow
 
                 $requestParam = @{
                     AuthHeader = $script:keyVaultHeader
@@ -236,7 +236,7 @@ function Get-KeyVaultSecret {
                 $stats.TotalAccessDenied = $stats.ForbiddenByPolicy + $stats.InsufficientPermissions
             }
             else {
-                Write-Host "  ℹ️ No secrets found in Key Vault(s): $($vaults.name -join ', ')" -ForegroundColor Gray
+                Write-Host "  No secrets found in Key Vault(s): $($vaults.name -join ', ')" -ForegroundColor Gray
             }
         }
         catch {
@@ -247,7 +247,7 @@ function Get-KeyVaultSecret {
     end {
         $Duration = (Get-Date) - $stats.StartTime
 
-        Write-Host "`n📊 Key Vault Secret Discovery Summary:" -ForegroundColor Magenta
+        Write-Host "`nKey Vault Secret Discovery Summary:" -ForegroundColor Magenta
         Write-Host "   Total Key Vaults Analyzed: $($stats.TotalVaults)" -ForegroundColor White
         Write-Host "   Key Vaults with Secrets: $($stats.VaultsWithSecrets)" -ForegroundColor Yellow
         Write-Host "   Total Secrets Retrieved: $($stats.TotalSecrets)" -ForegroundColor Green
@@ -262,7 +262,7 @@ function Get-KeyVaultSecret {
         }
         Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
 
-        Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
 
         if (!$result -or $result.Count -eq 0) {
             switch ($OutputFormat) {
@@ -271,7 +271,7 @@ function Get-KeyVaultSecret {
                     $jsonOutput = @() | ConvertTo-Json
                     $jsonFilePath = "KeyVaultSecrets_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     return
                 }
                 "CSV" {
@@ -279,15 +279,15 @@ function Get-KeyVaultSecret {
                     $csvOutput = @() | ConvertTo-CSV
                     $csvFilePath = "KeyVaultSecrets_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
                     return
                 }
                 "Object" {
-                    Write-Host "`n❌ No secrets found" -ForegroundColor Red
+                    Write-Host "`nNo secrets found" -ForegroundColor Red
                     return @()
                 }
                 "Table" {
-                    Write-Host "`n❌ No secrets found" -ForegroundColor Red
+                    Write-Host "`nNo secrets found" -ForegroundColor Red
                     return @()
                 }
             }
@@ -298,7 +298,7 @@ function Get-KeyVaultSecret {
                     $jsonOutput = $result | Sort-Object KeyVaultName, SecretName, Value | ConvertTo-Json -Depth 3
                     $jsonFilePath = "KeyVaultSecrets_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     return
                 }
                 "CSV" {
@@ -306,7 +306,7 @@ function Get-KeyVaultSecret {
                     $csvOutput = $result | Sort-Object KeyVaultName, SecretName, Value | ConvertTo-CSV
                     $csvFilePath = "KeyVaultSecrets_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "CSV output saved to: $csvFilePath" -ForegroundColor Green
                     return
                 }
                 "Object" { return $result | Sort-Object KeyVaultName, SecretName, Value }

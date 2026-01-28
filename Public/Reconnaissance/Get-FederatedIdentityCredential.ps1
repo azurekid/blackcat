@@ -46,7 +46,7 @@ function Get-FederatedIdentityCredential {
                 }
             }
             else {
-                Write-Host "🔍 Retrieving all User Assigned Managed Identities..." -ForegroundColor Cyan
+                Write-Host " Retrieving all User Assigned Managed Identities..." -ForegroundColor Cyan
                 $managedIdentities = Get-ManagedIdentity
                 Write-Host "    Found $($managedIdentities.Count) managed identities" -ForegroundColor Green
             }

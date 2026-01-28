@@ -22,7 +22,7 @@ function Get-PublicBlobContent {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
     }
 
     process {
@@ -30,7 +30,7 @@ function Get-PublicBlobContent {
             # Ensure the download directory exists if we're downloading files
             if ($Download -and -not [string]::IsNullOrEmpty($OutputPath)) {
                 if (-not (Test-Path -Path $OutputPath)) {
-                    Write-Host "📁 Creating output directory: $OutputPath" -ForegroundColor Yellow
+                    Write-Host " Creating output directory: $OutputPath" -ForegroundColor Yellow
                     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
                 }
             }
@@ -66,7 +66,7 @@ function Get-PublicBlobContent {
                 $containerName = $matchResults[2]
             }
             else {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "❌ Invalid URI format. Expected format: https://storage.blob.core.windows.net/container" -ErrorAction Error
+                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Invalid URI format. Expected format: https://storage.blob.core.windows.net/container" -ErrorAction Error
             }
 
             # Define the regex pattern to extract file names, version IDs, and their current version status
@@ -80,8 +80,8 @@ function Get-PublicBlobContent {
                 $fileMatches = [regex]::Matches($fileContent, $isNotCurrentVersion)
             }
 
-            $messageType = if ($Download) { "⬇️ to download" } else { "📋 to list" }
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "🔍 Found $($fileMatches.Count) files $messageType" -Severity 'Information'
+            $messageType = if ($Download) { "to download" } else { "to list" }
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message " Found $($fileMatches.Count) files $messageType" -Severity 'Information'
 
             if (-not $Download) {
                 $fileList = @()
@@ -89,21 +89,21 @@ function Get-PublicBlobContent {
                     $fileName  = $match.Groups[1].Value
                     $versionId = $match.Groups[2].Value
                     $isCurrentVersion = $match.Groups.Count -gt 3 -and $match.Groups[3].Value -eq 'true'
-                    $status = if ($isCurrentVersion) { "✅ Current" } else { "🗑️  Deleted" }
+                    $status = if ($isCurrentVersion) { "Current" } else { "🗑️  Deleted" }
 
                     $fileList += [PSCustomObject]@{
-                        Name      = "📄 $fileName"
+                        Name      = "$fileName"
                         Status    = $status
                         VersionId = $versionId
                         FullPath  = "$serviceEndpoint$containerName/$fileName"
                     }
                 }
-                Write-Host "📋 Blob listing complete! Found $($fileList.Count) files." -ForegroundColor Green
+                Write-Host "Blob listing complete! Found $($fileList.Count) files." -ForegroundColor Green
                 return $fileList
             }
 
             # Add progress message before starting downloads
-            Write-Host "🚀 Starting parallel downloads with throttle limit of 100..." -ForegroundColor Cyan
+            Write-Host "Starting parallel downloads with throttle limit of 100..." -ForegroundColor Cyan
             
             $fileMatches | ForEach-Object -Parallel {
                 $fileName         = $_.Groups[1].Value
@@ -139,22 +139,22 @@ function Get-PublicBlobContent {
 
                 try {
                     Invoke-RestMethod @params
-                    Write-Information "✅ Downloaded: $fileName" -InformationAction Continue
+                    Write-Information "Downloaded: $fileName" -InformationAction Continue
                 }
                 catch {
-                    Write-Information "❌ Failed to download: $fileName - $($_.Exception.Message)" -InformationAction Continue
+                    Write-Information "Failed to download: $fileName - $($_.Exception.Message)" -InformationAction Continue
                 }
             } -ThrottleLimit 100
             
-            Write-Host "🎉 Download process completed!" -ForegroundColor Green
+            Write-Host "Download process completed!" -ForegroundColor Green
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "💥 $($_.Exception.Message)" -Severity 'Error'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "$($_.Exception.Message)" -Severity 'Error'
         }
     }
 
     end {
-        Write-Verbose "✅ Ending function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose "Ending function $($MyInvocation.MyCommand.Name)"
     }
 
     <#

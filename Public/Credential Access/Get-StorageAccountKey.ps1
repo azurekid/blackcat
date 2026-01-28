@@ -36,7 +36,7 @@ function Get-StorageAccountKey {
     begin {
         [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
 
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
         $result = New-Object System.Collections.ArrayList
@@ -59,27 +59,27 @@ function Get-StorageAccountKey {
 
     process {
         try {
-            Write-Host "🎯 Analyzing Storage Account keys..." -ForegroundColor Green
+            Write-Host "Analyzing Storage Account keys..." -ForegroundColor Green
 
             if (!$($Name) -and !$Id) {
                 $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
-                Write-Host "  🌐 Processing all available Storage Accounts ($($id.Count) found)" -ForegroundColor Cyan
+                Write-Host "  Processing all available Storage Accounts ($($id.Count) found)" -ForegroundColor Cyan
             } elseif ($($Name)) {
                 $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
-                Write-Host "  📋 Processing specified Storage Account(s): $($Name -join ', ')" -ForegroundColor Cyan
+                Write-Host "  Processing specified Storage Account(s): $($Name -join ', ')" -ForegroundColor Cyan
             } else {
                 $id = $Id
-                Write-Host "  🎯 Processing Storage Account(s) by Resource ID ($($id.Count) specified)" -ForegroundColor Cyan
+                Write-Host "  Processing Storage Account(s) by Resource ID ($($id.Count) specified)" -ForegroundColor Cyan
             }
 
             $stats.TotalStorageAccounts = $id.Count
 
             if ($id.Count -eq 0) {
-                Write-Host "  ⚠️ No Storage Accounts found to process" -ForegroundColor Yellow
+                Write-Host "  No Storage Accounts found to process" -ForegroundColor Yellow
                 return
             }
 
-            Write-Host "  🔍 Retrieving keys from $($id.Count) Storage Account(s)..." -ForegroundColor Yellow
+            Write-Host "  Retrieving keys from $($id.Count) Storage Account(s)..." -ForegroundColor Yellow
 
             # Use concurrent collections for thread-safe operations
             $successfulKeys = [System.Collections.Concurrent.ConcurrentBag[object]]::new()
@@ -141,35 +141,35 @@ function Get-StorageAccountKey {
                             ($errorMsg -match "AuthorizationFailed") -or
                             ($errorMsg -match "InsufficientAccountPermissions")) {
 
-                            Write-Host "    🚫 Access forbidden by RBAC role assignment for Storage Account: $storageAccountName" -ForegroundColor Red
+                            Write-Host "    Access forbidden by RBAC role assignment for Storage Account: $storageAccountName" -ForegroundColor Red
                             ($using:policyForbiddenBag).Add(1)
                         } else {
-                            Write-Host "    🔒 Insufficient permissions for Storage Account: $storageAccountName" -ForegroundColor Yellow
+                            Write-Host "    Insufficient permissions for Storage Account: $storageAccountName" -ForegroundColor Yellow
                             ($using:permissionForbiddenBag).Add(1)
                         }
                     }
                     elseif ($errorMsg -match "Unauthorized|401" -or $statusCode -eq 401) {
-                        Write-Host "    🔐 Authentication failed for Storage Account: $storageAccountName" -ForegroundColor Yellow
+                        Write-Host "    Authentication failed for Storage Account: $storageAccountName" -ForegroundColor Yellow
                         ($using:permissionForbiddenBag).Add(1)
                     }
                     elseif ($errorMsg -match "NotFound|404|does not exist|could not be found" -or $statusCode -eq 404) {
-                        Write-Host "    ❌ Storage Account not found: $storageAccountName" -ForegroundColor Red
+                        Write-Host "    Storage Account not found: $storageAccountName" -ForegroundColor Red
                         ($using:generalErrorBag).Add(1)
                     }
                     elseif ($errorMsg -match "BadRequest|400" -or $statusCode -eq 400) {
-                        Write-Host "    ⚠️ Bad request for Storage Account: $storageAccountName" -ForegroundColor Yellow
+                        Write-Host "    Bad request for Storage Account: $storageAccountName" -ForegroundColor Yellow
                         ($using:generalErrorBag).Add(1)
                     }
                     elseif ($errorMsg -match "TooManyRequests|429" -or $statusCode -eq 429) {
-                        Write-Host "    ⏳ Rate limited for Storage Account: $storageAccountName" -ForegroundColor Yellow
+                        Write-Host "    Rate limited for Storage Account: $storageAccountName" -ForegroundColor Yellow
                         ($using:generalErrorBag).Add(1)
                     }
                     elseif ($errorMsg -match "InternalServerError|500|502|503|504" -or ($statusCode -ge 500 -and $statusCode -le 504)) {
-                        Write-Host "    🔥 Server error for Storage Account: $storageAccountName" -ForegroundColor Red
+                        Write-Host "    Server error for Storage Account: $storageAccountName" -ForegroundColor Red
                         ($using:generalErrorBag).Add(1)
                     }
                     else {
-                        Write-Host "    ❌ Error retrieving keys for Storage Account $storageAccountName`: $errorMsg" -ForegroundColor Red
+                        Write-Host "    Error retrieving keys for Storage Account $storageAccountName`: $errorMsg" -ForegroundColor Red
                         ($using:generalErrorBag).Add(1)
                     }
                 }
@@ -184,7 +184,7 @@ function Get-StorageAccountKey {
             $stats.ProcessingErrors = $generalErrorBag.Count
             $stats.TotalAccessDenied = $stats.ForbiddenByPolicy + $stats.InsufficientPermissions
 
-            Write-Host "  🔐 Retrieved keys from $($stats.StorageAccountsWithKeys) Storage Accounts, $($stats.ForbiddenByPolicy) policy denials, $($stats.InsufficientPermissions) permission denials" -ForegroundColor Cyan
+            Write-Host "  Retrieved keys from $($stats.StorageAccountsWithKeys) Storage Accounts, $($stats.ForbiddenByPolicy) policy denials, $($stats.InsufficientPermissions) permission denials" -ForegroundColor Cyan
         }
         catch {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
@@ -193,7 +193,7 @@ function Get-StorageAccountKey {
     end {
         $Duration = (Get-Date) - $stats.StartTime
 
-        Write-Host "`n📊 Storage Account Key Retrieval Summary:" -ForegroundColor Magenta
+        Write-Host "`nStorage Account Key Retrieval Summary:" -ForegroundColor Magenta
         Write-Host "   Total Storage Accounts Analyzed: $($stats.TotalStorageAccounts)" -ForegroundColor White
         Write-Host "   Storage Accounts with Keys Retrieved: $($stats.StorageAccountsWithKeys)" -ForegroundColor Yellow
         Write-Host "   Total Keys Retrieved: $($stats.TotalKeysRetrieved)" -ForegroundColor Green
@@ -209,7 +209,7 @@ function Get-StorageAccountKey {
         }
         Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
 
-        Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
 
         if (!$result -or $result.Count -eq 0) {
             # Handle case when no storage account keys found based on output format
@@ -219,7 +219,7 @@ function Get-StorageAccountKey {
                     $jsonOutput = @() | ConvertTo-Json
                     $jsonFilePath = "StorageAccountKeys_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     return
                 }
                 "CSV" {
@@ -227,15 +227,15 @@ function Get-StorageAccountKey {
                     $csvOutput = @() | ConvertTo-CSV
                     $csvFilePath = "StorageAccountKeys_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
                     return
                 }
                 "Object" {
-                    Write-Host "`n❌ No storage account keys found" -ForegroundColor Red
+                    Write-Host "`nNo storage account keys found" -ForegroundColor Red
                     return @()
                 }
                 "Table" {
-                    Write-Host "`n❌ No storage account keys found" -ForegroundColor Red
+                    Write-Host "`nNo storage account keys found" -ForegroundColor Red
                     return @()
                 }
             }
@@ -247,7 +247,7 @@ function Get-StorageAccountKey {
                     $jsonOutput = $result | Sort-Object StorageAccountName | ConvertTo-Json -Depth 3
                     $jsonFilePath = "StorageAccountKeys_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
@@ -256,7 +256,7 @@ function Get-StorageAccountKey {
                     $csvOutput = $result | Sort-Object StorageAccountName | ConvertTo-CSV
                     $csvFilePath = "StorageAccountKeys_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "CSV output saved to: $csvFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
