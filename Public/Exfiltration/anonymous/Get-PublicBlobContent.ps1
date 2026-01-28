@@ -1,28 +1,47 @@
 function Get-PublicBlobContent {
-    [cmdletbinding(DefaultParameterSetName = "List")]
+    [cmdletbinding(DefaultParameterSetName = "ListByName")]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Download")]
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "List")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "DownloadByUrl")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "ListByUrl")]
         [ValidatePattern('^https://[a-z0-9]+\.blob\.core\.windows\.net/[^?]+', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('url', 'uri')]
         [string]$BlobUrl,
 
-        [Parameter(Mandatory = $true, ParameterSetName = "Download")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "DownloadByName")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "ListByName")]
+        [ValidatePattern('^[a-z0-9]{3,24}$', ErrorMessage = "Storage account name must be 3-24 lowercase alphanumeric characters")]
+        [Alias('storage', 'account', 'sa')]
+        [string]$StorageAccountName,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "DownloadByName")]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "ListByName")]
+        [ValidatePattern('^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$', ErrorMessage = "Container name must be 3-63 lowercase alphanumeric characters or hyphens")]
+        [Alias('container', 'folder', 'cn')]
+        [string]$ContainerName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = "DownloadByUrl")]
+        [Parameter(Mandatory = $true, ParameterSetName = "DownloadByName")]
         [Alias('path', 'out', 'dir')]
         [string]$OutputPath,
 
-        [Parameter(Mandatory = $false, ParameterSetName = "Download")]
-        [Parameter(Mandatory = $false, ParameterSetName = "List")]
+        [Parameter(Mandatory = $false)]
         [Alias('deleted', 'archived', 'include-deleted')]
         [switch]$IncludeDeleted,
 
-        [Parameter(Mandatory = $true, ParameterSetName = "Download")]
+        [Parameter(Mandatory = $true, ParameterSetName = "DownloadByUrl")]
+        [Parameter(Mandatory = $true, ParameterSetName = "DownloadByName")]
         [Alias('save', 'fetch')]
         [switch]$Download
     )
 
     begin {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
+
+        # If StorageAccountName and ContainerName are provided, construct the BlobUrl
+        if ($PSCmdlet.ParameterSetName -like "*ByName") {
+            $BlobUrl = "https://$StorageAccountName.blob.core.windows.net/$ContainerName"
+            Write-Verbose "Constructed BlobUrl: $BlobUrl"
+        }
     }
 
     process {
@@ -162,12 +181,23 @@ function Get-PublicBlobContent {
         Lists or downloads files from a public Azure Blob Storage account, including deleted (soft-deleted) blobs.
 
     .DESCRIPTION
-        The Get-PublicBlobContent function lists files from a specified public Azure Blob Storage account URL by default.
+        The Get-PublicBlobContent function lists files from a specified public Azure Blob Storage account by default.
+        You can specify the storage location either by providing a full BlobUrl or by using StorageAccountName and ContainerName parameters.
         Use the -Download switch along with -OutputPath to download the files.
         It can also include deleted (soft-deleted) blobs if the IncludeDeleted switch is specified.
 
+    .PARAMETER StorageAccountName
+        The name of the Azure Storage Account (3-24 lowercase alphanumeric characters).
+        Use this with ContainerName as an alternative to BlobUrl.
+        Aliases: storage, account, sa
+
+    .PARAMETER ContainerName
+        The name of the blob container (3-63 lowercase alphanumeric characters or hyphens).
+        Use this with StorageAccountName as an alternative to BlobUrl.
+        Aliases: container, folder, cn
+
     .PARAMETER BlobUrl
-        The URL of the Azure Blob Storage account. The URL must match the pattern 'https://[account].blob.core.windows.net/[container]'.
+        The full URL of the Azure Blob Storage container. The URL must match the pattern 'https://[account].blob.core.windows.net/[container]'.
         Aliases: url, uri
 
     .PARAMETER OutputPath
@@ -184,9 +214,19 @@ function Get-PublicBlobContent {
         Aliases: save, fetch
 
     .EXAMPLE
+        Get-PublicBlobContent -StorageAccountName "mystorageaccount" -ContainerName "mycontainer"
+
+        This example lists all current blobs in the container using storage account name and container name.
+
+    .EXAMPLE
+        Get-PublicBlobContent -StorageAccountName "bluemountaintravelsa" -ContainerName "templates" -IncludeDeleted
+
+        This example lists both current and deleted blobs in the templates container.
+
+    .EXAMPLE
         Get-PublicBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer"
 
-        This example lists all current blobs in the container.
+        This example lists all current blobs in the container using the full URL.
 
     .EXAMPLE
         Get-PublicBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -IncludeDeleted
@@ -194,12 +234,17 @@ function Get-PublicBlobContent {
         This example lists both current and deleted blobs in the container.
 
     .EXAMPLE
+        Get-PublicBlobContent -StorageAccountName "mystorageaccount" -ContainerName "mycontainer" -OutputPath "/home/user/downloads" -Download
+
+        This example downloads the current versions of the files to the specified directory.
+
+    .EXAMPLE
         Get-PublicBlobContent -BlobUrl "https://mystorageaccount.blob.core.windows.net/mycontainer" -OutputPath "/home/user/downloads" -Download
 
         This example downloads the current versions of the files from the specified Azure Blob Storage account to the /home/user/downloads directory.
 
     .EXAMPLE
-        Get-PublicBlobContent -url "https://mystorageaccount.blob.core.windows.net/mycontainer" -path "/home/user/downloads" -IncludeDeleted -Download
+        Get-PublicBlobContent -storage "mystorageaccount" -container "mycontainer" -path "/home/user/downloads" -IncludeDeleted -Download
 
         This example uses aliases to download both current and deleted versions of the files.
 

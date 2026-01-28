@@ -1,13 +1,10 @@
 function Read-SASToken {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
-        [ValidatePattern('^(https?)://([a-zA-Z0-9])', ErrorMessage = "It does not match expected pattern '{1}'")]
-        [string]$SasUri,
-
-        [Parameter(Mandatory = $false)]
-        [ValidatePattern('(sv=.*?&)')]
-        [string]$SasToken
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [Alias('SasUri', 'SasToken', 'Uri', 'Token', 'Url')]
+        [string]$InputString
     )
 
     process {
@@ -18,20 +15,30 @@ function Read-SASToken {
         #Variables
         Add-Type -AssemblyName system.web
 
+        # Clean up input - remove leading ? if present
+        $InputString = $InputString.TrimStart('?')
 
-        if (![string]::IsNullOrWhiteSpace($SasUri)) {
-            $storageUri = $SasUri -split "\?"
+        # Auto-detect if input is a full URI or just a token
+        if ($InputString -match '^https?://') {
+            # Input is a full URI - extract the token portion
+            $storageUri = $InputString -split "\?"
+            $baseUri = $storageUri[0]
             $tokenArray = $storageUri[1] -split '&'
+            Write-Verbose "[+] Detected full URI input"
         }
-        elseif (!([string]::IsNullOrWhiteSpace($SasToken))) {
-            $tokenArray = $SasToken -split '&'
-            if ($tokenArray.count -lt 1) {
-                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No valid SAS token provided" -Severity 'Error'
-                break
-            }
+        elseif ($InputString -match 'sv=') {
+            # Input is just a SAS token
+            $tokenArray = $InputString -split '&'
+            $baseUri = $null
+            Write-Verbose "[+] Detected SAS token input"
         }
         else {
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No valid parameters provided" -Severity 'Error'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Invalid input: expected a SAS URI or SAS token containing 'sv=' parameter" -Severity 'Error'
+            break
+        }
+
+        if ($tokenArray.count -lt 1) {
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No valid SAS token parameters found" -Severity 'Error'
             break
         }
 
@@ -40,8 +47,11 @@ function Read-SASToken {
         $resourceTypes = New-Object System.Collections.ArrayList
         $services = New-Object System.Collections.ArrayList
 
-        $tokenObjects = [ordered]@{
-            'Storage Uri' = "$($storageUri)"
+        $tokenObjects = [ordered]@{}
+        
+        # Only add Storage Uri if we detected a full URI
+        if ($baseUri) {
+            $tokenObjects.'Storage Uri' = $baseUri
         }
 
         Write-Verbose '[+] Processing token properties'
@@ -128,32 +138,39 @@ function Read-SASToken {
     }
 <#
     .SYNOPSIS
-        Reads and processes the information from a Shared Access Signature (SAS) token.
+        Reads and processes the information from a Shared Access Signature (SAS) token or URI.
 
     .DESCRIPTION
-        The Read-SASToken function reads and processes the information from a Shared Access Signature (SAS) token. It extracts various properties from the SAS token, such as the storage URI, protocol, start time, expiry time, service version, permissions, IP address, signature, base64 signature, resource types, storage resource, and services.
+        The Read-SASToken function reads and processes the information from a Shared Access Signature (SAS) token.
+        It automatically detects whether the input is a full SAS URI or just a SAS token string.
+        It extracts various properties such as the storage URI, protocol, start time, expiry time, 
+        service version, permissions, IP address, signature, resource types, storage resource, and services.
 
-    .PARAMETER SasUri
-        The SAS URI from which to extract the token information. This parameter is optional.
-
-    .PARAMETER SasToken
-        The SAS token from which to extract the token information. This parameter is optional.
-
-    .EXAMPLE
-        $sasUri = "https://example.blob.core.windows.net/container?sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-        $tokenInfo = Read-SASToken -SasUri $sasUri
-
-        $tokenInfo
-
-        This example reads the information from a SAS token specified by the SasUri parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
+    .PARAMETER InputString
+        The SAS URI or SAS token string to parse. The function automatically detects the input type:
+        - If the input starts with 'http://' or 'https://', it's treated as a full URI
+        - Otherwise, it's treated as a SAS token string
+        Aliases: SasUri, SasToken, Uri, Token, Url
 
     .EXAMPLE
-        $sasToken = "sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-        $tokenInfo = Read-SASToken -SasToken $sasToken
+        Read-SASToken "https://example.blob.core.windows.net/container?sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxx"
 
-        $tokenInfo
+        This example reads the information from a full SAS URI. The storage URI will be extracted and displayed.
 
-        This example reads the information from a SAS token specified by the SasToken parameter and stores it in the $tokenInfo variable. The extracted token information is then displayed.
+    .EXAMPLE
+        Read-SASToken "sv=2019-12-12&ss=b&srt=s&sp=rwdlac&se=2022-01-01T00:00:00Z&st=2021-01-01T00:00:00Z&spr=https&sig=xxxx"
+
+        This example reads the information from just a SAS token string.
+
+    .EXAMPLE
+        Read-SASToken "?sv=2019-12-12&ss=b&srt=sco&sp=rl&se=2028-01-21T22:14:47Z&st=2026-01-21T13:59:47Z&spr=https&sig=xxxx"
+
+        This example shows that leading '?' characters are automatically trimmed.
+
+    .EXAMPLE
+        $url | Read-SASToken
+
+        This example shows pipeline input support.
 
     .NOTES
     Author: Rogier Dijkman (https://securehats.gitbook.io/BlackCat)
