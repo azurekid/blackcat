@@ -45,6 +45,7 @@
         # Exfiltration
         'Export-AzAccessToken',
         'Get-PublicBlobContent',
+        'Get-FileShareContent',
 
         # Helpers
         'ConvertFrom-JWT',
@@ -152,6 +153,7 @@
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
         'Public\Exfiltration\anonymous\Get-PublicBlobContent.ps1',
+        'Public\Exfiltration\anonymous\Get-FileShareContent.ps1',
 
         # Helpers
         'Public\Helpers\ConvertFrom-JWT.ps1',
