@@ -24,21 +24,21 @@ function Find-AzurePublicResource {
     }
 
     process {
-        Write-Host "🎯 Analyzing Azure resources for: $Name" -ForegroundColor Green
+        Write-Host " Analyzing Azure resources for: $Name" -ForegroundColor Green
         
         try {
             if ($WordList) {
-                Write-Host "  📄 Loading permutations from word list..." -ForegroundColor Cyan
+                Write-Host "   Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
-                Write-Host "    ✅ Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Green
+                Write-Host "     Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Green
             } else {
                 $permutations = [System.Collections.Generic.HashSet[string]]::new()
             }
 
             if ($sessionVariables.permutations) {
-                Write-Host "  📊 Loading session permutations..." -ForegroundColor Cyan
+                Write-Host "   Loading session permutations..." -ForegroundColor Cyan
                 foreach ($item in $sessionVariables.permutations) { [void]$permutations.Add($item) }
-                Write-Host "    ✅ Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
+                Write-Host "     Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
             }
 
             # Always include the base name without any suffix
@@ -50,7 +50,7 @@ function Find-AzurePublicResource {
             )
             $resourceAbbreviations | ForEach-Object { [void]$permutations.Add("-$_") ; [void]$permutations.Add("$_") }
 
-            Write-Host "  🌐 Generating Azure service DNS names..." -ForegroundColor Yellow
+            Write-Host "   Generating Azure service DNS names..." -ForegroundColor Yellow
 
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
@@ -109,8 +109,8 @@ function Find-AzurePublicResource {
             }
 
             $totalDns = $dnsNames.Count
-            Write-Host "    🎯 Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
-            Write-Host "  🔍 Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
+            Write-Host "     Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
+            Write-Host "   Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
             $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
             
@@ -199,7 +199,7 @@ function Find-AzurePublicResource {
                         $results.Add($obj)
                         
                         # Add to found resources for immediate display
-                        $foundMessage = "      ✅ $resourceName -> $ipAddresses [$resourceType]"
+                        $foundMessage = "       $resourceName -> $ipAddresses [$resourceType]"
                         $foundResources.Add($foundMessage)
                     }
                 }
@@ -223,7 +223,7 @@ function Find-AzurePublicResource {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
         
         if ($results -and $results.Count -gt 0) {
-            Write-Host "`n📊 Azure Resource Discovery Summary:" -ForegroundColor Magenta
+            Write-Host "`n Azure Resource Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Resources Found: $($results.Count)" -ForegroundColor Yellow
             
             # Group by resource type for summary
@@ -241,7 +241,7 @@ function Find-AzurePublicResource {
                 }
         }
         else {
-            Write-Host "`n❌ No public Azure resources found" -ForegroundColor Red
+            Write-Host "`n No public Azure resources found" -ForegroundColor Red
             Write-Information "No public Azure resources found" -InformationAction Continue
         }
     }

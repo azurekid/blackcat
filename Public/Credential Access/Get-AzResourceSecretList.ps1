@@ -12,7 +12,7 @@ function Get-AzResourceSecretList {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
         $result = New-Object System.Collections.ArrayList
@@ -35,12 +35,12 @@ function Get-AzResourceSecretList {
 
     process {
         try {
-            Write-Host "🎯 Starting Azure Resource Secret Discovery..." -ForegroundColor Green
+            Write-Host "Starting Azure Resource Secret Discovery..." -ForegroundColor Green
             
             $baseUri = "https://management.azure.com"
 
             # Get all resources from supported types
-            Write-Host "  📊 Collecting Azure resources..." -ForegroundColor Cyan
+            Write-Host "  Collecting Azure resources..." -ForegroundColor Cyan
             $allResources = @()
             $resourceTypes = @(
                 'Microsoft.Storage/storageAccounts',
@@ -78,18 +78,18 @@ function Get-AzResourceSecretList {
             # }
 
             $stats.TotalResources = $allResources.Count
-            Write-Host "    ✅ Found $($allResources.Count) total resources to analyze" -ForegroundColor Green
+            Write-Host "    Found $($allResources.Count) total resources to analyze" -ForegroundColor Green
 
             if ($allResources.Count -eq 0) {
-                Write-Host "⚠️ No resources found to analyze" -ForegroundColor Yellow
+                Write-Host "No resources found to analyze" -ForegroundColor Yellow
                 return $result
             }
 
             if ($allResources.Count -gt 20) {
-                Write-Host "  ⏳ Processing $($allResources.Count) resources, this may take a while..." -ForegroundColor Yellow
+                Write-Host "  Processing $($allResources.Count) resources, this may take a while..." -ForegroundColor Yellow
             }
 
-            Write-Host "  🔍 Analyzing resource secrets across $($allResources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
+            Write-Host "  Analyzing resource secrets across $($allResources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
             $allResources | ForEach-Object -Parallel {
                 $baseUri = $using:baseUri
@@ -576,11 +576,11 @@ function Get-AzResourceSecretList {
                 }
             } -ThrottleLimit $ThrottleLimit
 
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "✅ Found $($result.Count) resources with secrets" -Severity 'Information'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Found $($result.Count) resources with secrets" -Severity 'Information'
 
         }
         catch {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "❌ $($_.Exception.Message)" -Severity 'Error'
+            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "$($_.Exception.Message)" -Severity 'Error'
         }
     }
 
@@ -592,7 +592,7 @@ function Get-AzResourceSecretList {
         $stats.ProcessingErrors = $processingErrorsCount.Value
         $stats.ResourceTypes = ($result | Group-Object ResourceType).Count
         
-        Write-Host "`n📊 Azure Resource Secret Discovery Summary:" -ForegroundColor Magenta
+        Write-Host "`nAzure Resource Secret Discovery Summary:" -ForegroundColor Magenta
         Write-Host "   Total Resources Analyzed: $($stats.TotalResources)" -ForegroundColor White
         Write-Host "   Resources with Secrets Found: $($stats.ResourcesWithSecrets)" -ForegroundColor Yellow
         Write-Host "   Resource Types with Secrets: $($stats.ResourceTypes)" -ForegroundColor Cyan
@@ -614,10 +614,10 @@ function Get-AzResourceSecretList {
             Write-Host "`n   Severity Level Breakdown:" -ForegroundColor White
             foreach ($group in $severityLevelCounts) {
                 $emoji = switch ($group.Name) {
-                    "Critical" { "🚨" }
-                    "High" { "🔴" }
-                    "Medium" { "🟠" }
-                    "Low" { "⚠️" }
+                    "Critical" { "" }
+                    "High" { "" }
+                    "Medium" { "" }
+                    "Low" { "" }
                 }
                 Write-Host "      $emoji $($group.Name): $($group.Count)" -ForegroundColor White
             }
@@ -627,7 +627,7 @@ function Get-AzResourceSecretList {
             Write-Host "`n   Resource Type Breakdown:" -ForegroundColor White
             foreach ($group in $resourceTypeCounts) {
                 $shortType = ($group.Name -split '/')[-1]  # Get just the resource type name
-                Write-Host "      📦 $shortType`: $($group.Count)" -ForegroundColor Cyan
+                Write-Host "      $shortType`: $($group.Count)" -ForegroundColor Cyan
             }
             
             # Return results in requested format
@@ -637,7 +637,7 @@ function Get-AzResourceSecretList {
                     $jsonOutput = $result | ConvertTo-Json -Depth 10
                     $jsonFilePath = "AzureResourceSecrets_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
@@ -646,7 +646,7 @@ function Get-AzResourceSecretList {
                     $csvOutput = $result | ConvertTo-CSV
                     $csvFilePath = "AzureResourceSecrets_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "CSV output saved to: $csvFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
@@ -655,7 +655,7 @@ function Get-AzResourceSecretList {
                     if ($result.Count -gt 0) {
                         return $result | Format-Table -AutoSize 
                     } else {
-                        Write-Host "`n❌ No resources with secrets found" -ForegroundColor Red
+                        Write-Host "`nNo resources with secrets found" -ForegroundColor Red
                         return @()
                     }
                 }
@@ -669,7 +669,7 @@ function Get-AzResourceSecretList {
                     $jsonOutput = @() | ConvertTo-Json
                     $jsonFilePath = "AzureResourceSecrets_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host "Empty JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     return
                 }
                 "CSV" { 
@@ -677,23 +677,23 @@ function Get-AzResourceSecretList {
                     $csvOutput = @() | ConvertTo-CSV
                     $csvFilePath = "AzureResourceSecrets_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host "Empty CSV output saved to: $csvFilePath" -ForegroundColor Green
                     return
                 }
                 "Object" { 
-                    Write-Host "`n❌ No resources with secrets found" -ForegroundColor Red
+                    Write-Host "`nNo resources with secrets found" -ForegroundColor Red
                     Write-Information "No resources with secrets found" -InformationAction Continue
                     return @()
                 }
                 "Table" { 
-                    Write-Host "`n❌ No resources with secrets found" -ForegroundColor Red
+                    Write-Host "`nNo resources with secrets found" -ForegroundColor Red
                     Write-Information "No resources with secrets found" -InformationAction Continue
                     return @()
                 }
             }
         }
         
-        Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Completed function $($MyInvocation.MyCommand.Name)"
     }
 
     <#

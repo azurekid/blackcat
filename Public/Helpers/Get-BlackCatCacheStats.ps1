@@ -465,28 +465,28 @@ function Get-BlackCatCacheStats {
                 switch -Regex ($ExportPath) {
                     '\.json$' { 
                         $outputData | ConvertTo-Json -Depth 10 | Out-File -FilePath $ExportPath -Encoding UTF8
-                        if (-not $Quiet) { Write-Host "✅ Cache statistics exported to: $ExportPath" -ForegroundColor Green }
+                        if (-not $Quiet) { Write-Host " Cache statistics exported to: $ExportPath" -ForegroundColor Green }
                     }
                     '\.xml$' { 
                         $outputData | ConvertTo-Xml -Depth 10 | Out-File -FilePath $ExportPath -Encoding UTF8
-                        if (-not $Quiet) { Write-Host "✅ Cache statistics exported to: $ExportPath" -ForegroundColor Green }
+                        if (-not $Quiet) { Write-Host " Cache statistics exported to: $ExportPath" -ForegroundColor Green }
                     }
                     '\.csv$' { 
                         if ($allCacheData.Count -gt 0) {
                             $allCacheData | Export-Csv -Path $ExportPath -NoTypeInformation -Encoding UTF8
-                            if (-not $Quiet) { Write-Host "✅ Cache entries exported to: $ExportPath" -ForegroundColor Green }
+                            if (-not $Quiet) { Write-Host " Cache entries exported to: $ExportPath" -ForegroundColor Green }
                         } else {
-                            if (-not $Quiet) { Write-Host "⚠️  No cache entries to export" -ForegroundColor Yellow }
+                            if (-not $Quiet) { Write-Host "  No cache entries to export" -ForegroundColor Yellow }
                         }
                     }
                     default { 
                         $outputData | ConvertTo-Json -Depth 10 | Out-File -FilePath $ExportPath -Encoding UTF8
-                        if (-not $Quiet) { Write-Host "✅ Cache statistics exported to: $ExportPath (JSON format)" -ForegroundColor Green }
+                        if (-not $Quiet) { Write-Host " Cache statistics exported to: $ExportPath (JSON format)" -ForegroundColor Green }
                     }
                 }
             }
             catch {
-                if (-not $Quiet) { Write-Host "❌ Export failed: $($_.Exception.Message)" -ForegroundColor Red }
+                if (-not $Quiet) { Write-Host " Export failed: $($_.Exception.Message)" -ForegroundColor Red }
             }
         }
 
@@ -507,7 +507,7 @@ function Get-BlackCatCacheStats {
                 if ($allCacheData.Count -gt 0) {
                     return ($allCacheData | ConvertTo-Csv -NoTypeInformation)
                 } else {
-                    Write-Host "⚠️  No cache entries available for CSV format" -ForegroundColor Yellow
+                    Write-Host "  No cache entries available for CSV format" -ForegroundColor Yellow
                     return ""
                 }
             }
@@ -565,7 +565,7 @@ function Get-BlackCatCacheStats {
 
                 # Overall statistics with enhanced metrics
                 $summary = $outputData.Summary
-                Write-Host "🌍 GLOBAL OVERVIEW" -ForegroundColor Green
+                Write-Host " GLOBAL OVERVIEW" -ForegroundColor Green
                 Write-Host "├─ Active Cache Types: $($summary.ActiveCaches)/$($summary.TotalCaches)" -ForegroundColor White
                 Write-Host "├─ Total Cache Entries: $($summary.TotalEntries)" -ForegroundColor White
                 Write-Host "├─ Overall Hit Rate: $($summary.OverallHitRate)%" -ForegroundColor $(if ($summary.OverallHitRate -gt 80) { 'Green' } elseif ($summary.OverallHitRate -gt 60) { 'Yellow' } else { 'Red' })
@@ -596,13 +596,13 @@ function Get-BlackCatCacheStats {
                     $perf = $performanceData[$type]
                     
                     if ($perf.Status -eq 'Uninitialized') {
-                        Write-Host "📦 $($perf.Type.ToUpper()) CACHE" -ForegroundColor Gray
+                        Write-Host " $($perf.Type.ToUpper()) CACHE" -ForegroundColor Gray
                         Write-Host "└─ Status: Not initialized" -ForegroundColor Gray
                         Write-Host ""
                         continue
                     }
 
-                    Write-Host "📊 $($perf.Type.ToUpper()) CACHE ANALYTICS" -ForegroundColor Yellow
+                    Write-Host " $($perf.Type.ToUpper()) CACHE ANALYTICS" -ForegroundColor Yellow
                     Write-Host "├─ Status: $($perf.Status)" -ForegroundColor Green
                     Write-Host "├─ Entries: Total: $($perf.TotalEntries) | Valid: $($perf.ValidEntries) | Expired: $($perf.ExpiredEntries)" -ForegroundColor White
                     Write-Host "├─ Compression: $($perf.CompressedEntries) entries ($($perf.CompressionRatio)%)" -ForegroundColor Cyan
@@ -621,7 +621,7 @@ function Get-BlackCatCacheStats {
 
                 # Trend analysis if requested
                 if ($ShowTrends -and $trendData.Count -gt 0) {
-                    Write-Host "📈 TREND ANALYSIS" -ForegroundColor Blue
+                    Write-Host " TREND ANALYSIS" -ForegroundColor Blue
                     foreach ($type in $cacheTypes) {
                         if ($trendData.ContainsKey($type)) {
                             $trend = $trendData[$type]
@@ -638,7 +638,7 @@ function Get-BlackCatCacheStats {
 
                 # Histogram display if requested
                 if ($IncludeHistogram -and $histogramData.Count -gt 0) {
-                    Write-Host "📊 DISTRIBUTION HISTOGRAMS" -ForegroundColor Blue
+                    Write-Host " DISTRIBUTION HISTOGRAMS" -ForegroundColor Blue
                     foreach ($type in $cacheTypes) {
                         if ($histogramData.ContainsKey($type)) {
                             $histData = $histogramData[$type]
@@ -659,7 +659,7 @@ function Get-BlackCatCacheStats {
                 }
 
                 # Enhanced performance recommendations
-                Write-Host "💡 PERFORMANCE INSIGHTS" -ForegroundColor Magenta
+                Write-Host " PERFORMANCE INSIGHTS" -ForegroundColor Magenta
                 $recommendations = @()
                 
                 foreach ($type in $cacheTypes) {
@@ -668,41 +668,41 @@ function Get-BlackCatCacheStats {
                     
                     # Enhanced recommendation logic
                     if ($perf.HitRate -lt 60) {
-                        $recommendations += "⚠️  Low hit rate in $type cache ($($perf.HitRate)%) - consider increasing expiration time or reviewing cache strategy"
+                        $recommendations += "  Low hit rate in $type cache ($($perf.HitRate)%) - consider increasing expiration time or reviewing cache strategy"
                     }
                     if ($perf.ExpirationRate -gt 50) {
-                        $recommendations += "⏰ High expiration rate in $type cache ($($perf.ExpirationRate)%) - consider longer TTL or usage pattern analysis"
+                        $recommendations += " High expiration rate in $type cache ($($perf.ExpirationRate)%) - consider longer TTL or usage pattern analysis"
                     }
                     if ($perf.TotalSizeMB -gt 100) {
                         $recommendations += "� Large memory usage in $type cache ($($perf.TotalSizeMB) MB) - consider enabling compression or implementing LRU eviction"
                     }
                     if ($perf.TotalEntries -gt 100 -and $perf.CompressionRatio -eq 0) {
-                        $recommendations += "🗜️  $type cache has $($perf.TotalEntries) entries with no compression - could reduce memory by up to 70%"
+                        $recommendations += "  $type cache has $($perf.TotalEntries) entries with no compression - could reduce memory by up to 70%"
                     }
                     if ($perf.ValidEntries -eq 0 -and $perf.TotalEntries -gt 0) {
-                        $recommendations += "🧹 All entries in $type cache are expired - run cache cleanup or implement automatic cleanup"
+                        $recommendations += " All entries in $type cache are expired - run cache cleanup or implement automatic cleanup"
                     }
                     if ($perf.TotalEntries -gt 500) {
-                        $recommendations += "📈 Large cache size in $type ($($perf.TotalEntries) entries) - consider implementing size limits or LRU eviction"
+                        $recommendations += " Large cache size in $type ($($perf.TotalEntries) entries) - consider implementing size limits or LRU eviction"
                     }
                     if ($perf.MemoryDensity -gt 1048576) { # > 1MB per entry
-                        $recommendations += "📦 Large average entry size in $type cache ($([math]::Round($perf.MemoryDensity / 1MB, 1)) MB/entry) - compression highly recommended"
+                        $recommendations += " Large average entry size in $type cache ($([math]::Round($perf.MemoryDensity / 1MB, 1)) MB/entry) - compression highly recommended"
                     }
                     
                     # Trend-based recommendations
                     if ($ShowTrends -and $trendData.ContainsKey($type)) {
                         $trend = $trendData[$type]
                         if ($trend.GrowthRate -gt 75) {
-                            $recommendations += "🚀 Rapid growth detected in $type cache ($($trend.GrowthRate)% in 24h) - monitor memory usage closely"
+                            $recommendations += " Rapid growth detected in $type cache ($($trend.GrowthRate)% in 24h) - monitor memory usage closely"
                         }
                         if ($trend.TurnoverRate -gt 80) {
-                            $recommendations += "🔄 High turnover rate in $type cache ($($trend.TurnoverRate)%) - cache effectiveness may be compromised"
+                            $recommendations += " High turnover rate in $type cache ($($trend.TurnoverRate)%) - cache effectiveness may be compromised"
                         }
                     }
                 }
 
                 if ($recommendations.Count -eq 0) {
-                    Write-Host "✅ Cache performance is optimal! All metrics within recommended ranges." -ForegroundColor Green
+                    Write-Host " Cache performance is optimal! All metrics within recommended ranges." -ForegroundColor Green
                 } else {
                     foreach ($rec in $recommendations) {
                         Write-Host $rec -ForegroundColor Yellow
@@ -712,7 +712,7 @@ function Get-BlackCatCacheStats {
 
                 # Show detailed entries if requested
                 if ($ShowDetails -and $allCacheData.Count -gt 0) {
-                    Write-Host "📋 DETAILED CACHE ENTRIES" -ForegroundColor Blue
+                    Write-Host " DETAILED CACHE ENTRIES" -ForegroundColor Blue
                     $detailTable = $allCacheData | Select-Object -First (if ($Top -gt 0) { $Top } else { $allCacheData.Count }) |
                         Select-Object CacheType, 
                                       @{Name='Key'; Expression={if ($_.Key.Length -gt 30) { $_.Key.Substring(0,27) + "..." } else { $_.Key }}},
@@ -731,7 +731,7 @@ function Get-BlackCatCacheStats {
 
                 # Enhanced performance metrics if requested
                 if ($ShowPerformance) {
-                    Write-Host "⚡ ADVANCED PERFORMANCE METRICS" -ForegroundColor Blue
+                    Write-Host " ADVANCED PERFORMANCE METRICS" -ForegroundColor Blue
                     $perfTable = foreach ($type in $cacheTypes) {
                         $perf = $performanceData[$type]
                         if ($perf.Status -eq 'Active') {
@@ -756,7 +756,7 @@ function Get-BlackCatCacheStats {
                 }
 
                 $executionTime = ((Get-Date) - $startTime).TotalMilliseconds
-                Write-Host "📊 Advanced analysis completed in $([math]::Round($executionTime, 2)) ms" -ForegroundColor Gray
+                Write-Host " Advanced analysis completed in $([math]::Round($executionTime, 2)) ms" -ForegroundColor Gray
                 
                 # Return data object for programmatic use
                 return $outputData

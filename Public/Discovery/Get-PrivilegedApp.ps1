@@ -15,7 +15,7 @@ function Get-PrivilegedApp {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName "MSGraph"
 
         $result = New-Object System.Collections.ArrayList
@@ -34,12 +34,12 @@ function Get-PrivilegedApp {
 
     process {
         try {
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "🔍 Collecting Enterprise Applications" -Severity 'Information'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message " Collecting Enterprise Applications" -Severity 'Information'
             $applications = Invoke-MsGraph -relativeUrl "applications"
 
             $stats.TotalApplications = $applications.count
-            Write-Verbose "📱 User Applications: $($applications.count)"
-            Write-Verbose "    🔐 Validating [$($applications.count)] Enterprise Applications for privileged permissions"
+            Write-Verbose " User Applications: $($applications.count)"
+            Write-Verbose "     Validating [$($applications.count)] Enterprise Applications for privileged permissions"
 
             $riskyGrants = $sessionVariables.appRoleIds | Where-Object Permission -in @(
                 'Directory.ReadWrite.All',
@@ -53,7 +53,7 @@ function Get-PrivilegedApp {
                 'Application.ReadWrite.All'
             )
 
-            Write-Verbose "    🔍 Pre-filtering applications with privileged permissions..."
+            Write-Verbose "     Pre-filtering applications with privileged permissions..."
             $privilegedApps = $applications | Where-Object {
                 $app = $_
                 $hasPrivilegedPermissions = $false
@@ -66,25 +66,25 @@ function Get-PrivilegedApp {
                 $hasPrivilegedPermissions
             }
 
-            Write-Verbose "    📊 Found $($privilegedApps.Count) applications with privileged permissions (filtering from $($applications.count) total)"
+            Write-Verbose "     Found $($privilegedApps.Count) applications with privileged permissions (filtering from $($applications.count) total)"
 
             # Only fetch owners if explicitly requested or if output format needs detailed information
             $ownerLookup = @{}
             if ($IncludeOwners) {
-                Write-Verbose "    👥 Fetching owners for privileged applications..."
+                Write-Verbose "     Fetching owners for privileged applications..."
                 foreach ($app in $privilegedApps) {
                     try {
                         $owners = Invoke-MsGraph -relativeUrl "applications/$($app.Id)/owners"
                         $ownerLookup[$app.Id] = $owners.userPrincipalName
                     }
                     catch {
-                        Write-Verbose "    ⚠️ Failed to get owners for application $($app.Id): $($_.Exception.Message)"
+                        Write-Verbose "     Failed to get owners for application $($app.Id): $($_.Exception.Message)"
                         $ownerLookup[$app.Id] = @()
                     }
                 }
             }
             else {
-                Write-Verbose "    ⚡ Skipping owner lookup for better performance (use -IncludeOwners to fetch owners)"
+                Write-Verbose "     Skipping owner lookup for better performance (use -IncludeOwners to fetch owners)"
                 # Initialize empty lookup for all privileged apps
                 foreach ($app in $privilegedApps) {
                     $ownerLookup[$app.Id] = @("Not fetched - use -IncludeOwners parameter")
@@ -185,10 +185,10 @@ function Get-PrivilegedApp {
             $json = [ordered]@{}
             [void]$json.Add("data", $result)
 
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "✅ Found $($result.Count) privileged applications" -Severity 'Information'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message " Found $($result.Count) privileged applications" -Severity 'Information'
         }
         catch {
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "❌ $($_.Exception.Message)" -Severity 'Error'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message " $($_.Exception.Message)" -Severity 'Error'
         }
     }
 
@@ -202,7 +202,7 @@ function Get-PrivilegedApp {
         $stats.ApplicationsWithExpiredCredentials = $expiredCredentialAppCount.Value
         $stats.ApplicationsWithExpiredKeyCredentials = $expiredKeyCredentialAppCount.Value
         
-        Write-Host "`n📊 Privileged Application Discovery Summary:" -ForegroundColor Magenta
+        Write-Host "`n Privileged Application Discovery Summary:" -ForegroundColor Magenta
         Write-Host "   Total Applications Analyzed: $($stats.TotalApplications)" -ForegroundColor White
         Write-Host "   Privileged Applications Found: $($stats.PrivilegedApplications)" -ForegroundColor Yellow
         Write-Host "   Applications with Password Credentials: $($stats.ApplicationsWithCredentials)" -ForegroundColor Cyan
@@ -226,10 +226,10 @@ function Get-PrivilegedApp {
             Write-Host "`n   Severity Level Breakdown:" -ForegroundColor White
             foreach ($group in $severityLevelCounts) {
                 $emoji = switch ($group.Name) {
-                    "Critical" { "🚨" }
-                    "High" { "🔴" }
-                    "Medium" { "🟠" }
-                    "Low" { "⚠️" }
+                    "Critical" { "" }
+                    "High" { "" }
+                    "Medium" { "" }
+                    "Low" { "" }
                 }
                 Write-Host "      $emoji $($group.Name): $($group.Count)" -ForegroundColor White
             }
@@ -241,7 +241,7 @@ function Get-PrivilegedApp {
                     $jsonOutput = $result | ConvertTo-Json -Depth 3
                     $jsonFilePath = "PrivilegedApps_$timestamp.json"
                     $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                    Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                    Write-Host " JSON output saved to: $jsonFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
@@ -250,7 +250,7 @@ function Get-PrivilegedApp {
                     $csvOutput = $result | ConvertTo-CSV
                     $csvFilePath = "PrivilegedApps_$timestamp.csv"
                     $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                    Write-Host "📊 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                    Write-Host " CSV output saved to: $csvFilePath" -ForegroundColor Green
                     # File created, no console output needed
                     return
                 }
@@ -259,11 +259,11 @@ function Get-PrivilegedApp {
             }
         }
         else {
-            Write-Host "`n❌ No privileged applications found" -ForegroundColor Red
+            Write-Host "`n No privileged applications found" -ForegroundColor Red
             Write-Information "No privileged applications found" -InformationAction Continue
         }
         
-        Write-Verbose "🏁 Completed function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Completed function $($MyInvocation.MyCommand.Name)"
     }
     <#
 .SYNOPSIS

@@ -35,15 +35,15 @@ function Get-BlackCatCacheMemoryStats {
         Write-Host "  Total Cache Entries: $totalEntries" -ForegroundColor White
         
         if ($totalMemoryMB -gt 250) {
-            Write-Host "⚠️  High memory usage detected!" -ForegroundColor Red
+            Write-Host "  High memory usage detected!" -ForegroundColor Red
             Write-Host "   Consider using -CompressCache or reducing -MaxCacheSize" -ForegroundColor Yellow
         }
         elseif ($totalMemoryMB -gt 20) {
-            Write-Host "⚡ Moderate memory usage" -ForegroundColor Yellow
+            Write-Host " Moderate memory usage" -ForegroundColor Yellow
             Write-Host "   Monitor usage and consider compression for large datasets" -ForegroundColor White
         }
         else {
-            Write-Host "✅ Memory usage is within acceptable limits" -ForegroundColor Green
+            Write-Host " Memory usage is within acceptable limits" -ForegroundColor Green
         }
     }
     else {

@@ -30,7 +30,7 @@ function Get-UserAgentStatus {
     }
 
     # Format the output nicely
-    Write-Output "📊 User Agent Status:"
+    Write-Output " User Agent Status:"
     Write-Output "  Current User Agent: $($status.CurrentAgent)"
     Write-Output "  Last Changed: $($status.LastChanged)"
     Write-Output "  Request Count: $($status.RequestCount)"

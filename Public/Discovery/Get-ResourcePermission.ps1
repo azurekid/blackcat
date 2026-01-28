@@ -41,21 +41,21 @@ function Get-ResourcePermission {
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
-        Write-Host "🎯 Starting Azure Resource Permission Analysis..." -ForegroundColor Green
+        Write-Host " Starting Azure Resource Permission Analysis..." -ForegroundColor Green
         
         if ($SubscriptionId) {
-            Write-Host "  🔒 Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
         }
         if ($ResourceGroupName) {
-            Write-Host "  📁 Filter: Resource Group = $ResourceGroupName" -ForegroundColor Cyan
+            Write-Host "   Filter: Resource Group = $ResourceGroupName" -ForegroundColor Cyan
         }
         if ($ResourceType) {
-            Write-Host "  🏗️ Filter: Resource Type = $ResourceType" -ForegroundColor Cyan
+            Write-Host "   Filter: Resource Type = $ResourceType" -ForegroundColor Cyan
         }
         if ($ResourceName) {
-            Write-Host "  📝 Filter: Resource Name = $ResourceName" -ForegroundColor Cyan
+            Write-Host "   Filter: Resource Name = $ResourceName" -ForegroundColor Cyan
         }
-        Write-Host "  🔐 Permission Type: $PermissionType" -ForegroundColor Cyan
+        Write-Host "   Permission Type: $PermissionType" -ForegroundColor Cyan
         
         $resourcePermissions = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $baseUri = 'https://management.azure.com'
@@ -90,19 +90,19 @@ function Get-ResourcePermission {
             }
 
             if (-not $resources -or $resources.Count -eq 0) {
-                Write-Host "⚠️ No resources found matching the specified criteria" -ForegroundColor Yellow
+                Write-Host " No resources found matching the specified criteria" -ForegroundColor Yellow
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No resources found matching the specified criteria" -Severity 'Information'
                 return $resourcePermissions
             }
 
-            Write-Host "  📊 Found $($resources.Count) resources to analyze" -ForegroundColor Cyan
+            Write-Host "   Found $($resources.Count) resources to analyze" -ForegroundColor Cyan
             Write-Verbose "Processing $($resources.Count) resources"
             if ($resources.Count -gt 20) {
-                Write-Host "  ⏳ Processing $($resources.Count) resources, this may take a while..." -ForegroundColor Yellow
+                Write-Host "   Processing $($resources.Count) resources, this may take a while..." -ForegroundColor Yellow
                 Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Processing $($resources.Count) resources, this may take a while" -Severity 'Information'
             }
 
-            Write-Host "  🔍 Analyzing resource permissions across $($resources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
+            Write-Host "   Analyzing resource permissions across $($resources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
             $resources | ForEach-Object -Parallel {
                 $resourceId          = $_.id
                 $permissionType      = $using:PermissionType
@@ -173,14 +173,14 @@ function Get-ResourcePermission {
             Write-Verbose "Found $($resourcePermissions.Count) resources with matching permissions"
         }
         catch {
-            Write-Host "❌ Error while retrieving resource permissions: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host " Error while retrieving resource permissions: $($_.Exception.Message)" -ForegroundColor Red
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
 
         if ($resourcePermissions.Count -eq 0) {
-            Write-Host "⚠️ No resources found with the specified permission type" -ForegroundColor Yellow
+            Write-Host " No resources found with the specified permission type" -ForegroundColor Yellow
         } else {
-            Write-Host "`n📊 Resource Permission Discovery Summary:" -ForegroundColor Magenta
+            Write-Host "`n Resource Permission Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Resources with Permissions: $($resourcePermissions.Count)" -ForegroundColor Green
             
             # Group by resource type for summary
@@ -200,7 +200,7 @@ function Get-ResourcePermission {
             }
         }
 
-        Write-Host "✅ Resource permission analysis completed successfully!" -ForegroundColor Green
+        Write-Host " Resource permission analysis completed successfully!" -ForegroundColor Green
         
         # Convert ConcurrentBag to array for output formatting
         $result = @($resourcePermissions)
@@ -212,7 +212,7 @@ function Get-ResourcePermission {
                 $jsonOutput = $result | ConvertTo-Json -Depth 3
                 $jsonFilePath = "ResourcePermissions_$timestamp.json"
                 $jsonOutput | Out-File -FilePath $jsonFilePath -Encoding UTF8
-                Write-Host "💾 JSON output saved to: $jsonFilePath" -ForegroundColor Green
+                Write-Host " JSON output saved to: $jsonFilePath" -ForegroundColor Green
                 # File created, no console output needed
                 return
             }
@@ -221,7 +221,7 @@ function Get-ResourcePermission {
                 $csvOutput = $result | ConvertTo-Csv -NoTypeInformation
                 $csvFilePath = "ResourcePermissions_$timestamp.csv"
                 $csvOutput | Out-File -FilePath $csvFilePath -Encoding UTF8
-                Write-Host "💾 CSV output saved to: $csvFilePath" -ForegroundColor Green
+                Write-Host " CSV output saved to: $csvFilePath" -ForegroundColor Green
                 # File created, no console output needed
                 return
             }

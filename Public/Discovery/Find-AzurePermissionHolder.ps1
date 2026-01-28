@@ -96,8 +96,8 @@ function Find-AzurePermissionHolder {
     $roleDefinitionsCache = @{}
     $principalCache = @{}
 
-    Write-Host "🔍 Starting Azure Permission Holder Analysis..." -ForegroundColor Green
-    Write-Host "  🎯 Searching for permission: $($Permission -join ', ')" -ForegroundColor Cyan
+    Write-Host "Starting Azure Permission Holder Analysis..." -ForegroundColor Green
+    Write-Host "  Searching for permission: $($Permission -join ', ')" -ForegroundColor Cyan
 
     # Create cache key for results
     $cacheKeyParams = @{
@@ -112,7 +112,7 @@ function Find-AzurePermissionHolder {
     if (-not $SkipCache) {
         $cachedResults = Get-BlackCatCache -Key $cacheKey -CacheType 'MSGraph'
         if ($null -ne $cachedResults) {
-            Write-Host "📋 Retrieved permission holders from cache" -ForegroundColor Green
+            Write-Host "Retrieved permission holders from cache" -ForegroundColor Green
             
             # Return cached results in requested format using BlackCat's standard output formatter
             $formatParam = @{
@@ -140,7 +140,7 @@ function Find-AzurePermissionHolder {
         $roleDefinitionsResponse = Invoke-RestMethod -Uri $roleDefsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
         $roleDefinitions = $roleDefinitionsResponse.value
         
-        Write-Host "  ✅ Retrieved $($roleDefinitions.Count) role definitions" -ForegroundColor Green
+        Write-Host "  Retrieved $($roleDefinitions.Count) role definitions" -ForegroundColor Green
     }
     catch {
         Write-Error "Failed to retrieve role definitions: $($_.Exception.Message)"
@@ -206,7 +206,7 @@ function Find-AzurePermissionHolder {
         }
     }
     
-    Write-Host "  ✅ Found $($matchingRoles.Count) roles with matching permissions" -ForegroundColor Green
+    Write-Host "  Found $($matchingRoles.Count) roles with matching permissions" -ForegroundColor Green
     
     if ($matchingRoles.Count -eq 0) {
         Write-Host "No role definitions found with the specified permission(s). Check permission syntax." -ForegroundColor Yellow
@@ -222,7 +222,7 @@ function Find-AzurePermissionHolder {
             $subscriptionsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
             $subscriptionsResponse = Invoke-RestMethod -Uri $subscriptionsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
             $subscriptions += $subscriptionsResponse.value.subscriptionId
-            Write-Host "  📊 Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
+            Write-Host "  Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
         }
         catch {
             Write-Error "Failed to retrieve subscriptions: $($_.Exception.Message)"
@@ -264,7 +264,7 @@ function Find-AzurePermissionHolder {
         }
     }
     
-    Write-Host "  ✅ Found $($roleAssignments.Count) role assignments for matching roles" -ForegroundColor Green
+    Write-Host "  Found $($roleAssignments.Count) role assignments for matching roles" -ForegroundColor Green
     
     if ($roleAssignments.Count -eq 0) {
         Write-Host "No matching role assignments found." -ForegroundColor Yellow
@@ -321,7 +321,7 @@ function Find-AzurePermissionHolder {
     
     # Display summary
     $duration = [Math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-    Write-Host "`n📊 Permission Holder Discovery Summary:" -ForegroundColor Magenta
+    Write-Host "`nPermission Holder Discovery Summary:" -ForegroundColor Magenta
     Write-Host "   Found $($results.Count) permission holders for '$($Permission -join ', ')'" -ForegroundColor Green
     
     # Group by principal type for summary
@@ -331,7 +331,7 @@ function Find-AzurePermissionHolder {
     }
     
     Write-Host "   Duration: $($duration) seconds" -ForegroundColor White
-    Write-Host "✅ Permission holder analysis completed successfully!" -ForegroundColor Green
+    Write-Host "Permission holder analysis completed successfully!" -ForegroundColor Green
     
     # Return results in the requested format using BlackCat's standard output formatter
     $formatParam = @{

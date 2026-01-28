@@ -84,7 +84,7 @@ function Find-PublicStorageContainer {
             if ($validDnsNames.Count -gt 0) {
                 Write-Host "    Found $($validDnsNames.Count) valid storage accounts" -ForegroundColor Green
                 $totalContainers = $validDnsNames.Count * $permutations.Count
-                Write-Host "  🔍 Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
+                Write-Host "   Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
 
                 $validDnsNames | ForEach-Object -Parallel {
                     $dns = $_

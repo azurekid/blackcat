@@ -17,7 +17,7 @@ function Get-AppRolePermission {
     )
 
     begin {
-        Write-Verbose "🚀 Starting function $($MyInvocation.MyCommand.Name)"
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         
         # Validate appRoleName parameter against available permissions
         if ($appRoleName -and $script:SessionVariables -and $script:SessionVariables.appRoleIds) {
@@ -37,38 +37,38 @@ function Get-AppRolePermission {
 
         try {
 
-            Write-Verbose "🔍 Searching for App Role permissions"
+            Write-Verbose " Searching for App Role permissions"
 
             if ($appRoleName) {
-                Write-Host "  🎯 Looking up App Role by name: '$appRoleName' (Type: $Type)" -ForegroundColor Cyan
+                Write-Host "   Looking up App Role by name: '$appRoleName' (Type: $Type)" -ForegroundColor Cyan
                 $object = ($script:SessionVariables.appRoleIds | Where-Object Permission -eq $appRoleName | Where-Object Type -eq $Type)
                 
                 if ($object) {
-                    Write-Host "    ✅ Found App Role permission: $($object.Permission)" -ForegroundColor Green
+                    Write-Host "     Found App Role permission: $($object.Permission)" -ForegroundColor Green
                 } else {
-                    Write-Host "    ❌ No App Role found with name '$appRoleName' and type '$Type'" -ForegroundColor Red
+                    Write-Host "     No App Role found with name '$appRoleName' and type '$Type'" -ForegroundColor Red
                 }
             } else {
-                Write-Host "  🔑 Looking up App Role by ID: $appRoleId" -ForegroundColor Cyan
+                Write-Host "   Looking up App Role by ID: $appRoleId" -ForegroundColor Cyan
                 $object = ($script:SessionVariables.appRoleIds | Where-Object appRoleId -eq $appRoleId)
                 
                 if ($object) {
-                    Write-Host "    ✅ Found App Role permission: $($object.Permission)" -ForegroundColor Green
+                    Write-Host "     Found App Role permission: $($object.Permission)" -ForegroundColor Green
                 } else {
-                    Write-Host "    ❌ No App Role found with ID '$appRoleId'" -ForegroundColor Red
+                    Write-Host "     No App Role found with ID '$appRoleId'" -ForegroundColor Red
                 }
             }
 
             if ($object) {
-                Write-Host "    📋 Permission: $($object.Permission)" -ForegroundColor Yellow
-                Write-Host "    🏷️  Type: $($object.Type)" -ForegroundColor Yellow
+                Write-Host "     Permission: $($object.Permission)" -ForegroundColor Yellow
+                Write-Host "      Type: $($object.Type)" -ForegroundColor Yellow
                 Write-Host "    🆔 App Role ID: $($object.appRoleId)" -ForegroundColor Yellow
             }
 
             return $object
         }
         catch {
-            Write-Host "  ❌ Error retrieving App Role permission: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "   Error retrieving App Role permission: $($_.Exception.Message)" -ForegroundColor Red
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }

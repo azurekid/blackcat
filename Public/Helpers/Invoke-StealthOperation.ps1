@@ -32,7 +32,7 @@ function Invoke-StealthOperation {
     )
 
     begin {
-        Write-Verbose "🚀 Starting stealth pipeline with $DelayType timing"
+        Write-Verbose " Starting stealth pipeline with $DelayType timing"
         $itemCount = 0
         
         # Business hours mapping for different countries with cultural patterns
@@ -98,10 +98,10 @@ function Invoke-StealthOperation {
                             )
                             $businessConfig.Description = "UTC$TimeZone"
                             $businessConfigDescription = $businessConfig.Description
-                            Write-Verbose "🌍 Using custom UTC offset: $TimeZone with generic business hours"
+                            Write-Verbose " Using custom UTC offset: $TimeZone with generic business hours"
                         }
                         catch {
-                            Write-Warning "⚠️ Invalid UTC offset format '$TimeZone'. Using country default."
+                            Write-Warning " Invalid UTC offset format '$TimeZone'. Using country default."
                             $businessConfig = $businessHours[$Country]
                             if (-not $businessConfig) { 
                                 $businessConfig = $businessHours["US"]
@@ -118,10 +118,10 @@ function Invoke-StealthOperation {
                             $targetTimeZone = [System.TimeZoneInfo]::FindSystemTimeZoneById($TimeZone)
                             $businessConfig.Description = $TimeZone
                             $businessConfigDescription = $businessConfig.Description
-                            Write-Verbose "🕐 Using specified timezone: $TimeZone with generic business hours"
+                            Write-Verbose " Using specified timezone: $TimeZone with generic business hours"
                         }
                         catch {
-                            Write-Warning "⚠️ Timezone '$TimeZone' not found. Using country default."
+                            Write-Warning " Timezone '$TimeZone' not found. Using country default."
                             $businessConfig = $businessHours[$Country]
                             if (-not $businessConfig) { 
                                 $businessConfig = $businessHours["US"]
@@ -143,7 +143,7 @@ function Invoke-StealthOperation {
                         $businessConfigDescription = $Country
                     }
                     $targetTimeZone = [System.TimeZoneInfo]::FindSystemTimeZoneById($businessConfig.TimeZone)
-                    Write-Verbose "🏢 Using country-specific configuration: $Country"
+                    Write-Verbose " Using country-specific configuration: $Country"
                 }
                 try {
                     $localTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $targetTimeZone)
@@ -235,14 +235,14 @@ function Invoke-StealthOperation {
                             $configDescription = if ($TimeZone) { $businessConfig.Description } else { $Country }
                             $waitMessage = if ($isLunchBreak -and $businessConfig.SiestaPattern) {
                                 if ($waitHours -gt 0) {
-                                    "🌅 Waiting {0}h {1}m until {2} siesta/lunch break ends..." -f $waitHours, $waitMinutes, $configDescription
+                                    " Waiting {0}h {1}m until {2} siesta/lunch break ends..." -f $waitHours, $waitMinutes, $configDescription
                                 } else {
-                                    "🌅 Waiting {0}m until {1} siesta/lunch break ends..." -f $waitMinutes, $configDescription
+                                    " Waiting {0}m until {1} siesta/lunch break ends..." -f $waitMinutes, $configDescription
                                 }
                             } elseif ($waitHours -gt 0) {
-                                "🌙 Waiting {0}h {1}m until {2} business hours begin..." -f $waitHours, $waitMinutes, $configDescription
+                                " Waiting {0}h {1}m until {2} business hours begin..." -f $waitHours, $waitMinutes, $configDescription
                             } else {
-                                "⏰ Waiting {0}m until {1} business hours begin..." -f $waitMinutes, $configDescription
+                                " Waiting {0}m until {1} business hours begin..." -f $waitMinutes, $configDescription
                             }
                             Write-Host "  $waitMessage" -ForegroundColor Magenta
                         }
@@ -314,17 +314,17 @@ function Invoke-StealthOperation {
                     "BusinessHours" {
                         $timeInfo = " ($businessConfigDescription)"
                         # Context-aware emoji based on configuration
-                        $emoji = if ($TimeZone) { "🌍" } else { "🏢" }
+                        $emoji = if ($TimeZone) { "" } else { "" }
                         "$emoji Stealth delay: {0}s (BusinessHours{1})" -f $calculatedDelay, $timeInfo
                     }
                     "Progressive" {
-                        "📈 Stealth delay: {0}s (Progressive - Step {1})" -f $calculatedDelay, ($itemCount + 1)
+                        " Stealth delay: {0}s (Progressive - Step {1})" -f $calculatedDelay, ($itemCount + 1)
                     }
                     "Exponential" {
-                        "🚀 Stealth delay: {0}s (Exponential - Level {1})" -f $calculatedDelay, ($itemCount + 1)
+                        " Stealth delay: {0}s (Exponential - Level {1})" -f $calculatedDelay, ($itemCount + 1)
                     }
                     default {
-                        "🎲 Stealth delay: {0}s ({1})" -f $calculatedDelay, $DelayType
+                        " Stealth delay: {0}s ({1})" -f $calculatedDelay, $DelayType
                     }
                 }
                 Write-Host "  $delayMessage" -ForegroundColor DarkYellow
@@ -342,7 +342,7 @@ function Invoke-StealthOperation {
     }
 
     end {
-        Write-Verbose "✅ Stealth pipeline completed for $itemCount items"
+        Write-Verbose " Stealth pipeline completed for $itemCount items"
     }
 <#
     .SYNOPSIS

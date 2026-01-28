@@ -107,7 +107,7 @@ function Optimize-BlackCatCacheMemory {
         Write-Host "  $type cache: $($beforeStats.TotalEntries) → $afterEntries entries" -ForegroundColor White
         Write-Host "  Memory usage: $([math]::Round($sizeBefore, 2)) → $([math]::Round($sizeAfter, 2)) MB" -ForegroundColor White
         if ($savings -gt 0) {
-            Write-Host "  💾 Saved $([math]::Round($savings, 2)) MB" -ForegroundColor Green
+            Write-Host "   Saved $([math]::Round($savings, 2)) MB" -ForegroundColor Green
         }
 
         $totalOptimized++
