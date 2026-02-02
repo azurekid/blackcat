@@ -113,5 +113,13 @@ function New-AuthHeader {
         Author: Rogier Dijkman
         Prerequisite: Az.Accounts module must be installed and the user must be logged in using `Connect-AzAccount`.
         The function uses `Get-AzAccessToken` to retrieve the access token for the specified endpoint.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0006 - Credential Access
+        https://attack.mitre.org/tactics/TA0006/
+
+    .LINK
+        MITRE ATT&CK Technique: T1550.001 - Use Alternate Authentication Material: Application Access Token
+        https://attack.mitre.org/techniques/T1550/001/
     #>
 }

@@ -190,5 +190,13 @@ Retrieves credentials that will expire within the next 30 days.
 https://learn.microsoft.com/en-us/graph/api/application-get
 https://learn.microsoft.com/en-us/graph/api/serviceprincipal-get
 
+.LINK
+MITRE ATT&CK Tactic: TA0007 - Discovery
+https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+MITRE ATT&CK Technique: T1087.004 - Account Discovery: Cloud Account
+https://attack.mitre.org/techniques/T1087/004/
+
 #>
 }

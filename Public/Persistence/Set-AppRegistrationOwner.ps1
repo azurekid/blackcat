@@ -68,5 +68,16 @@ function Set-AppRegistrationOwner {
 
     .EXAMPLE
         Set-AppRegistrationOwner -AppId "00000000-0000-0000-0000-000000000000" -UserPrincipalName "user@domain.com"
+
+    .NOTES
+        Requires appropriate Microsoft Graph permissions to manage application owners.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0003 - Persistence
+        https://attack.mitre.org/tactics/TA0003/
+
+    .LINK
+        MITRE ATT&CK Technique: T1098.001 - Account Manipulation: Additional Cloud Credentials
+        https://attack.mitre.org/techniques/T1098/001/
     #>
 }

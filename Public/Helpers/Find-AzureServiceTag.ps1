@@ -47,6 +47,52 @@ class AzureRegionNames : IValidateSetValuesGenerator {
 }
 
 function Find-AzureServiceTag {
+    <#
+    .SYNOPSIS
+        Searches Azure Service Tags to find IP ranges and service information.
+
+    .DESCRIPTION
+        This function searches through Azure Service Tags to identify which Azure services
+        are associated with specific IP addresses or to filter service tags by service name
+        and region. Useful for network security analysis and firewall configuration.
+
+    .PARAMETER IPAddress
+        The IP address to lookup in Azure service tags (IPv4 or IPv6).
+
+    .PARAMETER ServiceName
+        The Azure service name to filter by.
+
+    .PARAMETER Region
+        The Azure region to filter by.
+
+    .PARAMETER AsJson
+        Returns results in JSON format.
+
+    .PARAMETER Detailed
+        Returns detailed results with all properties.
+
+    .EXAMPLE
+        Find-AzureServiceTag -IPAddress "20.38.98.100"
+
+        Searches for which Azure service tag contains the specified IP address.
+
+    .EXAMPLE
+        Find-AzureServiceTag -ServiceName "AzureStorage" -Region "westeurope"
+
+        Returns all service tags for Azure Storage in West Europe.
+
+    .NOTES
+        Requires running Update-AzureServiceTag first to load the service tag data.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0043 - Reconnaissance
+        https://attack.mitre.org/tactics/TA0043/
+
+    .LINK
+        MITRE ATT&CK Technique: T1590.005 - Gather Victim Network Information: IP Addresses
+        https://attack.mitre.org/techniques/T1590/005/
+
+    #>
     [CmdletBinding(DefaultParameterSetName = 'ByFilters')]
     [Alias('Get-ServiceTag', 'Find-ServiceTag', 'azure-service-tag', 'find-service-tag')]
     [OutputType([PSCustomObject[]])]

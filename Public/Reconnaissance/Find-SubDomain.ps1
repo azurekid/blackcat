@@ -225,5 +225,16 @@ Aliases: table, list
     System.Collections.ArrayList
     Returns a collection of PSCustomObjects containing Domain, Category, Url, HostName, and IpAddress properties.
 
+.NOTES
+    This function performs unauthenticated DNS enumeration and does not require Azure credentials.
+
+.LINK
+    MITRE ATT&CK Tactic: TA0043 - Reconnaissance
+    https://attack.mitre.org/tactics/TA0043/
+
+.LINK
+    MITRE ATT&CK Technique: T1596.001 - Search Open Technical Databases: DNS/Passive DNS
+    https://attack.mitre.org/techniques/T1596/001/
+
 #>
 }

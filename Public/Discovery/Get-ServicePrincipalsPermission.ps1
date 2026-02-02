@@ -245,5 +245,13 @@ Returns a structured object containing detailed security information about the s
 - The function attempts to resolve permission names from IDs using session variables or the Get-AppRolePermission function.
 - Aligned with the output format of other BlackCat reconnaissance functions for consistent analysis.
 - Optimized for large environments with many service principals and complex permission structures.
+
+.LINK
+MITRE ATT&CK Tactic: TA0007 - Discovery
+https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+MITRE ATT&CK Technique: T1087.004 - Account Discovery: Cloud Account
+https://attack.mitre.org/techniques/T1087/004/
 #>
 }

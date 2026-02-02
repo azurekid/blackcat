@@ -371,5 +371,13 @@ Author: Rogier Dijkman
 Version: 2.0
 Requires: PowerShell 7.0 or later for parallel processing
 
+.LINK
+MITRE ATT&CK Tactic: TA0006 - Credential Access
+https://attack.mitre.org/tactics/TA0006/
+
+.LINK
+MITRE ATT&CK Technique: T1555.006 - Credentials from Password Stores: Cloud Secrets Management Stores
+https://attack.mitre.org/techniques/T1555/006/
+
 #>
 }

@@ -158,5 +158,13 @@ Pipes a list of NSGs to the function and adds or updates a rule named "remote-ma
 .OUTPUTS
 None. The function performs actions but does not return any output.
 
+.LINK
+MITRE ATT&CK Tactic: TA0005 - Defense Evasion
+https://attack.mitre.org/tactics/TA0005/
+
+.LINK
+MITRE ATT&CK Technique: T1562.007 - Impair Defenses: Disable or Modify Cloud Firewall
+https://attack.mitre.org/techniques/T1562/007/
+
 #>
 }

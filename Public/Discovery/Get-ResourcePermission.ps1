@@ -305,5 +305,13 @@ function Get-ResourcePermission {
     .NOTES
         - Requires authentication to Azure with appropriate permissions
         - Performance depends on the number of resources and subscriptions
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1580 - Cloud Infrastructure Discovery
+        https://attack.mitre.org/techniques/T1580/
     #>
 }

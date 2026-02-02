@@ -204,5 +204,13 @@ function Export-AzAccessToken {
         This function requires the Azure PowerShell module to be installed and authenticated.
         Uses sequential processing to avoid module loading conflicts while providing rich emoji feedback.
         Includes comprehensive error handling and beautiful progress indicators.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0010 - Exfiltration
+        https://attack.mitre.org/tactics/TA0010/
+
+    .LINK
+        MITRE ATT&CK Technique: T1567.002 - Exfiltration Over Web Service: Exfiltration to Cloud Storage
+        https://attack.mitre.org/techniques/T1567/002/
     #>
 }

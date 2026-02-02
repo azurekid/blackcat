@@ -216,5 +216,13 @@ Retrieves information about groups with display names starting with "Marketing".
 [PSCustomObject]
 Returns a custom object containing detailed information about the user or group, including roles, memberships, and other attributes.
 
+.LINK
+MITRE ATT&CK Tactic: TA0007 - Discovery
+https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+MITRE ATT&CK Technique: T1087.004 - Account Discovery: Cloud Account
+https://attack.mitre.org/techniques/T1087/004/
+
 #>
 }

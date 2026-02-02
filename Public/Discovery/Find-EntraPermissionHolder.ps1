@@ -458,6 +458,14 @@ function Find-EntraPermissionHolder {
         Performance Notes:
           - Use the ThrottleLimit parameter to adjust parallel processing performance
           - For large tenants, resolving groups can take significant time
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1069.003 - Permission Groups Discovery: Cloud Groups
+        https://attack.mitre.org/techniques/T1069/003/
     #>
     [cmdletbinding()]
     [OutputType([System.Collections.Generic.List[PSCustomObject]])]

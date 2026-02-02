@@ -59,6 +59,17 @@ function Find-AzurePermissionHolder {
     .EXAMPLE
         Find-AzurePermissionHolder -Permission @("Microsoft.Authorization/roleAssignments/write", "Microsoft.Authorization/roleDefinitions/write") -OutputFormat Table
         Finds all principals that can modify role assignments or role definitions, and outputs as a table.
+
+    .NOTES
+        This function requires appropriate Azure RBAC permissions to read role assignments and definitions.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1069.003 - Permission Groups Discovery: Cloud Groups
+        https://attack.mitre.org/techniques/T1069/003/
     #>
     [CmdletBinding()]
     param (

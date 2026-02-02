@@ -216,4 +216,45 @@ function Test-DomainRegistration {
             }
         }
     }
+
+    <#
+    .SYNOPSIS
+        Tests whether a domain is registered or available for registration.
+
+    .DESCRIPTION
+        The Test-DomainRegistration function checks domain registration status using RDAP, WHOIS, 
+        or DNS lookups. This can be used to identify potential domain takeover opportunities.
+
+    .PARAMETER Domain
+        The domain name to check for registration status.
+
+    .PARAMETER Method
+        The method to use for checking domain registration. Valid values are:
+        - rdap: Use RDAP protocol
+        - whois: Use WHOIS lookup
+        - dns: Use DNS resolution
+        - all: Try all methods (default)
+
+    .EXAMPLE
+        Test-DomainRegistration -Domain "example.com"
+
+        Checks if example.com is registered using all available methods.
+
+    .EXAMPLE
+        Test-DomainRegistration -Domain "potential-subdomain.azurewebsites.net" -Method dns
+
+        Checks if the subdomain resolves in DNS (useful for subdomain takeover checks).
+
+    .NOTES
+        Author: Rogier Dijkman
+        This function is useful for identifying dangling DNS records and subdomain takeover opportunities.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0043 - Reconnaissance
+        https://attack.mitre.org/tactics/TA0043/
+
+    .LINK
+        MITRE ATT&CK Technique: T1593.002 - Search Open Websites/Domains: Search Engines
+        https://attack.mitre.org/techniques/T1593/002/
+    #>
 }

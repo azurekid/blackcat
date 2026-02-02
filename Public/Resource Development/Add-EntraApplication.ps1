@@ -136,5 +136,13 @@ A PSCustomObject containing user-friendly information about the created Entra ID
 
 .LINK
 https://learn.microsoft.com/en-us/graph/overview
+
+.LINK
+MITRE ATT&CK Tactic: TA0042 - Resource Development
+https://attack.mitre.org/tactics/TA0042/
+
+.LINK
+MITRE ATT&CK Technique: T1583.006 - Acquire Infrastructure: Web Services
+https://attack.mitre.org/techniques/T1583/006/
 #>
 }
