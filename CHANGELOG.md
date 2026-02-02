@@ -13,7 +13,7 @@ _New File Share discovery capabilities and improved function organization_
 * Supports both authenticated (Azure AD/SAS token) and anonymous access scenarios
 * Recursive directory enumeration with `-Recurse` parameter
 * Lists all file shares in a storage account when no share name specified
-* Includes soft-deleted file detection with `-IncludeSoftDeleted`
+* Includes soft-deleted **share** detection with `-IncludeSoftDeleted` (note: Azure Files soft-delete only works at share level, not file level)
 * Multiple authentication methods: OAuth, SAS Token, Storage Account Key
 * Detailed file metadata including size, creation time, and last modified
 
