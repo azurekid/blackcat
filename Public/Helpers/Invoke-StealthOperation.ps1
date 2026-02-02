@@ -432,5 +432,14 @@ function Invoke-StealthOperation {
     .NOTES
         Built-in stealth delay implementation eliminates dependency on external functions.
         Consider network policies and rate limits when configuring delay parameters.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0005 - Defense Evasion
+        https://attack.mitre.org/tactics/TA0005/
+
+    .LINK
+        MITRE ATT&CK Technique: T1562.003 - Impair Defenses: Impair Command History Logging
+        https://attack.mitre.org/techniques/T1562/003/
+
     #>
 }

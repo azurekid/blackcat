@@ -446,5 +446,13 @@ Creates a new user with automatically generated display name (using target's dis
 - The Az PowerShell module is required for assigning Azure RBAC roles.
 - The function uses BlackCat module functions like Get-EntraInformation, Get-EntraIDPermissions, and Get-RoleAssignment.
 - Application permission cloning is marked as simplified and may require environment-specific implementation.
+
+.LINK
+MITRE ATT&CK Tactic: TA0042 - Resource Development
+https://attack.mitre.org/tactics/TA0042/
+
+.LINK
+MITRE ATT&CK Technique: T1585.001 - Establish Accounts: Social Media Accounts
+https://attack.mitre.org/techniques/T1585/001/
 #>
 }

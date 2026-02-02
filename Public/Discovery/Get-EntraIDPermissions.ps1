@@ -144,5 +144,13 @@ function Get-EntraIDPermissions {
 .NOTES
     Requires appropriate Microsoft Graph API permissions to query user/group roles and permissions.
     The function filters out read permissions by default when showing actions.
+
+.LINK
+    MITRE ATT&CK Tactic: TA0007 - Discovery
+    https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+    MITRE ATT&CK Technique: T1069.003 - Permission Groups Discovery: Cloud Groups
+    https://attack.mitre.org/techniques/T1069/003/
 #>
 }

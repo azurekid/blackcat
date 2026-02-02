@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.26.1'
+    ModuleVersion     = '0.30.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -32,84 +32,78 @@
         # Discovery
         'Find-EntraPermissionHolder',
         'Find-AzurePermissionHolder',
+        'Get-AdministrativeUnit',
         'Get-AppRolePermission',
+        'Get-EntraIDPermissions',
+        'Get-EntraInformation',
+        'Get-EntraRoleMember',
         'Get-FederatedAppCredential',
+        'Get-FederatedIdentityCredential',
+        'Get-ManagedIdentity',
         'Get-PrivilegedApp',
         'Get-PrivilegedServicePrincipal',
-        'Get-ServicePrincipalCredential',
-        'Get-ServicePrincipalsPermission',
         'Get-ResourcePermission',
         'Get-RoleAssignment',
-        'Get-EntraRoleAssignmentMap',
+        'Get-ServicePrincipalCredential',
+        'Get-ServicePrincipalsPermission',
+        'Get-StorageContainerList',
 
         # Exfiltration
         'Export-AzAccessToken',
+        'Get-FileShareContent',
         'Get-PublicBlobContent',
 
         # Helpers
+        'Clear-BlackCatCache',
         'ConvertFrom-JWT',
-        'Show-BlackCatCommands',
         'Find-AzureServiceTag',
-        'Invoke-Update',
+        'Get-BlackCatCacheMemoryStats',
+        'Get-BlackCatCacheStats',
+        'Get-CurrentUserAgent',
+        'Get-UserAgentStatus',
+        'Invoke-AzBatch',
+        'Invoke-MsGraph',
         'Invoke-StealthOperation',
+        'Invoke-Update',
         'New-AuthHeader',
         'New-JWT',
+        'Optimize-BlackCatCacheMemory',
         'Read-SASToken',
         'Select-AzureContext',
-        'Update-AzureServiceTag',
-        'Clear-BlackCatCache',
-        'Get-BlackCatCacheStats',
-        'Get-BlackCatCacheMemoryStats',
-        'Optimize-BlackCatCacheMemory',
-        'Write-CacheTypeStats',
         'Set-UserAgentRotation',
-        'Get-UserAgentStatus',
-        'Get-CurrentUserAgent',
+        'Show-BlackCatCommands',
+        'Update-AzureServiceTag',
+        'Write-CacheTypeStats',
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
 
-        # Initial Access
-        'Test-DomainRegistration',
-
         # Persistence
-        'Add-StorageAccountSasToken',
         'Add-GroupObject',
+        'Add-StorageAccountSasToken',
         'Set-AdministrativeUnit',
         'Set-AppRegistrationOwner',
         'Set-FederatedIdentity',
-        'Set-ManagedIdentityPermission',
         'Set-FunctionAppSecret',
+        'Set-ManagedIdentityPermission',
         'Set-ServicePrincipalCredential',
         'Set-UserCredential',
 
         # Reconnaissance
-        'Get-AdministrativeUnit',
-        'Get-EntraInformation',
-        'Get-EntraIDPermissions',
-        'Get-EntraRoleAssignment',
-        'Get-EntraRoleMember',
-        'Get-FederatedIdentityCredential',
-        'Get-ManagedIdentity',
-        'Get-StorageContainerList',
-        'Invoke-AzBatch',
-        'Invoke-MsGraph',
         'Find-AzurePublicResource',
+        'Find-DnsRecords',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
-        'Find-DnsRecords',
+        'Get-EntraRoleAssignment',
+        'Get-EntraRoleAssignmentMap',
+        'Test-DomainRegistration',
 
         # Resource Development
         'Add-EntraApplication',
-        'Copy-PrivilegedUser',
-        'Restore-DeletedIdentity',
-        'Connect-ServicePrincipal',
         'Connect-EntraApplication',
-
-        # Other (functions not found in FileList)
-        'Get-AzResourceSecretList',
-        'Get-RoleAssignment',
-        'Set-Context'
+        'Connect-ServicePrincipal',
+        'Copy-PrivilegedUser',
+        'Restore-DeletedIdentity'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -147,10 +141,19 @@
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Discovery\Get-RoleAssignment.ps1',
+        'Public\Discovery\Get-AdministrativeUnit.ps1',
+        'Public\Discovery\Get-EntraInformation.ps1',
+        'Public\Discovery\Get-EntraIDPermissions.ps1',
+        'Public\Discovery\Get-EntraRoleMember.ps1',
+        'Public\Discovery\Get-FederatedIdentityCredential.ps1',
+        'Public\Discovery\Get-ManagedIdentity.ps1',
+        'Public\Discovery\Get-StorageContainerList.ps1',
         'Public\Reconnaissance\Get-EntraRoleAssignmentMap.ps1',
+        'Public\Reconnaissance\Get-EntraRoleAssignment.ps1',
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',
+        'Public\Exfiltration\Get-FileShareContent.ps1',
         'Public\Exfiltration\anonymous\Get-PublicBlobContent.ps1',
 
         # Helpers
@@ -159,6 +162,8 @@
         'Public\Helpers\Find-AzureServiceTag.ps1',
         'Public\Helpers\Invoke-Update.ps1',
         'Public\Helpers\Invoke-StealthOperation.ps1',
+        'Public\Helpers\Invoke-AzBatch.ps1',
+        'Public\Helpers\Invoke-MsGraph.ps1',
         'Public\Helpers\New-AuthHeader.ps1',
         'Public\Helpers\New-JWT.ps1',
         'Public\Helpers\Read-SASToken.ps1',
@@ -176,9 +181,6 @@
         # Impair Defenses
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
 
-        # Initial Access
-        'Public\Initial Access\Test-DomainRegistration.ps1',
-
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
         'Public\Persistence\Add-GroupObject.ps1',
@@ -191,22 +193,11 @@
         'Public\Persistence\Set-UserCredential.ps1',
 
         # Reconnaissance
-        'Public\Reconnaissance\Get-AdministrativeUnit.ps1',
-        'Public\Reconnaissance\Get-EntraInformation.ps1',
-        'Public\Reconnaissance\Get-EntraIdPermissions.ps1',
-        'Public\Reconnaissance\Get-EntraRoleAssignment.ps1',
-        'Public\Reconnaissance\Get-FederatedIdentityCredential.ps1',
-        'Public\Reconnaissance\Get-ManagedIdentity.ps1',
-        'Public\Reconnaissance\Get-StorageContainerList.ps1',
-        'Public\Reconnaissance\Invoke-AzBatch.ps1',
-        'Public\Reconnaissance\Invoke-MsGraph.ps1',
-        'Public\Reconnaissance\Get-EntraRoleMember.ps1',
-
-        # Anonymous Reconnaissance
-        'Public\Reconnaissance\anonymous\Find-AzurePublicResource.ps1',
-        'Public\Reconnaissance\anonymous\Find-PublicStorageContainer.ps1',
-        'Public\Reconnaissance\anonymous\Find-SubDomain.ps1',
-        'Public\Reconnaissance\anonymous\Find-DnsRecords.ps1',
+        'Public\Reconnaissance\Find-AzurePublicResource.ps1',
+        'Public\Reconnaissance\Find-PublicStorageContainer.ps1',
+        'Public\Reconnaissance\Find-SubDomain.ps1',
+        'Public\Reconnaissance\Find-DnsRecords.ps1',
+        'Public\Reconnaissance\Test-DomainRegistration.ps1',
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
