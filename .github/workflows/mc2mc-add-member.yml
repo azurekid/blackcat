@@ -31,11 +31,13 @@ jobs:
                 # }
 
                 # Grant the UAMI the ability to assign directory roles
-                $$parameters = @{
+                $parameters = @{
                       servicePrincipalId = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
                       CommonResource     = 'MicrosoftGraph'
                       appRoleName        = 'RoleManagement.ReadWrite.Directory'
                 }
+
+                Set-ManagedIdentityPermission @parameters
                         
                 // Add-GroupObject @parameters
                 azPSVersion: "latest"
