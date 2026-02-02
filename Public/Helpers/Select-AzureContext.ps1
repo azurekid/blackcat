@@ -221,6 +221,14 @@ function Select-AzureContext {
 
     .NOTES
         Author: Rogier Dijkman
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0042 - Resource Development
+        https://attack.mitre.org/tactics/TA0042/
+
+    .LINK
+        MITRE ATT&CK Technique: T1078.004 - Valid Accounts: Cloud Accounts
+        https://attack.mitre.org/techniques/T1078/004/
     #>
 }
 

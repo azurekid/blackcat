@@ -451,5 +451,16 @@ function Invoke-MsGraph {
         Invoke-MSGraph -relativeUrl "groups" -CompressCache
 
         This example retrieves groups and compresses the cached data to reduce memory usage in large environments.
+
+    .NOTES
+        This function requires appropriate Microsoft Graph permissions for the requested resource.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1526 - Cloud Service Discovery
+        https://attack.mitre.org/techniques/T1526/
     #>
 }

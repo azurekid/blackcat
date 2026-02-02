@@ -282,5 +282,13 @@ function Find-PublicStorageContainer {
     - Requires appropriate permissions to perform DNS resolution and HTTP requests.
     - Uses parallel processing for improved performance; adjust ThrottleLimit based on system resources.
     - Designed for reconnaissance and security assessment purposes.
+
+.LINK
+    MITRE ATT&CK Tactic: TA0043 - Reconnaissance
+    https://attack.mitre.org/tactics/TA0043/
+
+.LINK
+    MITRE ATT&CK Technique: T1593.003 - Search Open Websites/Domains: Code Repositories
+    https://attack.mitre.org/techniques/T1593/003/
 #>
 }

@@ -159,5 +159,13 @@ function Add-GroupObject {
     Requires appropriate permissions to manage group memberships and ownerships in Azure AD.
     Uses Microsoft Graph API via custom helper functions (Invoke-MsGraph, Write-Message, etc.).
 
+.LINK
+    MITRE ATT&CK Tactic: TA0003 - Persistence
+    https://attack.mitre.org/tactics/TA0003/
+
+.LINK
+    MITRE ATT&CK Technique: T1098.003 - Account Manipulation: Additional Cloud Roles
+    https://attack.mitre.org/techniques/T1098/003/
+
 #>
 }

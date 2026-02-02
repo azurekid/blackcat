@@ -138,5 +138,14 @@ function Get-CurrentUserAgent {
     
     .NOTES
     The function's behavior is controlled by settings configured via Set-UserAgentRotation.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1016 - System Network Configuration Discovery
+        https://attack.mitre.org/techniques/T1016/
+
     #>
 }

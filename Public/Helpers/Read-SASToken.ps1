@@ -174,5 +174,13 @@ function Read-SASToken {
 
     .NOTES
     Author: Rogier Dijkman (https://securehats.gitbook.io/BlackCat)
+
+.LINK
+    MITRE ATT&CK Tactic: TA0006 - Credential Access
+    https://attack.mitre.org/tactics/TA0006/
+
+.LINK
+    MITRE ATT&CK Technique: T1552.005 - Unsecured Credentials: Cloud Instance Metadata API
+    https://attack.mitre.org/techniques/T1552/005/
 #>
 }

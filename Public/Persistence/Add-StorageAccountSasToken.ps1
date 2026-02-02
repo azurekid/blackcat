@@ -83,5 +83,13 @@ function Add-StorageAccountSasToken {
 
     .NOTES
     Author: Rogier Dijkman
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0003 - Persistence
+        https://attack.mitre.org/tactics/TA0003/
+
+    .LINK
+        MITRE ATT&CK Technique: T1098.001 - Account Manipulation: Additional Cloud Credentials
+        https://attack.mitre.org/techniques/T1098/001/
     #>
 }

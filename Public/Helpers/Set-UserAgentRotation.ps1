@@ -105,5 +105,13 @@ function Set-UserAgentRotation {
     .NOTES
     Rotating user agents helps avoid detection by SIEM solutions that might
     flag rapid changes in user agents from the same source as suspicious behavior.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0005 - Defense Evasion
+        https://attack.mitre.org/tactics/TA0005/
+
+    .LINK
+        MITRE ATT&CK Technique: T1036.005 - Masquerading: Match Legitimate Name or Location
+        https://attack.mitre.org/techniques/T1036/005/
     #>
 }

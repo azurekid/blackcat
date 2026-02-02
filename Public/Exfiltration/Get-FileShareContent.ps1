@@ -417,4 +417,12 @@ function Get-DirectoryContents {
         - ss=f (File service)
         - srt=sco (Service, Container, Object) for full enumeration
         - sp=rl (Read, List) minimum permissions
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0010 - Exfiltration
+        https://attack.mitre.org/tactics/TA0010/
+
+    .LINK
+        MITRE ATT&CK Technique: T1530 - Data from Cloud Storage
+        https://attack.mitre.org/techniques/T1530/
 #>

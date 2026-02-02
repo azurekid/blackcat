@@ -62,5 +62,13 @@ Get-AzManagedIdentity -Name "myManagedIdentity"
 
 .NOTES
 - The function requires the `Microsoft.ManagedIdentity` provider and the `2023-01-31` API version.
+
+.LINK
+MITRE ATT&CK Tactic: TA0007 - Discovery
+https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+MITRE ATT&CK Technique: T1526 - Cloud Service Discovery
+https://attack.mitre.org/techniques/T1526/
 #>
 }

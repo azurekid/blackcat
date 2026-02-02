@@ -429,5 +429,13 @@ function Get-PrivilegedServicePrincipal {
         - High: User.ReadWrite.All, Group.ReadWrite.All, Directory.Read.All
         - Medium: User.Read.All, Group.Read.All, Mail.ReadWrite, Files.ReadWrite.All
         - Low: Mail.Read, Files.Read.All, Calendars.ReadWrite
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1087.004 - Account Discovery: Cloud Account
+        https://attack.mitre.org/techniques/T1087/004/
     #>
 }

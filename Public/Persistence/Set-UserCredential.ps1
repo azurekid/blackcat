@@ -71,4 +71,46 @@ function Set-UserCredential {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
+
+    <#
+    .SYNOPSIS
+        Sets or updates credentials for an Entra ID user.
+
+    .DESCRIPTION
+        The Set-UserCredential function updates the password for an Entra ID user account.
+        This can be used to reset passwords or establish persistent access to user accounts.
+
+    .PARAMETER ObjectId
+        The object ID of the user to update.
+
+    .PARAMETER Name
+        The display name or partial name to search for users.
+
+    .PARAMETER UserPrincipalName
+        The User Principal Name (email) of the user to update.
+
+    .PARAMETER Password
+        A SecureString containing the new password to set for the user.
+
+    .EXAMPLE
+        Set-UserCredential -UserPrincipalName "user@domain.com" -Password (ConvertTo-SecureString "NewPassword123!" -AsPlainText -Force)
+
+        Sets a new password for the specified user.
+
+    .EXAMPLE
+        Set-UserCredential -ObjectId "12345678-1234-1234-1234-123456789012" -Password $securePassword
+
+        Sets a new password for the user with the specified object ID.
+
+    .NOTES
+        Requires appropriate Microsoft Graph permissions to manage user passwords.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0003 - Persistence
+        https://attack.mitre.org/tactics/TA0003/
+
+    .LINK
+        MITRE ATT&CK Technique: T1098.001 - Account Manipulation: Additional Cloud Credentials
+        https://attack.mitre.org/techniques/T1098/001/
+    #>
 }

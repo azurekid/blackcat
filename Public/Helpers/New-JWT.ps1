@@ -70,5 +70,16 @@ Specifies the secret key used to sign the JWT. This key is used to generate the 
 .EXAMPLE
 PS> New-JWT -Audience "example.com" -Issuer "my-app" -Subject "user123" -ExpirationMinutes 60 -SigningKey "my-secret-key"
 Generates a JWT token for the specified audience, issuer, subject, and expiration time using the provided signing key.
+
+.NOTES
+    This function can be used to forge JWT tokens for testing or attack scenarios.
+
+.LINK
+    MITRE ATT&CK Tactic: TA0006 - Credential Access
+    https://attack.mitre.org/tactics/TA0006/
+
+.LINK
+    MITRE ATT&CK Technique: T1606.002 - Forge Web Credentials: SAML Tokens
+    https://attack.mitre.org/techniques/T1606/002/
 #>
 }

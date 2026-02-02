@@ -627,5 +627,16 @@ function Get-EntraRoleMember {
 .EXAMPLE
     Get-EntraRoleMember -RoleName "Privileged Role Administrator" -ExpandGroups
     Retrieves all Privileged Role Administrators, including nested members of any groups that have this role.
+
+.NOTES
+    Requires appropriate Microsoft Graph permissions to enumerate role members.
+
+.LINK
+    MITRE ATT&CK Tactic: TA0007 - Discovery
+    https://attack.mitre.org/tactics/TA0007/
+
+.LINK
+    MITRE ATT&CK Technique: T1069.003 - Permission Groups Discovery: Cloud Groups
+    https://attack.mitre.org/techniques/T1069/003/
 #>
 }

@@ -343,5 +343,13 @@ Stores results in a variable and filters for production-related Storage Accounts
 - This function uses Azure REST API to retrieve storage account keys.
 - Ensure that you have the necessary permissions to access the storage accounts.
 
+.LINK
+MITRE ATT&CK Tactic: TA0006 - Credential Access
+https://attack.mitre.org/tactics/TA0006/
+
+.LINK
+MITRE ATT&CK Technique: T1552.005 - Unsecured Credentials: Cloud Instance Metadata API
+https://attack.mitre.org/techniques/T1552/005/
+
 #>
 }

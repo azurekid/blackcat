@@ -146,5 +146,13 @@ function Restore-DeletedIdentity {
 
 .LINK
     https://learn.microsoft.com/en-us/graph/api/directory-deleteditems-list
+
+.LINK
+    MITRE ATT&CK Tactic: TA0042 - Resource Development
+    https://attack.mitre.org/tactics/TA0042/
+
+.LINK
+    MITRE ATT&CK Technique: T1583.006 - Acquire Infrastructure: Web Services
+    https://attack.mitre.org/techniques/T1583/006/
 #>
 }

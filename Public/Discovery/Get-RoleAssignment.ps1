@@ -676,5 +676,13 @@ function Get-RoleAssignment {
         - Results are automatically cached for improved performance. Use -SkipCache to force fresh data retrieval.
         - Cache expiration is set to 60 minutes by default but can be customized with -CacheExpirationMinutes.
         - Large datasets can be compressed in cache using -CompressCache to reduce memory usage.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1087.004 - Account Discovery: Cloud Account
+        https://attack.mitre.org/techniques/T1087/004/
     #>
 }
