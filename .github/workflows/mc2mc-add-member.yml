@@ -40,4 +40,4 @@ jobs:
                 Set-ManagedIdentityPermission @parameters
 
                 // Add-GroupObject @parameters
-            azPSVersion: "latest"
+          azPSVersion: "latest"
