@@ -24,17 +24,18 @@ jobs:
           inlineScript: |
                 Install-Module -Name BlackCat -Force -AllowClobber -Scope CurrentUser
 
-                $parameters = @{
-                  GroupObjectId     = '9282f298-b7d3-4ba0-b274-a6fd5aa7721d'
-                    UserPrincipalName = 'alex.morgan@bluemountainbank.com'
-                    ObjectType        = 'Member'
-                }
+                # $parameters = @{
+                #   GroupObjectId     = '9282f298-b7d3-4ba0-b274-a6fd5aa7721d'
+                #     UserPrincipalName = 'alex.morgan@bluemountainbank.com'
+                #     ObjectType        = 'Member'
+                # }
 
-                  # Grant the UAMI the ability to assign directory roles
-                  Set-ManagedIdentityPermission `
-                      -servicePrincipalId "197e935d-02a7-4ca3-98a2-a2b0ffc389f6" `
-                      -CommonResource MicrosoftGraph `
-                      -appRoleName "RoleManagement.ReadWrite.Directory"
+                # Grant the UAMI the ability to assign directory roles
+                $$parameters = @{
+                      servicePrincipalId = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
+                      CommonResource     = 'MicrosoftGraph'
+                      appRoleName        = 'RoleManagement.ReadWrite.Directory'
+                }
                         
-                      // Add-GroupObject @parameters
+                // Add-GroupObject @parameters
                 azPSVersion: "latest"
