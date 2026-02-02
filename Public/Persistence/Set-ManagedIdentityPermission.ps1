@@ -278,6 +278,14 @@ This example assigns the app role with the specified app role ID to the service 
 - This function requires authentication to the Microsoft Graph API. Ensure that the authentication header is set correctly.
 - The function uses `Invoke-RestMethod` to make API calls and handles errors gracefully by logging messages.
 
+.LINK
+MITRE ATT&CK Tactic: TA0003 - Persistence
+https://attack.mitre.org/tactics/TA0003/
+
+.LINK
+MITRE ATT&CK Technique: T1098.003 - Account Manipulation: Additional Cloud Roles
+https://attack.mitre.org/techniques/T1098/003/
+
 #>
 }
 

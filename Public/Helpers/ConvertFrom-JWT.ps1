@@ -100,5 +100,13 @@ $result
 
 This example demonstrates how to use the ConvertFrom-JWT function to convert a Base64-encoded JWT into a PowerShell object. The resulting object is then assigned to the $result variable and displayed.
 
+.LINK
+    MITRE ATT&CK Tactic: TA0006 - Credential Access
+    https://attack.mitre.org/tactics/TA0006/
+
+.LINK
+    MITRE ATT&CK Technique: T1552.004 - Unsecured Credentials: Private Keys
+    https://attack.mitre.org/techniques/T1552/004/
+
 #>
 }

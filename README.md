@@ -75,6 +75,60 @@ documentation: >
     Get-Help Get-RoleAssignments
 ```
 
+### Function Categories (MITRE ATT&CK Aligned)
+
+```yaml
+credential_access:
+    description: Functions for extracting credentials and secrets
+    functions:
+        - Get-KeyVaultSecret
+        - Get-StorageAccountKey
+
+discovery:
+    description: Functions for enumerating Azure/Entra ID resources (authenticated)
+    functions:
+        - Get-AdministrativeUnit
+        - Get-EntraInformation
+        - Get-EntraIDPermissions
+        - Get-EntraRoleMember
+        - Get-ManagedIdentity
+        - Get-RoleAssignment
+        - Get-StorageContainerList
+        - Find-EntraPermissionHolder
+        - Find-AzurePermissionHolder
+
+exfiltration:
+    description: Functions for extracting data from Azure resources
+    functions:
+        - Export-AzAccessToken
+        - Get-FileShareContent
+        - Get-PublicBlobContent
+
+reconnaissance:
+    description: Functions for external/unauthenticated enumeration
+    functions:
+        - Find-AzurePublicResource
+        - Find-SubDomain
+        - Find-DnsRecords
+        - Find-PublicStorageContainer
+        - Test-DomainRegistration
+
+persistence:
+    description: Functions for maintaining access
+    functions:
+        - Set-FederatedIdentity
+        - Set-ManagedIdentityPermission
+        - Set-ServicePrincipalCredential
+        - Add-GroupObject
+
+resource_development:
+    description: Functions for creating attack infrastructure
+    functions:
+        - Add-EntraApplication
+        - Connect-ServicePrincipal
+        - Copy-PrivilegedUser
+```
+
 ### Backlog
 
 ```yaml

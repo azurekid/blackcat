@@ -80,4 +80,43 @@ function Get-AdministrativeUnit {
             Write-Verbose "Exception occurred: $($_.Exception.Message)"
         }
     }
+
+    <#
+    .SYNOPSIS
+        Retrieves administrative units from Entra ID.
+
+    .DESCRIPTION
+        The Get-AdministrativeUnit function retrieves administrative units from Microsoft Entra ID,
+        including their membership rules and optionally their members.
+
+    .PARAMETER AdministrativeUnit
+        The display name or partial name of the administrative unit to search for.
+
+    .PARAMETER ObjectId
+        The object ID of a specific administrative unit to retrieve.
+
+    .PARAMETER IncludeMembers
+        When specified, includes the members of each administrative unit in the output.
+
+    .EXAMPLE
+        Get-AdministrativeUnit
+
+        Retrieves all administrative units in the tenant.
+
+    .EXAMPLE
+        Get-AdministrativeUnit -AdministrativeUnit "HR" -IncludeMembers
+
+        Retrieves administrative units with "HR" in the name and includes their members.
+
+    .NOTES
+        Requires appropriate Microsoft Graph permissions to enumerate administrative units.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1526 - Cloud Service Discovery
+        https://attack.mitre.org/techniques/T1526/
+    #>
 }

@@ -170,5 +170,13 @@ Adds the specified users to the administrative unit.
 
 .NOTES
 Requires appropriate permissions to update administrative units in Azure Active Directory.
+
+.LINK
+MITRE ATT&CK Tactic: TA0003 - Persistence
+https://attack.mitre.org/tactics/TA0003/
+
+.LINK
+MITRE ATT&CK Technique: T1098.003 - Account Manipulation: Additional Cloud Roles
+https://attack.mitre.org/techniques/T1098/003/
 #>
 }

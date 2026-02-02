@@ -4,6 +4,44 @@
 
 # CHANGELOG
 
+## v0.30.0 [2026-02-02] 📁 Azure File Share Enumeration & MITRE ATT&CK Alignment
+
+_New File Share discovery capabilities and improved function organization_
+
+**New Function: `Get-FileShareContent`**
+* Enumerates Azure File Shares and their contents
+* Supports both authenticated (Azure AD/SAS token) and anonymous access scenarios
+* Recursive directory enumeration with `-Recurse` parameter
+* Lists all file shares in a storage account when no share name specified
+* Includes soft-deleted file detection with `-IncludeSoftDeleted`
+* Multiple authentication methods: OAuth, SAS Token, Storage Account Key
+* Detailed file metadata including size, creation time, and last modified
+
+**MITRE ATT&CK Documentation:**
+* Added MITRE ATT&CK tactic and technique references to 40+ functions
+* Each function now includes `.LINK` sections with relevant ATT&CK mappings
+* Helps security teams understand attack chain implications
+* Supports purple team exercises and threat modeling
+
+**Function Reorganization (MITRE ATT&CK Alignment):**
+* **Discovery** - Functions that enumerate Azure/Entra ID resources:
+  - Moved from Reconnaissance: `Get-AdministrativeUnit`, `Get-EntraInformation`, `Get-EntraIDPermissions`, `Get-EntraRoleMember`, `Get-FederatedIdentityCredential`, `Get-ManagedIdentity`, `Get-StorageContainerList`
+* **Helpers** - Utility functions for API interaction:
+  - Moved from Reconnaissance: `Invoke-AzBatch`, `Invoke-MsGraph`
+* **Reconnaissance** - Unauthenticated external enumeration:
+  - Moved from Initial Access: `Test-DomainRegistration`
+  - Focus on anonymous/external recon: `Find-AzurePublicResource`, `Find-SubDomain`, `Find-DnsRecords`, `Find-PublicStorageContainer`
+* **Exfiltration** - Data extraction functions:
+  - Moved `Get-FileShareContent` to main Exfiltration folder (not anonymous subfolder)
+
+**Module Manifest Updates:**
+* Updated `FunctionsToExport` to reflect new organization
+* Updated `FileList` with correct file paths
+* Alphabetized function lists within categories
+* Removed obsolete function references
+
+---
+
 ## v0.26.0 [2026-01-26] 🔧 Service Principal Support & Output Improvements
 
 _Enhanced `-CurrentUser` functionality for Service Principal authentication_

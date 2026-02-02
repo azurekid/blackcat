@@ -247,5 +247,13 @@ function Invoke-AzBatch {
         - Results are automatically cached to improve performance for repeated queries
         - Use Get-BlackCatCacheStats to monitor cache usage
         - The function handles pagination automatically for large result sets
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1526 - Cloud Service Discovery
+        https://attack.mitre.org/techniques/T1526/
     #>
 }

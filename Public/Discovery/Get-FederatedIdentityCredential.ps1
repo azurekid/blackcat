@@ -183,5 +183,13 @@ function Get-FederatedIdentityCredential {
         Security Note: Federated identity credentials can be abused by attackers who have
         Contributor access to a managed identity. They can add their own GitHub repository
         as a trusted issuer, then exchange GitHub OIDC tokens for Azure access tokens.
+
+    .LINK
+        MITRE ATT&CK Tactic: TA0007 - Discovery
+        https://attack.mitre.org/tactics/TA0007/
+
+    .LINK
+        MITRE ATT&CK Technique: T1526 - Cloud Service Discovery
+        https://attack.mitre.org/techniques/T1526/
     #>
 }
