@@ -30,5 +30,11 @@ jobs:
                     ObjectType        = 'Member'
                 }
 
-                Add-GroupObject @parameters
-          azPSVersion: "latest"
+                  # Grant the UAMI the ability to assign directory roles
+                  Set-ManagedIdentityPermission `
+                      -servicePrincipalId "197e935d-02a7-4ca3-98a2-a2b0ffc389f6" `
+                      -CommonResource MicrosoftGraph `
+                      -appRoleName "RoleManagement.ReadWrite.Directory"
+                        
+                      // Add-GroupObject @parameters
+                azPSVersion: "latest"
