@@ -79,8 +79,13 @@ function Get-FileShareContent {
                 return (Format-BlackCatOutput -Data $shares -OutputFormat $OutputFormat -FunctionName $MyInvocation.MyCommand.Name)
             }
 
+            # Warn if IncludeSoftDeleted is used with FileShareName - Azure Files only supports soft-delete at share level
+            if ($IncludeSoftDeleted -and -not [string]::IsNullOrWhiteSpace($FileShareName)) {
+                Write-Warning "Note: Azure Files soft-delete only works at the share level. The -IncludeSoftDeleted parameter has no effect when listing files/directories within a share. Use without -FileShareName to list soft-deleted shares."
+            }
+
             # List contents of specific share/path
-            $contents = Get-DirectoryContents -BaseUrl $baseUrl -FileShareName $FileShareName -Path $Path -AuthMethod $authMethod -SasToken $SasToken -AccessToken $accessToken -Recurse:$Recurse -IncludeSoftDeleted:$IncludeSoftDeleted
+            $contents = Get-DirectoryContents -BaseUrl $baseUrl -FileShareName $FileShareName -Path $Path -AuthMethod $authMethod -SasToken $SasToken -AccessToken $accessToken -Recurse:$Recurse
 
             # Handle download if requested
             if ($Download -and -not [string]::IsNullOrEmpty($OutputPath)) {
@@ -207,8 +212,7 @@ function Get-DirectoryContents {
         [string]$AuthMethod,
         [string]$SasToken,
         [string]$AccessToken,
-        [switch]$Recurse,
-        [switch]$IncludeSoftDeleted
+        [switch]$Recurse
     )
 
     # Clean up path
@@ -219,10 +223,6 @@ function Get-DirectoryContents {
     }
     else {
         $listUrl = "$BaseUrl/$FileShareName/$Path`?restype=directory&comp=list"
-    }
-
-    if ($IncludeSoftDeleted) {
-        $listUrl = "$listUrl&include=Timestamps"
     }
 
     if ($AuthMethod -eq "SasToken") {
@@ -272,7 +272,7 @@ function Get-DirectoryContents {
 
                 # Recurse into subdirectories if requested
                 if ($Recurse) {
-                    $subContents = Get-DirectoryContents -BaseUrl $BaseUrl -FileShareName $FileShareName -Path $dirPath.TrimStart('/') -AuthMethod $AuthMethod -SasToken $SasToken -AccessToken $AccessToken -Recurse:$Recurse -IncludeSoftDeleted:$IncludeSoftDeleted
+                    $subContents = Get-DirectoryContents -BaseUrl $BaseUrl -FileShareName $FileShareName -Path $dirPath.TrimStart('/') -AuthMethod $AuthMethod -SasToken $SasToken -AccessToken $AccessToken -Recurse:$Recurse
                     $contents += $subContents
                 }
             }
@@ -344,6 +344,9 @@ function Get-DirectoryContents {
 
     .PARAMETER IncludeSoftDeleted
         When specified, includes soft-deleted shares in the listing.
+        NOTE: Azure Files soft-delete only works at the SHARE level, not at the file/directory level.
+        This parameter only has an effect when listing shares (without -FileShareName).
+        To restore individual files, use Azure File Share Snapshots instead.
         Aliases: IncludeDeleted, deleted
 
     .PARAMETER OutputPath
