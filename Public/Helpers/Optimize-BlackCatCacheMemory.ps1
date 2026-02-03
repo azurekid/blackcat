@@ -32,6 +32,7 @@ function Optimize-BlackCatCacheMemory {
         This example optimizes only the MSGraph cache, limiting it to 50 entries and compressing large entries.
 
     .NOTES
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
         This function helps manage memory usage in large environments with extensive cache data.
         Run regularly in long-running sessions or scripts processing large datasets.
     #>

@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.30.2'
+    ModuleVersion     = '0.32.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -77,6 +77,9 @@
 
         # Impair Defenses
         'Set-AzNetworkSecurityGroupRule',
+
+        # Initial Access
+        'Connect-GraphToken',
 
         # Persistence
         'Add-GroupObject',
@@ -198,6 +201,9 @@
         'Public\Reconnaissance\Find-SubDomain.ps1',
         'Public\Reconnaissance\Find-DnsRecords.ps1',
         'Public\Reconnaissance\Test-DomainRegistration.ps1',
+
+        # Initial Access
+        'Public\Initial Access\Connect-GraphToken.ps1',
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',

@@ -61,6 +61,7 @@ function Get-UserAgentStatus {
     Get-UserAgentStatus
 
     .NOTES
+    This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
     Use this function to monitor the state of user agent rotation and verify your
     rotation settings are working as expected.
     #>

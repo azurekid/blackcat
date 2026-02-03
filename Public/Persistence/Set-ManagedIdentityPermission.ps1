@@ -3,10 +3,25 @@ using namespace System.Management.Automation
 function Set-ManagedIdentityPermission {
     [cmdletbinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ResourceId')]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'ResourceId')]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'CommonResource')]        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
+            "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "ResourceGroupName"
+        )]
+        [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
+        [Alias('name', 'identity-name', 'user-assigned-identity', 'service-principal-name')]
+        [string]$servicePrincipalName,
+
+        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
+        [Alias('rg', 'resource-group')]
+        [string[]]$ResourceGroupName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'ResourceId')]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'CommonResource')]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
-        [Alias('service-principal-id')]
+        [Alias('service-principal-id', 'ObjectId')]
         [string]$servicePrincipalId,
+
 
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $false, ParameterSetName = 'ResourceId')]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
@@ -48,6 +63,29 @@ function Set-ManagedIdentityPermission {
     begin {
         # Sets the authentication header to the Microsoft Graph API
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'MSGraph'
+        
+        # Resolve servicePrincipalId if only name is provided
+        if ($servicePrincipalName -and -not $servicePrincipalId) {
+            Write-Verbose "Resolving service principal by name: $servicePrincipalName"
+            try {
+                $spLookup = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=displayName eq '$servicePrincipalName'" -NoBatch
+                
+                if (-not $spLookup -or -not $spLookup.value -or $spLookup.value.Count -eq 0) {
+                    throw "Could not find service principal with name '$servicePrincipalName'"
+                }
+                
+                $servicePrincipalId = $spLookup.value[0].id
+                Write-Verbose "Resolved service principal name '$servicePrincipalName' to ID: $servicePrincipalId"
+            }
+            catch {
+                throw "Error resolving service principal by name: $_"
+            }
+        }
+        
+        # Validate that we have a servicePrincipalId
+        if (-not $servicePrincipalId) {
+            throw "Either -servicePrincipalId or -servicePrincipalName must be provided"
+        }
         
         # Define common resource appIds
         $commonResourceAppIds = @{
@@ -206,6 +244,11 @@ If the BlackCat session data is not available, it falls back to common permissio
 .PARAMETER servicePrincipalId
 The unique identifier (GUID) of the service principal to which the app role will be assigned. This parameter is mandatory.
 
+.PARAMETER servicePrincipalName
+Optional. The display name of the service principal (UAMI name) instead of providing the object ID.
+If specified, the function will resolve the name to an object ID automatically.
+Either -servicePrincipalId or -servicePrincipalName must be provided (not both required).
+
 .PARAMETER resourceId
 The unique identifier (GUID) of the resource (application) that defines the app role. This parameter is mandatory when not using the CommonResource parameter.
 For Microsoft Graph permissions, this should be the service principal ID of Microsoft Graph (00000003-0000-0000-c000-000000000000).
@@ -240,6 +283,14 @@ Use tab completion to see all available permissions when the module is properly 
 .PARAMETER Remove
 A switch parameter that, when specified, removes the app role assignment instead of adding it.
 The function will look up existing assignments and delete the one matching the specified appRoleName.
+
+.EXAMPLE
+# Using UAMI display name instead of ID
+Set-ManagedIdentityPermission -servicePrincipalName "uami-hr-cicd-automation" `
+                              -CommonResource MicrosoftGraph `
+                              -appRoleName "Application.ReadWrite.All"
+
+This example assigns the "Application.ReadWrite.All" app role by looking up the UAMI by its display name.
 
 .EXAMPLE
 Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-123456789abc" `

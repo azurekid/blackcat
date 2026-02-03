@@ -100,6 +100,7 @@ function Clear-BlackCatCache {
         The autocompletion will show keys based on the selected CacheType.
 
     .NOTES
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
         Use Get-BlackCatCacheStats to see current cache statistics before clearing.
         Tab completion is available for the -Key parameter to show available cache keys.
     #>

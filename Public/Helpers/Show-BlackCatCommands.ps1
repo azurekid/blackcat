@@ -143,4 +143,32 @@ function Show-BlackCatCommands {
     catch {
         Write-Error "Error processing BlackCat.psd1: $_"
     }
+    <#
+    .SYNOPSIS
+        Displays all available BlackCat functions organized by MITRE ATT&CK category.
+
+    .DESCRIPTION
+        This function shows a comprehensive list of all public functions in the BlackCat module,
+        organized by their MITRE ATT&CK tactic category. You can filter by category to show
+        only functions related to specific attack phases.
+
+    .PARAMETER Category
+        Optional category to filter functions. If not specified, shows all categories.
+        Auto-completion is provided for available categories (e.g., Discovery, Persistence, Credential Access).
+
+    .EXAMPLE
+        Show-BlackCatCommands
+        Shows all available BlackCat functions organized by category.
+
+    .EXAMPLE
+        Show-BlackCatCommands -Category Discovery
+        Shows only functions in the Discovery category.
+
+    .ALIAS
+        cat, c
+
+    .NOTES
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
+        Use this function to explore available BlackCat capabilities and their classifications.
+    #>
 }

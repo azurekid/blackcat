@@ -6,6 +6,7 @@ function Write-CacheTypeStats {
     .DESCRIPTION
         This internal helper reduces duplication in cache statistics display logic.
         Uses Write-Host to output formatted cache statistics information.
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
     #>
     [CmdletBinding()]
     param (

@@ -20,6 +20,13 @@ function Invoke-BlackCat {
             $randomUserAgent = "BlackCat/$($manifest.ModuleVersion) PowerShell Client"
             Write-Verbose "Using default user agent: $randomUserAgent"
 
+        # Check if we're using Connect-GraphToken authentication (graphHeader already set)
+        if ($ResourceTypeName -eq "MSGraph" -and $script:graphHeader -and $script:SessionVariables.AccessToken) {
+            Write-Verbose "Using existing Graph token from Connect-GraphToken"
+            # Token is already set, no need to call Az.Accounts
+            return
+        }
+
         if ($azProfile.Contexts.Count -ne 0) {
             if ([string]::IsNullOrEmpty($script:SessionVariables.AccessToken)) {
                 try {

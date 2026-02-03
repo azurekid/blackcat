@@ -65,7 +65,7 @@ function Invoke-Update {
         None. The function does not generate any output.
 
     .NOTES
-        Author: Your Name
-        Date: Today's Date
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
+        This function downloads support files needed by BlackCat functions.
 #>
 }

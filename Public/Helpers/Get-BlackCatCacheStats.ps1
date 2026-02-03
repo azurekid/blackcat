@@ -94,6 +94,7 @@ function Get-BlackCatCacheStats {
         This example shows cache statistics with histograms for entries newer than 24 hours and trend analysis.
 
     .NOTES
+        This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
         This function provides comprehensive cache analytics to help optimize cache performance and usage.
         Expired entries are automatically identified but not removed unless accessed through normal cache operations.
         Advanced features include trend analysis, optimization recommendations, and multiple export formats.
