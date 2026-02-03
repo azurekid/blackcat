@@ -22,10 +22,6 @@ function Get-FileShareContent {
         [switch]$Recurse,
 
         [Parameter(Mandatory = $false)]
-        [Alias('IncludeDeleted', 'deleted')]
-        [switch]$IncludeSoftDeleted,
-
-        [Parameter(Mandatory = $false)]
         [string]$OutputPath,
 
         [Parameter(Mandatory = $false)]
@@ -72,23 +68,28 @@ function Get-FileShareContent {
 
     process {
         try {
+            # Handle FileShareName with path (e.g., "docs/config")
+            if ($FileShareName -and $FileShareName.Contains('/')) {
+                $parts = $FileShareName -split '/', 2
+                $FileShareName = $parts[0]
+                if ([string]::IsNullOrWhiteSpace($Path)) {
+                    $Path = $parts[1]
+                    Write-Verbose "[+] Split FileShareName: Share='$FileShareName', Path='$Path'"
+                }
+            }
+
             # If no FileShareName provided, list all shares
             if ([string]::IsNullOrWhiteSpace($FileShareName)) {
                 Write-Verbose "[+] No FileShareName provided - listing all file shares"
-                $shares = Get-FileShares -BaseUrl $baseUrl -AuthMethod $authMethod -SasToken $SasToken -AccessToken $accessToken -IncludeSoftDeleted:$IncludeSoftDeleted
+                $shares = Get-FileShares -BaseUrl $baseUrl -AuthMethod $authMethod -SasToken $SasToken -AccessToken $accessToken
                 return (Format-BlackCatOutput -Data $shares -OutputFormat $OutputFormat -FunctionName $MyInvocation.MyCommand.Name)
-            }
-
-            # Warn if IncludeSoftDeleted is used with FileShareName - Azure Files only supports soft-delete at share level
-            if ($IncludeSoftDeleted -and -not [string]::IsNullOrWhiteSpace($FileShareName)) {
-                Write-Warning "Note: Azure Files soft-delete only works at the share level. The -IncludeSoftDeleted parameter has no effect when listing files/directories within a share. Use without -FileShareName to list soft-deleted shares."
             }
 
             # List contents of specific share/path
             $contents = Get-DirectoryContents -BaseUrl $baseUrl -FileShareName $FileShareName -Path $Path -AuthMethod $authMethod -SasToken $SasToken -AccessToken $accessToken -Recurse:$Recurse
 
-            # Handle download if requested
-            if ($Download -and -not [string]::IsNullOrEmpty($OutputPath)) {
+            # Handle download if OutputPath is specified
+            if (-not [string]::IsNullOrEmpty($OutputPath)) {
                 if (-not (Test-Path -Path $OutputPath)) {
                     Write-Host " Creating output directory: $OutputPath" -ForegroundColor Yellow
                     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
@@ -139,15 +140,10 @@ function Get-FileShares {
         [string]$BaseUrl,
         [string]$AuthMethod,
         [string]$SasToken,
-        [string]$AccessToken,
-        [switch]$IncludeSoftDeleted
+        [string]$AccessToken
     )
 
     $listUrl = "$BaseUrl/?comp=list"
-    
-    if ($IncludeSoftDeleted) {
-        $listUrl = "$listUrl&include=deleted"
-    }
 
     if ($AuthMethod -eq "SasToken") {
         $listUrl = "$listUrl&$SasToken"
@@ -342,18 +338,11 @@ function Get-DirectoryContents {
     .PARAMETER Recurse
         When specified, recursively enumerates all subdirectories.
 
-    .PARAMETER IncludeSoftDeleted
-        When specified, includes soft-deleted shares in the listing.
-        NOTE: Azure Files soft-delete only works at the SHARE level, not at the file/directory level.
-        This parameter only has an effect when listing shares (without -FileShareName).
-        To restore individual files, use Azure File Share Snapshots instead.
-        Aliases: IncludeDeleted, deleted
-
     .PARAMETER OutputPath
-        The directory where files will be downloaded when using -Download.
+        The directory where files will be downloaded. When specified, automatically downloads all files from the share/path.
 
     .PARAMETER Download
-        When specified along with -OutputPath, downloads all files from the share/path.
+        Legacy parameter. No longer required - specifying -OutputPath is sufficient to trigger download.
         Aliases: save, fetch
 
     .PARAMETER OutputFormat
@@ -399,7 +388,7 @@ function Get-DirectoryContents {
         Recursively lists all directories and files in the 'docs' share.
 
     .EXAMPLE
-        Get-FileShareContent -StorageAccountName "bluemountaintravelsa" -FileShareName "docs" -SasToken $token -Download -OutputPath "./loot"
+        Get-FileShareContent -StorageAccountName "bluemountaintravelsa" -FileShareName "docs" -SasToken $token -OutputPath "./loot"
 
         Downloads all files from the 'docs' share to the ./loot directory.
 
@@ -407,11 +396,6 @@ function Get-DirectoryContents {
         Get-FileShareContent -StorageAccountName "bluemountaintravelsa" -FileShareName "docs"
 
         Lists contents using the current authenticated context (Connect-ServicePrincipal).
-
-    .EXAMPLE
-        Get-FileShareContent -StorageAccountName "bluemountaintravelsa" -IncludeSoftDeleted -SasToken $token
-
-        Lists all file shares including soft-deleted ones.
 
     .NOTES
         Author: Rogier Dijkman
