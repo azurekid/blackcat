@@ -27,6 +27,11 @@ function Set-ManagedIdentityPermission {
         )]
         [string]$CommonResource,
 
+        [Parameter(Mandatory = $false, ParameterSetName = 'CommonResource')]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
+        [Alias('resource-sp-id')]
+        [string]$ResourceServicePrincipalId,
+
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ErrorMessage = "It does not match expected GUID pattern")]
         [Alias('app-role-id')]
@@ -59,26 +64,33 @@ function Set-ManagedIdentityPermission {
         
         # If using CommonResource, resolve the Resource ID
         if ($PSCmdlet.ParameterSetName -eq 'CommonResource') {
-            Write-Verbose "Resolving resource ID for common resource: $CommonResource"
-            
-            $appId = $commonResourceAppIds[$CommonResource]
-            if (-not $appId) {
-                throw "Could not find appId for common resource: $CommonResource"
+            # If ResourceServicePrincipalId is provided, use it directly (skip lookup)
+            if ($ResourceServicePrincipalId) {
+                Write-Verbose "Using provided ResourceServicePrincipalId: $ResourceServicePrincipalId"
+                $resourceId = $ResourceServicePrincipalId
             }
-            
-            Write-Verbose "Looking up service principal for app ID: $appId"
-            try {
-                $spLookup = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$appId'" -NoBatch
+            else {
+                Write-Verbose "Resolving resource ID for common resource: $CommonResource"
                 
-                if (-not $spLookup -or -not $spLookup.value -or $spLookup.value.Count -eq 0) {
-                    throw "Could not find service principal for $CommonResource (AppId: $appId)"
+                $appId = $commonResourceAppIds[$CommonResource]
+                if (-not $appId) {
+                    throw "Could not find appId for common resource: $CommonResource"
                 }
                 
-                $resourceId = $spLookup.value[0].id
-                Write-Verbose "Resolved $CommonResource to resourceId: $resourceId"
-            }
-            catch {
-                throw "Error resolving resourceId for $CommonResource : $_"
+                Write-Verbose "Looking up service principal for app ID: $appId"
+                try {
+                    $spLookup = Invoke-MsGraph -relativeUrl "servicePrincipals?`$filter=appId eq '$appId'" -NoBatch
+                    
+                    if (-not $spLookup -or -not $spLookup.value -or $spLookup.value.Count -eq 0) {
+                        throw "Could not find service principal for $CommonResource (AppId: $appId)"
+                    }
+                    
+                    $resourceId = $spLookup.value[0].id
+                    Write-Verbose "Resolved $CommonResource to resourceId: $resourceId"
+                }
+                catch {
+                    throw "Error resolving resourceId for $CommonResource : $_"
+                }
             }
         }
         
@@ -211,6 +223,12 @@ resolve the appropriate service principal ID. Valid options include:
 - PowerBI: Power BI Service
 - AzureDataLake: Azure Data Lake
 
+.PARAMETER ResourceServicePrincipalId
+Optional. The service principal ID (object ID) of the resource in your tenant. When provided, the function skips
+the lookup of the resource service principal, which requires Application.Read.All permission.
+This is useful in bootstrap scenarios where the identity doesn't have permission to read service principals yet.
+You can obtain this value once using: (Get-AzADServicePrincipal -ApplicationId "00000003-0000-0000-c000-000000000000").Id
+
 .PARAMETER appRoleId
 The unique identifier (GUID) of the app role to be assigned. This parameter is optional. If not provided, it will be resolved using the `appRoleName` parameter.
 
@@ -247,6 +265,17 @@ Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-12345
 
 This example assigns the "Application.ReadWrite.All" app role to the specified service principal for Microsoft Graph,
 without needing to manually look up the resource ID.
+
+.EXAMPLE
+# Bootstrap scenario - when you don't have permission to look up service principals
+# First get the Microsoft Graph SP ID from your tenant (one-time lookup by an admin)
+Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-123456789abc" `
+                              -CommonResource MicrosoftGraph `
+                              -ResourceServicePrincipalId "your-tenant-msgraph-sp-id" `
+                              -appRoleName "RoleManagement.ReadWrite.Directory"
+
+This example uses the -ResourceServicePrincipalId parameter to bypass the service principal lookup,
+which is useful when the identity doesn't have Application.Read.All permission yet.
 
 .EXAMPLE
 # Assign permission to a User Assigned Managed Identity for Azure Key Vault
