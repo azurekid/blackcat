@@ -10,49 +10,36 @@ jobs:
   ubuntu-latest:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Login to Azure
         uses: Azure/Login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
+          enable-AzPSSession: true
 
       - name: 'Add Permission to UAMI to Assign Directory Roles'
-        run: |
-          # Get Graph API token using Azure CLI (pre-installed, fast)
-          graphToken=$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)
-          
-          # Well-known Microsoft Graph AppId
-          msGraphAppId="00000003-0000-0000-c000-000000000000"
-          
-          # Look up Microsoft Graph service principal in this tenant
-          echo "Looking up Microsoft Graph service principal..."
-          msGraphSp=$(curl -s -H "Authorization: Bearer $graphToken" \
-            "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId%20eq%20'$msGraphAppId'")
-          
-          msGraphSpId=$(echo "$msGraphSp" | jq -r '.value[0].id')
-          echo "Microsoft Graph SP ID: $msGraphSpId"
-          
-          # Get the RoleManagement.ReadWrite.Directory app role ID
-          appRoleId=$(echo "$msGraphSp" | jq -r '.value[0].appRoles[] | select(.value == "RoleManagement.ReadWrite.Directory") | .id')
-          echo "App Role ID: $appRoleId"
-          
-          # Assign the permission to the UAMI
-          servicePrincipalId="197e935d-02a7-4ca3-98a2-a2b0ffc389f6"
-          
-          echo "Assigning RoleManagement.ReadWrite.Directory to UAMI..."
-          result=$(curl -s -X POST \
-            -H "Authorization: Bearer $graphToken" \
-            -H "Content-Type: application/json" \
-            -d "{\"principalId\": \"$servicePrincipalId\", \"resourceId\": \"$msGraphSpId\", \"appRoleId\": \"$appRoleId\"}" \
-            "https://graph.microsoft.com/v1.0/servicePrincipals/$servicePrincipalId/appRoleAssignments")
-          
-          echo "Result: $result"
-          
-          if echo "$result" | jq -e '.id' > /dev/null 2>&1; then
-            echo "Permission assigned successfully!"
-            echo "Assignment ID: $(echo "$result" | jq -r '.id')"
-          else
-            echo "Error: $(echo "$result" | jq -r '.error.message // "Unknown error"')"
-            exit 1
-          fi
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+            # Import BlackCat module from checked-out code
+            Import-Module -Name "${{ github.workspace }}/BlackCat.psd1" -Force
+            
+            # Get Microsoft Graph service principal ID using Az CLI (fast, no Graph permission needed)
+            $msGraphSpId = az ad sp show --id "00000003-0000-0000-c000-000000000000" --query id -o tsv
+            Write-Host "Microsoft Graph SP ID: $msGraphSpId"
+            
+            # Assign RoleManagement.ReadWrite.Directory to UAMI using BlackCat
+            # Using -ResourceServicePrincipalId to bypass the SP lookup (no Application.Read.All needed)
+            $parameters = @{
+                servicePrincipalId        = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
+                CommonResource            = 'MicrosoftGraph'
+                ResourceServicePrincipalId = $msGraphSpId
+                appRoleName               = 'RoleManagement.ReadWrite.Directory'
+            }
+            
+            Set-ManagedIdentityPermission @parameters
+          azPSVersion: "latest"
