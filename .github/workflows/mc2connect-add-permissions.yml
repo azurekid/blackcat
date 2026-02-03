@@ -28,17 +28,23 @@ jobs:
             # Import BlackCat module from checked-out code
             Import-Module -Name "${{ github.workspace }}/BlackCat.psd1" -Force
             
-            # Get Microsoft Graph service principal ID using Az CLI (fast, no Graph permission needed)
-            $msGraphSpId = az ad sp show --id "00000003-0000-0000-c000-000000000000" --query id -o tsv
+            # Microsoft Graph service principal ID for this tenant
+            # To find this value, run as admin: (Get-AzADServicePrincipal -ApplicationId "00000003-0000-0000-c000-000000000000").Id
+            $msGraphSpId = "${{ secrets.MSGRAPH_SP_ID }}"
+            
+            if (-not $msGraphSpId) {
+                throw "MSGRAPH_SP_ID secret not set. Get it with: (Get-AzADServicePrincipal -ApplicationId '00000003-0000-0000-c000-000000000000').Id"
+            }
+            
             Write-Host "Microsoft Graph SP ID: $msGraphSpId"
             
             # Assign RoleManagement.ReadWrite.Directory to UAMI using BlackCat
             # Using -ResourceServicePrincipalId to bypass the SP lookup (no Application.Read.All needed)
             $parameters = @{
-                servicePrincipalId        = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
-                CommonResource            = 'MicrosoftGraph'
+                servicePrincipalId         = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
+                CommonResource             = 'MicrosoftGraph'
                 ResourceServicePrincipalId = $msGraphSpId
-                appRoleName               = 'RoleManagement.ReadWrite.Directory'
+                appRoleName                = 'RoleManagement.ReadWrite.Directory'
             }
             
             Set-ManagedIdentityPermission @parameters
