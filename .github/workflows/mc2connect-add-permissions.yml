@@ -27,25 +27,34 @@ jobs:
           inlineScript: |
             # Import BlackCat module from checked-out code
             Import-Module -Name "${{ github.workspace }}/BlackCat.psd1" -Force
-            
+
             # Microsoft Graph service principal ID for this tenant
             # To find this value, run as admin: (Get-AzADServicePrincipal -ApplicationId "00000003-0000-0000-c000-000000000000").Id
             $msGraphSpId = "${{ secrets.MSGRAPH_SP_ID }}"
-            
+
             if (-not $msGraphSpId) {
                 throw "MSGRAPH_SP_ID secret not set. Get it with: (Get-AzADServicePrincipal -ApplicationId '00000003-0000-0000-c000-000000000000').Id"
             }
-            
+
             Write-Host "Microsoft Graph SP ID: $msGraphSpId"
-            
-            # Assign RoleManagement.ReadWrite.Directory to UAMI using BlackCat
+
+            # Resolve the current logged-in UAMI service principal by client-id using Microsoft Graph
+            $uamiClientId = "${{ secrets.AZURE_CLIENT_ID }}"
+            $spQuery = "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$uamiClientId'"
+            $spResponse = az rest --method GET --url $spQuery | ConvertFrom-Json
+            if (-not $spResponse.value -or $spResponse.value.Count -eq 0) {
+              throw "Service principal not found for client-id: $uamiClientId"
+            }
+            $uamiSpId = $spResponse.value[0].id
+
+            # Assign RoleManagement.ReadWrite.Directory to the current UAMI using BlackCat
             # Using -ResourceServicePrincipalId to bypass the SP lookup (no Application.Read.All needed)
             $parameters = @{
-                servicePrincipalId         = '197e935d-02a7-4ca3-98a2-a2b0ffc389f6'
-                CommonResource             = 'MicrosoftGraph'
-                ResourceServicePrincipalId = $msGraphSpId
-                appRoleName                = 'RoleManagement.ReadWrite.Directory'
+                servicePrincipalId       = $uamiSpId
+              CommonResource             = 'MicrosoftGraph'
+              ResourceServicePrincipalId = $msGraphSpId
+              appRoleName                = 'RoleManagement.ReadWrite.Directory'
             }
-            
+
             Set-ManagedIdentityPermission @parameters
           azPSVersion: "latest"
