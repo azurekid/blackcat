@@ -9,8 +9,8 @@ function Connect-GraphToken {
         [switch]$asBase64,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub', 
-                     'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase', 
+        [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub',
+                     'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase',
                      'ServiceBus', 'Storage', 'Synapse', 'Other')]
         [string]$EndpointType = 'MSGraph',
 
@@ -72,7 +72,7 @@ function Connect-GraphToken {
 
             # Parse the JWT to extract claims
             $tokenDetails = ConvertFrom-JWT -Base64JWT $decodedToken
-            
+
             if (-not $tokenDetails) {
                 throw "Failed to parse JWT token"
             }
@@ -90,15 +90,29 @@ function Connect-GraphToken {
                 $null
             }
 
+            # Validate token expiration
+            if (-not $expiresOn) {
+                Write-Warning "Could not determine token expiration time from token claims"
+            } else {
+                $utcNow = [DateTime]::UtcNow
+                $timeRemaining = $expiresOn - $utcNow
+
+                if ($utcNow -gt $expiresOn) {
+                    # Token has expired
+                    $expiredDuration = $utcNow - $expiresOn
+                    $expiredSeconds = [Math]::Round($expiredDuration.TotalSeconds)
+                    throw " Token has expired. Expired $expiredSeconds seconds ago at $($expiresOn.ToString('yyyy-MM-dd HH:mm:ss')) UTC"
+                }
+                elseif ($timeRemaining.TotalMinutes -lt 5) {
+                    # Token expiring soon
+                    Write-Warning " Token will expire in $([Math]::Round($timeRemaining.TotalSeconds)) seconds at $($expiresOn.ToString('yyyy-MM-dd HH:mm:ss')) UTC"
+                }
+            }
+
             # Validate token audience matches endpoint
             $expectedAudience = if ($EndpointType -eq 'MSGraph') { 'https://graph.microsoft.com' } else { $targetEndpoint }
             if ($audience -ne $expectedAudience -and $audience -ne $targetEndpoint) {
                 Write-Warning "Token audience is '$audience', expected '$expectedAudience'. This may not work with API calls to $EndpointType."
-            }
-
-            # Check token expiration
-            if ($expiresOn -and $expiresOn -lt [DateTime]::UtcNow) {
-                throw "Token has expired at $expiresOn UTC"
             }
 
             Write-Verbose "Token expires: $expiresOn UTC"
@@ -225,8 +239,8 @@ When specified, the function will decode the base64 string before processing.
 
 .PARAMETER EndpointType
 The type of Azure endpoint to authenticate against.
-Acceptable values are: 'Azure' (ARM), 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 
-'EventHub', 'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph' (default), 'RedisCache', 'SQLDatabase', 
+Acceptable values are: 'Azure' (ARM), 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid',
+'EventHub', 'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph' (default), 'RedisCache', 'SQLDatabase',
 'ServiceBus', 'Storage', 'Synapse', 'Other' (custom endpoint).
 
 When 'Other' is selected, the EndpointUri parameter is required.
