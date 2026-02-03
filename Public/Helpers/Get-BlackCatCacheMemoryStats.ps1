@@ -76,4 +76,5 @@ function Get-BlackCatCacheMemoryStats {
         This is a utility/support function and does not directly map to MITRE ATT&CK tactics.
         Use this function to monitor memory usage and identify opportunities for optimization.
         Large cache sizes may impact PowerShell session performance.
+    #>
 }
