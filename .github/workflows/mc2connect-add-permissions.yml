@@ -29,11 +29,25 @@ jobs:
             Import-Module -Name "${{ github.workspace }}/BlackCat.psd1" -Force
 
             # Microsoft Graph service principal ID for this tenant
-            # To find this value, run as admin: (Get-AzADServicePrincipal -ApplicationId "00000003-0000-0000-c000-000000000000").Id
+            # Prefer a pre-provided secret, but fall back to Graph lookup if absent.
+            # Manual Graph lookup:
+            #   az rest --method GET --url "https://graph.microsoft.com/v1.0/servicePrincipals?\$filter=appId eq '00000003-0000-0000-c000-000000000000'"
             $msGraphSpId = "${{ secrets.MSGRAPH_SP_ID }}"
 
             if (-not $msGraphSpId) {
-                throw "MSGRAPH_SP_ID secret not set. Get it with: (Get-AzADServicePrincipal -ApplicationId '00000003-0000-0000-c000-000000000000').Id"
+              try {
+                $graphSpQuery = "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'"
+                $graphSpResponse = az rest --method GET --url $graphSpQuery | ConvertFrom-Json
+                if ($graphSpResponse.value -and $graphSpResponse.value.Count -gt 0) {
+                  $msGraphSpId = $graphSpResponse.value[0].id
+                }
+              } catch {
+                Write-Verbose "Failed to resolve Microsoft Graph SP ID via Graph: $_"
+              }
+            }
+
+            if (-not $msGraphSpId) {
+              throw "MSGRAPH_SP_ID secret not set and lookup failed. Query Microsoft Graph for appId '00000003-0000-0000-c000-000000000000' to get the servicePrincipal id."
             }
 
             Write-Host "Microsoft Graph SP ID: $msGraphSpId"
