@@ -143,6 +143,19 @@ function Get-ServicePrincipalsPermission {
                     'Permission Name'      = $permissionName
                 }
             }
+
+            $appPermissionsSummary = $appPermissions | Group-Object 'Resource DisplayName' | ForEach-Object {
+                $permissionList = $_.Group | ForEach-Object {
+                    if ($_."Permission Name" -and $_."Permission Name" -ne "Unknown") {
+                        $_."Permission Name"
+                    }
+                    else {
+                        $_."PermissionId"
+                    }
+                }
+
+                "$($_.Name): $($permissionList -join ', ')"
+            }
             
             $delegatedPerms = $delegatedPermissions | ForEach-Object {
                 [PSCustomObject]@{
@@ -171,7 +184,7 @@ function Get-ServicePrincipalsPermission {
                 AppRoles                 = $spDetails.appRoles.displayName
                 GroupMemberships         = ($memberOf | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }).displayName
                 DirectoryRoles           = ($memberOf | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.directoryRole' }).displayName
-                AppPermissions           = $appPermissions
+                AppPermissions           = $appPermissionsSummary
                 DelegatedPermissions     = $delegatedPerms
                 OwnedObjects             = $ownedObjectsInfo
                 IsPrivileged             = $false
