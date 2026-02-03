@@ -51,9 +51,18 @@ function Find-PublicStorageContainer {
                 Write-Host "  Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
                 Write-Host "    Loaded $($permutations.Count) permutations from '$WordList'" -ForegroundColor Green
+            } else {
+                $permutations = [System.Collections.Generic.HashSet[string]]::new()
             }
 
-            $permutations += $sessionVariables.permutations
+            if ($sessionVariables.permutations) {
+                Write-Host "  Loading session permutations..." -ForegroundColor Cyan
+                foreach ($item in $sessionVariables.permutations) { [void]$permutations.Add($item) }
+            }
+
+            # Always include the base name without any suffix
+            if (-not $permutations.Contains('')) { [void]$permutations.Add('') }
+
             Write-Host "  Loaded total of $($permutations.Count) permutations" -ForegroundColor Green
 
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
