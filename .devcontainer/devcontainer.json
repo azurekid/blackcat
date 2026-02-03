@@ -47,7 +47,7 @@
       "installUsingPython": "true"
     }
   },
-  "postCreateCommand": "mkdir /root/.config/powershell && echo 'Import-Module -Name ./BlackCat.psm1' > /root/.config/powershell/Microsoft.PowerShell_profile.ps1 && ./.devcontainer/update.sh && sudo cp .devcontainer/welcome /workspaces/.codespaces/shared/first-run-notice.txt"
+  "postCreateCommand": "mkdir -p \"$HOME/.config/powershell\" && echo 'Import-Module -Name ./BlackCat.psm1' > \"$HOME/.config/powershell/Microsoft.PowerShell_profile.ps1\" && (./.devcontainer/update.sh || true) && sudo cp .devcontainer/.devcontainter/welcome /workspaces/.codespaces/shared/first-run-notice.txt"
   
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": []
