@@ -230,24 +230,7 @@ function Get-EntraRoleMember {
 
                 # Check if session variables are available and populated
                 if ($null -eq $script:SessionVariables -or $null -eq $script:SessionVariables.Roles -or $script:SessionVariables.Roles.Count -lt 10) {
-                    Write-Verbose "Role session variables not available or incomplete. Attempting to initialize them..."
-
-                    # Check if we have an access token before trying to update roles
-                    if ($script:SessionVariables -and $script:SessionVariables.AccessToken) {
-                        Write-Verbose "Access token exists, refreshing Entra role definitions..."
-                        try {
-                            $refreshSuccess = Update-EntraRoles -ErrorAction Stop
-                            if (-not $refreshSuccess) {
-                                Write-Warning "Failed to initialize role definitions"
-                            }
-                        }
-                        catch {
-                            Write-Warning "Error initializing role definitions: $_"
-                        }
-                    }
-                    else {
-                        Write-Warning "No access token found. You must authenticate first with Connect-Entra or Connect-MSGraph"
-                    }
+                    Write-Verbose "Role session variables not available or incomplete. Roles should be loaded from EntraRoles.csv at module import."
                 }
 
                 # Now try to use the roles (whether they were just refreshed or already existed)
@@ -274,24 +257,7 @@ function Get-EntraRoleMember {
 
                 # Check if session variables need to be initialized
                 if ($null -eq $script:SessionVariables -or $null -eq $script:SessionVariables.Roles -or $script:SessionVariables.Roles.Count -lt 10) {
-                    Write-Verbose "Role session variables not available or incomplete. Attempting to initialize them..."
-
-                    # Check if we have an access token before trying to update roles
-                    if ($script:SessionVariables -and $script:SessionVariables.AccessToken) {
-                        Write-Verbose "Access token exists, refreshing Entra role definitions..."
-                        try {
-                            $refreshSuccess = Update-EntraRoles -ErrorAction Stop
-                            if (-not $refreshSuccess) {
-                                Write-Warning "Failed to initialize role definitions"
-                            }
-                        }
-                        catch {
-                            Write-Warning "Error initializing role definitions: $_"
-                        }
-                    }
-                    else {
-                        Write-Warning "No access token found. You must authenticate first with Connect-Entra or Connect-MSGraph"
-                    }
+                    Write-Verbose "Role session variables not available or incomplete. Roles should be loaded from EntraRoles.csv at module import."
                 }
 
                 # Try to use the role ID to get the display name

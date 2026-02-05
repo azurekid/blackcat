@@ -23,12 +23,9 @@ function Invoke-BlackCat {
         # Check if we're using Connect-GraphToken authentication (graphHeader already set)
         # Only return early if we have BOTH a graph header AND a valid session access token (Connect-GraphToken case)
         if ($ResourceTypeName -eq "MSGraph" -and $script:graphHeader -and $script:SessionVariables.AccessToken) {
-            # Verify the token isn't expired
-            if ($script:SessionVariables.ExpiresOn -and $script:SessionVariables.ExpiresOn -gt [datetime]::UtcNow.AddMinutes(5)) {
-                Write-Verbose "Using existing Graph token from Connect-GraphToken"
-                # Token is already set and valid, no need to call Az.Accounts
-                return
-            }
+            Write-Verbose "Using existing Graph token from Connect-GraphToken"
+            # Token is already set, no need to call Az.Accounts
+            return
         }
 
         if ($azProfile.Contexts.Count -ne 0) {
