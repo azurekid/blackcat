@@ -12,7 +12,11 @@ function Get-ManagedIdentity {
 
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
         [Alias('rg', 'resource-group')]
-        [string[]]$ResourceGroupName
+        [string[]]$ResourceGroupName,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Table', 'List', 'Json')]
+        [string]$OutputFormat = 'Table'
     )
 
     begin {
@@ -28,9 +32,31 @@ function Get-ManagedIdentity {
             Write-Verbose "Get Managed Identity"
 
             if ($Name) {
-                return (Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities' -Name $($Name))
+                $results = Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities' -Name $($Name)
             } else {
-                return (Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities')
+                $results = Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities'
+            }
+
+            # Format output based on OutputFormat parameter
+            switch ($OutputFormat) {
+                'Table' {
+                    return $results | Select-Object -Property Name, 
+                        @{Name='ServicePrincipalId'; Expression={$_.properties.principalId}},
+                        @{Name='ResourceGroup'; Expression={$_.id.Split('/')[4]}} |
+                        Format-Table -AutoSize
+                }
+                'List' {
+                    return $results | Select-Object -Property Name, 
+                        @{Name='ServicePrincipalId'; Expression={$_.properties.principalId}},
+                        @{Name='ResourceGroup'; Expression={$_.id.Split('/')[4]}} |
+                        Format-List
+                }
+                'Json' {
+                    return $results | ConvertTo-Json -Depth 10
+                }
+                default {
+                    return $results
+                }
             }
         }
         catch {
@@ -47,6 +73,12 @@ The `Get-AzManagedIdentity` function retrieves user-assigned managed identities 
 .PARAMETER Name
 The name of the managed identity to retrieve. This parameter is optional and can be provided from the pipeline by property name.
 
+.PARAMETER OutputFormat
+Specifies the output format for the results. Valid values are 'Table' (default), 'List', or 'Json'.
+- Table: Displays results in a formatted table with Name, ServicePrincipalId, and ResourceGroup columns
+- List: Displays results in a list format
+- Json: Returns the raw JSON response
+
 .EXAMPLE
 # Example 1: Retrieve all managed identities
 Get-AzManagedIdentity
@@ -54,6 +86,14 @@ Get-AzManagedIdentity
 .EXAMPLE
 # Example 2: Retrieve a specific managed identity by name
 Get-AzManagedIdentity -Name "myManagedIdentity"
+
+.EXAMPLE
+# Example 3: Retrieve all managed identities in JSON format
+Get-AzManagedIdentity -OutputFormat Json
+
+.EXAMPLE
+# Example 4: Retrieve all managed identities in list format
+Get-AzManagedIdentity -OutputFormat List
 
 .DEPENDENCIES
 - `Invoke-BlackCat`: This function is invoked at the beginning of the script.
