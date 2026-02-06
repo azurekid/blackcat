@@ -15,7 +15,7 @@ function Get-ManagedIdentity {
         [string[]]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Table', 'List', 'Json')]
+        [ValidateSet('Table', 'List', 'Json', 'Object')]
         [string]$OutputFormat = 'Table'
     )
 
@@ -39,6 +39,9 @@ function Get-ManagedIdentity {
 
             # Format output based on OutputFormat parameter
             switch ($OutputFormat) {
+                'Object' {
+                    return $results
+                }
                 'Table' {
                     return $results | Select-Object -Property Name, 
                         @{Name='ServicePrincipalId'; Expression={$_.properties.principalId}},

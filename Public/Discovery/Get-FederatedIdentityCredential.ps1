@@ -35,7 +35,7 @@ function Get-FederatedIdentityCredential {
             }
             elseif ($Name) {
                 Write-Host "Looking up Managed Identity: $Name..." -ForegroundColor Cyan
-                $uami = Get-ManagedIdentity -Name $Name
+                $uami = Get-ManagedIdentity -Name $Name -OutputFormat Object
                 if ($uami) {
                     $managedIdentities += $uami
                     Write-Host "    Found managed identity" -ForegroundColor Green
@@ -47,7 +47,7 @@ function Get-FederatedIdentityCredential {
             }
             else {
                 Write-Host " Retrieving all User Assigned Managed Identities..." -ForegroundColor Cyan
-                $managedIdentities = Get-ManagedIdentity
+                $managedIdentities = Get-ManagedIdentity -OutputFormat Object
                 Write-Host "    Found $($managedIdentities.Count) managed identities" -ForegroundColor Green
             }
 
