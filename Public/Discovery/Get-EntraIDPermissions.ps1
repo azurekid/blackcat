@@ -99,12 +99,7 @@ function Get-EntraIDPermissions {
     Retrieves and lists all permissions a user or group has in Microsoft Entra ID.
 
 .DESCRIPTION
-    The Get-EntraIDPermissions function queries Microsoft Graph API to retrieve all roles and associated permissions
-    that a specified user or group has in Microsoft Entra ID (formerly Azure AD). It provides detailed information
-    about each role including description, associated actions, and whether the role is privileged.
-
-    The function can identify targets using Object ID, Name, or User Principal Name, and can optionally display
-    only the actions a user can perform rather than full role details.
+    Queries Microsoft Graph API for roles and permissions of Entra ID users or groups.
 
 .PARAMETER ObjectId
     The unique Object ID of the user or group in Entra ID.

@@ -89,8 +89,7 @@ function Add-EntraApplication {
 Creates an Entra ID Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .DESCRIPTION
-The Add-EntraApplication function automates the creation of an Entra ID Application and its corresponding Service Principal.
-It also assigns the Global Administrator role to the Service Principal. This function uses Microsoft Graph API to perform the operations.
+Automates creating an Entra ID Application and assigns Global Administrator role.
 
 .PARAMETER DisplayName
 Specifies the display name of the Entra ID Application. Defaults to 'MS-PIM' if not provided.

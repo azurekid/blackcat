@@ -4,9 +4,7 @@ function Update-AzureServiceTag {
         Updates the local cache of Azure Service Tags from Microsoft.
 
     .DESCRIPTION
-        Downloads the latest Azure IP ranges and Service Tags from Microsoft's download center.
-        The service tag data is stored locally and used by Find-AzureServiceTag for IP lookups.
-        Supports Azure Public, Azure China, Azure Germany, and Azure US Government clouds.
+        Downloads latest Azure IP ranges and Service Tags from Microsoft download center.
 
     .PARAMETER Region
         The Azure cloud region to download service tags for.

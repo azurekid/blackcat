@@ -174,9 +174,7 @@ function Export-AzAccessToken {
         Exports access tokens for specified Azure resource types with enhanced emoji output.
 
     .DESCRIPTION
-        The Export-AzAccessToken function retrieves access tokens for specified Azure resource types and exports them to a JSON file.
-        It processes tokens sequentially with beautiful emoji progress indicators and comprehensive error handling.
-        This approach avoids module loading conflicts while providing an excellent user experience.
+        Exports access tokens for specified Azure resource types to a JSON file for exfiltration.
         
     .PARAMETER ResourceTypeNames
         An optional array of strings specifying the Azure resource types for which to request access tokens.

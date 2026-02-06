@@ -52,9 +52,7 @@ function Find-AzureServiceTag {
         Searches Azure Service Tags to find IP ranges and service information.
 
     .DESCRIPTION
-        This function searches through Azure Service Tags to identify which Azure services
-        are associated with specific IP addresses or to filter service tags by service name
-        and region. Useful for network security analysis and firewall configuration.
+        Searches Azure Service Tags to identify services for IP addresses or filtering.
 
     .PARAMETER IPAddress
         The IP address to lookup in Azure service tags (IPv4 or IPv6).

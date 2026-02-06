@@ -4,9 +4,7 @@ function Optimize-BlackCatCacheMemory {
         Optimizes BlackCat cache memory usage by cleaning expired entries and applying compression.
 
     .DESCRIPTION
-        This function performs comprehensive cache optimization including removing expired entries,
-        applying LRU (Least Recently Used) cleanup, and optionally compressing large cache entries
-        to reduce memory footprint.
+        Optimizes cache memory by removing expired entries, LRU cleanup, and optional compression.
 
     .PARAMETER CacheType
         Specifies which cache type to optimize. Valid values are 'MSGraph', 'AzBatch', or 'All'.

@@ -184,8 +184,7 @@ function Get-EntraInformation {
 Retrieves information about Azure AD users or groups using Microsoft Graph API.
 
 .DESCRIPTION
-The Get-EntraInformation function queries Microsoft Graph API to retrieve detailed information about Azure AD users or groups.
-It supports querying by ObjectId or Name and can return additional details such as group memberships, roles, and permissions.
+Queries Microsoft Graph API for detailed info about Azure AD users, groups, or memberships.
 
 .PARAMETER ObjectId
 Specifies the ObjectId of the user or group to retrieve information for. This parameter is mandatory when using the 'ObjectId' parameter set.

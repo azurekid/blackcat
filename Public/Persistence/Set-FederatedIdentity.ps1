@@ -98,10 +98,7 @@ function Set-FederatedIdentity {
 Sets a federated identity credential for a user-assigned managed identity to enable GitHub Actions authentication.
 
 .DESCRIPTION
-The Set-FederatedIdentity cmdlet creates or updates a federated identity credential that enables GitHub Actions workflows
-to authenticate to Azure using OpenID Connect. This links a specific GitHub repository and branch to a user-assigned managed identity.
-
-You can specify the managed identity either by its full resource ID or by its name (which will be resolved automatically).
+Creates or updates federated identity credentials enabling GitHub Actions OIDC auth.
 
 .PARAMETER Id
 The resource ID of the user-assigned managed identity in Azure. This should be the full resource ID path.

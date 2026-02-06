@@ -165,13 +165,7 @@ function Find-SubDomain {
     Discovers active subdomains for specified domain names through DNS resolution.
 
 .DESCRIPTION
-    Find-SubDomain performs subdomain enumeration by testing a list of common subdomain prefixes
-    against one or more domain names. It resolves each potential subdomain via DNS lookups and
-    reports those that successfully resolve.
-
-    The function can use built-in subdomain lists organized by categories (such as 'common',
-    'dev', etc.) or a custom word list provided by the user. A 'deep' search option is available
-    for more thorough enumeration with expanded subdomain lists.
+    Enumerates subdomains via DNS using common prefixes or custom word lists.
 
 .PARAMETER DomainName
     One or more domain names to enumerate subdomains for (e.g., example.com).

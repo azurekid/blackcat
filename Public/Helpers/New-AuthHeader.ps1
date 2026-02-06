@@ -82,9 +82,7 @@ function New-AuthHeader {
         Creates an authentication header for Azure REST API interactions.
 
     .DESCRIPTION
-        The `New-AuthHeader` function generates an authentication header for various Azure services and APIs.
-        It uses the current Azure context to retrieve an access token for the specified endpoint type.
-        The function supports predefined Azure endpoints as well as custom endpoints when 'Other' is selected.
+        Generates authentication headers for various Azure services using access tokens.
 
     .PARAMETER EndpointType
         Specifies the type of Azure endpoint to authenticate against.

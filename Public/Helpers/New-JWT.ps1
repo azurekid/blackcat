@@ -50,7 +50,7 @@ function New-JWT {
 Generates a new JSON Web Token (JWT) with the specified parameters.
 
 .DESCRIPTION
-The New-JWT function creates a new JWT using the HS256 algorithm. It takes in parameters such as audience, issuer, subject, expiration time, and a signing key to generate the token. The token consists of a header, payload, and signature.
+Creates a new JWT token using HS256 algorithm with specified audience, issuer, and expiration.
 
 .PARAMETER Audience
 Specifies the audience (aud) claim for the JWT. This is typically the intended recipient of the token.

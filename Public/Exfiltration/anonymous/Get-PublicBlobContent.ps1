@@ -181,10 +181,7 @@ function Get-PublicBlobContent {
         Lists or downloads files from a public Azure Blob Storage account, including deleted (soft-deleted) blobs.
 
     .DESCRIPTION
-        The Get-PublicBlobContent function lists files from a specified public Azure Blob Storage account by default.
-        You can specify the storage location either by providing a full BlobUrl or by using StorageAccountName and ContainerName parameters.
-        Use the -Download switch along with -OutputPath to download the files.
-        It can also include deleted (soft-deleted) blobs if the IncludeDeleted switch is specified.
+        Lists or downloads files from public Azure Blob containers with deleted blob support.
 
     .PARAMETER StorageAccountName
         The name of the Azure Storage Account (3-24 lowercase alphanumeric characters).

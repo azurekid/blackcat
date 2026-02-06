@@ -63,8 +63,7 @@ function Set-FunctionAppSecret {
         Creates or updates secrets for an Azure Function App.
 
     .DESCRIPTION
-        The New-FunctionAppSecret function creates or updates secrets for an Azure Function App.
-        It can manage both host-level secrets and function-level secrets.
+        Creates or updates secrets for Azure Function Apps at host or function level.
 
     .PARAMETER Name
         The name of the function app. Auto-completes with existing function app names.

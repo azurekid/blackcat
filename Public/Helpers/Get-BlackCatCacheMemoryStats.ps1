@@ -54,9 +54,7 @@ function Get-BlackCatCacheMemoryStats {
         Displays detailed memory usage statistics for BlackCat cache systems.
 
     .DESCRIPTION
-        This function shows comprehensive memory usage information for the cache systems,
-        including total memory usage, average entry sizes, compression statistics, and
-        provides recommendations for memory optimization.
+        Shows memory usage information for cache systems with optimization suggestions.
 
     .PARAMETER CacheType
         Specifies which cache type to display memory statistics for. Valid values are 'MSGraph', 'AzBatch', or 'All'.

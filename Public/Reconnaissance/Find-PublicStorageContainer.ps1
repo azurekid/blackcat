@@ -240,8 +240,7 @@ function Find-PublicStorageContainer {
     Finds publicly accessible Azure Storage containers for a given storage account name and type.
 
 .DESCRIPTION
-    The Find-PublicStorageContainer function attempts to discover public Azure Storage containers (blob, file, queue, table, or dfs) by generating permutations of storage account names and checking their DNS resolution and accessibility.
-    It supports parallel processing for both DNS resolution and container enumeration, and can optionally include empty containers and container metadata in the results.
+    Discovers public Azure Storage containers via DNS permutation and accessibility test.
 
 .PARAMETER StorageAccountName
     The base name of the Azure Storage account to check. Permutations will be generated based on this value.

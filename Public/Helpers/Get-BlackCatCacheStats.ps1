@@ -4,10 +4,7 @@ function Get-BlackCatCacheStats {
         Displays comprehensive statistics about the BlackCat cache systems with advanced analytics and insights.
 
     .DESCRIPTION
-        This function provides detailed information about the current cache state for BlackCat cache systems,
-        including total entries, valid/expired entries, memory usage, hit rates, performance metrics,
-        cache efficiency analysis, detailed cache key listings with advanced filtering capabilities,
-        trend analysis, memory optimization recommendations, and export capabilities.
+        Displays comprehensive statistics about BlackCat cache with advanced analytics.
 
     .PARAMETER CacheType
         Specifies which cache type to display statistics for. Valid values are 'MSGraph', 'AzBatch', or 'All'.

@@ -372,20 +372,7 @@ function Find-EntraPermissionHolder {
         Find Microsoft Entra ID (Azure AD) principals that have a specific permission.
 
     .DESCRIPTION
-        The Find-EntraPermissionHolder function identifies all roles containing a specific permission
-        and then returns all principals (users, groups, or service principals) assigned to those roles.
-
-        This function leverages the existing Get-EntraRoleMember and Get-EntraIDPermissions functions
-        to efficiently identify who has specific permissions in your Entra ID tenant, which is useful
-        for security audits, compliance checks, and permission discovery during incident response
-        or threat hunting activities.
-
-        The function supports:
-        - Finding all roles that contain a specific permission
-        - Identifying all principals assigned to those roles
-        - Resolving group memberships to see nested users with the permission
-        - Identifying both active and eligible (PIM) role assignments
-        - Output in various formats for further analysis
+        Identifies Entra ID roles containing a permission and returns all assigned principals.
 
     .PARAMETER Permission
         The specific permission string to search for (e.g., "microsoft.directory/applications/create").

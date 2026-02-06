@@ -270,7 +270,7 @@ function Get-StorageAccountKey {
 Retrieves the storage account keys for specified Azure Storage Accounts.
 
 .DESCRIPTION
-The `Get-StorageAccountKey` function retrieves the access keys for Azure Storage Accounts with enhanced output formatting, error tracking, and comprehensive summary statistics. It supports parallel processing to handle multiple storage accounts efficiently with beautiful emoji progress indicators and detailed access denial reporting.
+Retrieves access keys for Azure Storage Accounts with parallel processing and formatted output.
 
 .PARAMETER Name
 Specifies the name(s) of the storage account(s) to retrieve keys for.

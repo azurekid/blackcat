@@ -77,16 +77,7 @@ function Get-AppRolePermission {
 Retrieves the permissions for a specified Microsoft App Role.
 
 .DESCRIPTION
-The Get-AppRolePermission function retrieves the permissions associated with a specified Microsoft App Role.
-It can filter permissions based on the App Role ID or App Role Name and Type. The function provides enhanced
-output with emoji indicators and colorful progress messages for better user experience.
-
-Features:
-- Emoji-enhanced progress indicators and status messages
-- Detailed success and error reporting with visual feedback
-- Color-coded output for easy identification of results
-- Support for both Application and Delegated permission types
-- Pipeline support for processing multiple app role IDs
+Retrieves permissions associated with a specified Microsoft App Role with emoji feedback.
 
 .PARAMETER appRoleId
 The unique identifier (GUID) of the App Role. Must match the expected GUID pattern.

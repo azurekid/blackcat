@@ -52,9 +52,7 @@ function Get-UserAgentStatus {
     Get the current status of user agent rotation.
 
     .DESCRIPTION
-    This function returns information about the current user agent rotation status,
-    including the current user agent in use, when it was last changed, and when the
-    next rotation is expected to occur.
+    Returns information about current user agent rotation status and next expected rotation time.
 
     .EXAMPLE
     # Display user agent rotation status

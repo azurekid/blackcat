@@ -398,15 +398,7 @@ function Connect-EntraApplication {
 Authenticates to Microsoft Graph using an Enterprise Application with delegated permissions.
 
 .DESCRIPTION
-The Connect-EntraApplication function provides an interactive way to authenticate to Microsoft Graph using delegated permissions of an Enterprise Application (App Registration). This function works similarly to Connect-MgGraph but specifically uses an application's delegated permissions, allowing operations to run in the context of the authenticated user.
-
-This is ideal for scenarios where you need:
-- Interactive user authentication
-- Operations that run with user's permissions and identity
-- User context for auditing and compliance
-- Conditional Access and MFA policies to apply
-
-The function supports both interactive browser-based authentication and device code flow for headless/remote environments.
+Authenticates to Microsoft Graph using Enterprise App with delegated user permissions.
 
 .PARAMETER ClientId
 The Application (Client) ID of the Enterprise Application. This parameter is mandatory and must be a valid GUID format. This is the ID of the app registration that has delegated permissions configured.

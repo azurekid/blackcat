@@ -123,7 +123,7 @@ function Get-ServicePrincipalCredential {
 Retrieves credentials (passwords and certificates) for Microsoft Entra applications and service principals.
 
 .DESCRIPTION
-The Get-ServicePrincipalCredential function retrieves and displays credential information for Microsoft Entra applications and service principals. It can filter by credential type and include or exclude expired credentials. The function provides detailed information about each credential including expiration status and days until expiry.
+Retrieves credential information for Entra applications and service principals with expiry details.
 
 .PARAMETER ObjectId
 The Object ID (GUID) of the Microsoft Entra application or service principal. This parameter is mandatory and must match the pattern of a valid GUID.

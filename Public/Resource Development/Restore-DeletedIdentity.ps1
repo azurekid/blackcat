@@ -101,9 +101,7 @@ function Restore-DeletedIdentity {
     Retrieves and optionally restores deleted identities from Microsoft Graph.
 
 .DESCRIPTION
-    The Restore-DeletedIdentity function allows you to search for and restore deleted identities (Applications, Groups, Users, or Administrative Units)
-    from Microsoft Graph. It can retrieve items deleted within the last 30 days and optionally restore them. For Applications, it also handles the
-    restoration of associated service principals.
+    Searches for and restores deleted identities from Microsoft Graph (last 30 days).
 
 .PARAMETER ObjectId
     The unique identifier (ObjectId) of the deleted identity to find or restore.

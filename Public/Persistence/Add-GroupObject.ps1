@@ -117,9 +117,7 @@ function Add-GroupObject {
     Adds an object (user, service principal, or application) as a member or owner to an Azure AD group.
 
 .DESCRIPTION
-    The Add-GroupObject function adds a specified object (user, service principal, or application) to an Azure AD group as either a member or an owner.
-    The group can be specified by ObjectId or by Name. The object to add can be specified by ObjectId, UserPrincipalName, ServicePrincipalId, ServicePrincipalName, or ApplicationId.
-    The function checks for existing membership or ownership before attempting to add the object.
+    Adds a user, service principal, or app to an Azure AD group as member or owner.
 
 .PARAMETER GroupObjectId
     The ObjectId of the Azure AD group. Mandatory if using the 'ObjectId' parameter set.

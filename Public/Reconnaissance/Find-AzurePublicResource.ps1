@@ -250,12 +250,7 @@ function Find-AzurePublicResource {
     Finds publicly accessible Azure resources.
 
 .DESCRIPTION
-    The Find-AzurePublicResource function generates permutations of Azure resource names using a base name and an optional wordlist.
-    It constructs DNS names for various Azure services including Storage, Databases, Security, Compute, AI/ML, Integration, and other Azure services.
-    The function attempts to resolve these DNS names and returns successfully resolved resources with their type, IP addresses, and URIs.
-
-    The function provides real-time feedback with emoji-decorated console output showing progress and discovered resources.
-    It supports multiple output formats and uses parallel processing for efficient DNS resolution.
+    Discovers publicly accessible Azure resources by DNS enumeration and permutation testing.
 
 .PARAMETER Name
     The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.

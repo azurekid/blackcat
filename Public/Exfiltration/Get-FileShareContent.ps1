@@ -312,12 +312,7 @@ function Get-DirectoryContents {
         Lists file shares or contents from an Azure Storage Account using SAS token or authenticated context.
 
     .DESCRIPTION
-        The Get-FileShareContent function provides flexible enumeration of Azure File Shares.
-        - Without FileShareName: Lists all file shares in the storage account
-        - With FileShareName: Lists directories and files within the specified share
-        
-        Supports both SAS token authentication (for leaked/found tokens) and authenticated 
-        context from Connect-ServicePrincipal or Connect-AzAccount.
+        Enumerates files/directories in Azure File Shares with SAS token or auth access.
 
     .PARAMETER StorageAccountName
         The name of the Azure Storage Account (3-24 lowercase alphanumeric characters).

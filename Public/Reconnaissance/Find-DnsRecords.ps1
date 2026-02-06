@@ -527,11 +527,7 @@ function Find-DnsRecords {
     Performs comprehensive DNS reconnaissance on target domains with enhanced provider support and subdomain enumeration capabilities.
 
 .DESCRIPTION
-    Find-DnsRecords is an advanced DNS reconnaissance tool that queries multiple DNS-over-HTTPS providers to gather DNS records
-    for specified domains. It supports various record types, subdomain enumeration with CNAME discovery, and can detect
-    flattened/proxied CNAMEs used by CDN services like Cloudflare. The function provides load balancing across multiple
-    DNS providers, customizable delays for stealth, and integrates with the BlackCat framework for enhanced subdomain lists
-    and user agent rotation.
+    Advanced DNS reconnaissance tool using multiple DoH providers and CNAME flattening detection.
 
 .PARAMETER Domains
     One or more target domains to perform DNS reconnaissance on.

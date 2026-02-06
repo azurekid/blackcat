@@ -71,7 +71,7 @@ function Get-ManagedIdentity {
 Retrieves Azure Managed Identities.
 
 .DESCRIPTION
-The `Get-AzManagedIdentity` function retrieves user-assigned managed identities from Azure. It can filter the identities by name if provided.
+Retrieves user-assigned managed identities from Azure with optional name filtering.
 
 .PARAMETER Name
 The name of the managed identity to retrieve. This parameter is optional and can be provided from the pipeline by property name.

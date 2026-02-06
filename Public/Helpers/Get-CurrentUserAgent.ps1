@@ -120,9 +120,7 @@ function Get-CurrentUserAgent {
     Gets the current user agent string to use for HTTP requests based on rotation settings.
 
     .DESCRIPTION
-    This function manages user agent rotation for BlackCat module requests. It tracks when and how
-    often to rotate user agents based on configured time intervals and request counts to avoid detection.
-    It can use a fixed custom user agent or rotate through a pool of realistic browser user agents.
+    Manages user agent rotation for BlackCat requests based on time and request counts.
 
     .PARAMETER IncrementCount
     When specified, increments the request counter for the current user agent.

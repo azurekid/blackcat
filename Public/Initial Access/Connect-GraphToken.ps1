@@ -249,20 +249,7 @@ function Connect-GraphToken {
 Authenticates to Azure APIs using a bearer token (JWT) for BlackCat module operations.
 
 .DESCRIPTION
-The Connect-GraphToken function allows you to authenticate to Azure APIs by providing an existing
-bearer token (JWT access token). This is useful when you have obtained a token through other means,
-such as from a managed identity, federated credential, or external token acquisition process.
-
-The function parses the JWT token to extract tenant ID, application information, permissions (roles),
-and expiration time. It then configures the BlackCat session to use this token for subsequent
-API calls to the specified endpoint.
-
-This function is particularly useful for:
-- Using tokens from Azure Managed Identities (UAMI/System-assigned)
-- Federated identity credential scenarios (GitHub OIDC, etc.)
-- Token extraction from external authentication flows
-- Testing with pre-acquired tokens
-- Multi-cloud and multi-endpoint scenarios
+Authenticates to Azure APIs using an existing bearer token from managed identities or external sources.
 
 .PARAMETER AccessToken
 The JWT bearer token for Azure APIs. This should be a complete JWT string, base64-encoded string,

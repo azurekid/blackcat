@@ -131,17 +131,7 @@ function Get-FederatedIdentityCredential {
         Retrieves federated identity credentials configured on Azure User Assigned Managed Identities.
 
     .DESCRIPTION
-        The `Get-FederatedIdentityCredential` function queries Azure Resource Manager to retrieve
-        federated identity credentials (FICs) configured on User Assigned Managed Identities (UAMIs).
-        
-        Federated identity credentials establish trust relationships between managed identities and
-        external identity providers like GitHub Actions, enabling workload identity federation without
-        storing secrets.
-
-        This function is valuable for security assessments to identify:
-        - Which managed identities have external trust relationships
-        - What GitHub repositories or other OIDC providers can authenticate as the managed identity
-        - Potential attack paths via federated credential abuse
+        Retrieves federated identity credentials configured on User Assigned Managed Identities via ARM.
 
     .PARAMETER Name
         The name of a specific User Assigned Managed Identity to query.

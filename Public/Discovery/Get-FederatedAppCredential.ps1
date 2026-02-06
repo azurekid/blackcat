@@ -100,9 +100,7 @@ function Get-FederatedAppCredential {
 Retrieves federated identity credentials for a specified Microsoft Entra application.
 
 .DESCRIPTION
-The `Get-FederatedAppCredential` function retrieves federated identity credentials associated with a Microsoft Entra application. You can specify the application using its Object ID or Application ID (GUID). If the Application ID is provided, the function resolves it to the corresponding Object ID before retrieving the credentials.
-
-The function now provides enhanced output with emoji-styled formatting, including the application name that contains the credentials
+Retrieves federated identity credentials for Entra applications via Object or App ID.
 
 .PARAMETER ObjectId
 The Object ID (GUID) of the Microsoft Entra application. This parameter must match the pattern of a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).

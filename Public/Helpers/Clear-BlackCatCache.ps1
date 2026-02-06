@@ -64,8 +64,7 @@ function Clear-BlackCatCache {
         Clears the cache used by BlackCat functions.
 
     .DESCRIPTION
-        This function allows you to clear cached API results from Microsoft Graph API and Azure Batch calls.
-        You can clear specific cache entries by key, clear all cached data, or clear specific cache types.
+        Clears cached API results from Microsoft Graph and Azure Batch calls by type.
 
     .PARAMETER Key
         The specific cache key to clear. If not specified, use -All to clear everything.

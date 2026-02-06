@@ -184,9 +184,7 @@ function Select-AzureContext {
         Lists and selects Azure PowerShell contexts.
 
     .DESCRIPTION
-        Lists available Azure contexts and allows switching between them using friendly names, 
-        index numbers, subscription names, or usernames. Provides tab completion and partial
-        name matching for easier context selection.
+        Lists Azure contexts and switches between them using friendly names or index numbers.
 
     .PARAMETER List
         Switch parameter to list all available contexts (default behavior).

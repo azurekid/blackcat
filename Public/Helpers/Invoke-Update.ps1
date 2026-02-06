@@ -45,7 +45,7 @@ function Invoke-Update {
         Downloads and updates helper files from a specified repository.
 
     .DESCRIPTION
-        The Invoke-Update function downloads a set of predefined helper files from a specified repository URL and saves them to a local directory. This function is useful for keeping local helper files up-to-date with the latest versions available in the repository.
+        Downloads predefined helper files from repository URL and saves to local directory.
 
     .PARAMETER Repository
         Specifies the base URL of the repository from which to download the helper files. The default value is 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/src/Helpers/'.

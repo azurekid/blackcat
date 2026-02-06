@@ -141,10 +141,7 @@ function Read-SASToken {
         Reads and processes the information from a Shared Access Signature (SAS) token or URI.
 
     .DESCRIPTION
-        The Read-SASToken function reads and processes the information from a Shared Access Signature (SAS) token.
-        It automatically detects whether the input is a full SAS URI or just a SAS token string.
-        It extracts various properties such as the storage URI, protocol, start time, expiry time, 
-        service version, permissions, IP address, signature, resource types, storage resource, and services.
+        Parses SAS URI or token to extract properties including permissions and signature.
 
     .PARAMETER InputString
         The SAS URI or SAS token string to parse. The function automatically detects the input type:

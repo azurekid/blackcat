@@ -110,9 +110,7 @@ function Get-StorageContainerList {
 Retrieves a list of storage containers from Azure Storage Accounts.
 
 .DESCRIPTION
-The `Get-StorageContainerList` function retrieves a list of storage containers from Azure Storage Accounts.
-It supports filtering by resource group and public access level. The function uses Azure REST API to fetch
-the container details and supports parallel processing for improved performance.
+Retrieves storage containers from Azure Storage Accounts with access level filtering.
 
 .PARAMETER Id
 Specifies the resource ID of the storage account(s). If not provided, the function will retrieve all storage

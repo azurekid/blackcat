@@ -541,10 +541,7 @@ function Get-EntraRoleMember {
     Gets all members of a specified Microsoft Entra ID (Azure AD) role.
 
 .DESCRIPTION
-    The Get-EntraRoleMember function identifies all members (users, groups, or service principals)
-    assigned to a specific Entra ID role. It first identifies the role definition by name or ID,
-    then finds all assignments for that role, and determines the principal type and details
-    for each assignment.
+    Identifies members assigned to a specific Entra ID role with optional group expansion.
 
 .PARAMETER RoleName
     Specifies the display name of the Entra ID role to query. This parameter has tab completion

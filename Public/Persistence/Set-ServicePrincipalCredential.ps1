@@ -207,7 +207,7 @@ function Set-ServicePrincipalCredential {
 Manages credentials (passwords and certificates) for Microsoft Entra applications and service principals.
 
 .DESCRIPTION
-The Set-ServicePrincipalCredential function allows you to add, remove, and manage credentials for Microsoft Entra applications and service principals. It supports both password credentials and certificate credentials, and can work with either the applications or servicePrincipals endpoints.
+Adds, removes, and manages password/certificate credentials for Entra applications and service principals.
 
 .PARAMETER ObjectId
 The Object ID (GUID) of the Microsoft Entra application or service principal. This parameter is mandatory and must match the pattern of a valid GUID.

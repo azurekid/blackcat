@@ -166,9 +166,7 @@ function Invoke-AzBatch {
         Invokes Azure Resource Graph queries using batch requests with caching support.
 
     .DESCRIPTION
-        This function sends batch requests to Azure Resource Graph API to query Azure resources.
-        It supports filtering by resource type, name, and custom filters. The function includes
-        automatic pagination, caching for improved performance, and comprehensive error handling.
+        Sends batch requests to Azure Resource Graph API with filtering and pagination.
 
     .PARAMETER ResourceType
         The Azure resource type to filter by (e.g., 'Microsoft.Storage/storageAccounts').

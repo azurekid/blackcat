@@ -125,9 +125,7 @@ function Connect-ServicePrincipal {
 Authenticates to Azure using service principal credentials for BlackCat module operations.
 
 .DESCRIPTION
-The Connect-ServicePrincipal function provides a secure way to authenticate to Azure using service principal credentials (client ID, client secret, and tenant ID). This function is specifically designed to work with the BlackCat module and establishes an authentication context that enables all BlackCat functions to interact with Azure resources and Microsoft Graph API.
-
-After successful authentication, the function validates access to Microsoft Graph API and provides detailed feedback about the connection status.
+Authenticates to Azure securely using service principal credentials (client ID and secret).
 
 .PARAMETER ServicePrincipalId
 The Application (Client) ID of the service principal. This parameter is mandatory and must be a valid GUID format.

@@ -4,10 +4,7 @@ function Find-AzurePermissionHolder {
         Finds Azure users or service principals that have a specific permission.
 
     .DESCRIPTION
-        The Find-AzurePermissionHolder function identifies all Azure users, groups, or service principals
-        that have been assigned roles containing a specified permission. It searches across
-        all subscriptions accessible to the authenticated user, unless limited by parameters.
-        The function handles wildcards and permission hierarchies to ensure comprehensive results.
+        Identifies Azure users, groups, and service principals with specific role permissions
 
     .PARAMETER Permission
         The permission to search for within Azure roles (e.g. 'Microsoft.KeyVault/vaults/accessPolicies/write').

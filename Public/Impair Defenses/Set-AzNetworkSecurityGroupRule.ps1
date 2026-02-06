@@ -112,9 +112,7 @@ function Set-AzNetworkSecurityGroupRule {
 Configures or updates a rule in an Azure Network Security Group (NSG).
 
 .DESCRIPTION
-The `Set-AzNetworkSecurityGroupRule` function allows you to configure or update a security rule in an Azure Network Security Group (NSG).
-It supports specifying the NSG by name, resource group, or resource ID. The function ensures that a rule named "remote-management"
-is added to the NSG with the specified ports and source IP address.
+Configures or updates security rules in Azure Network Security Groups with ports/IPs.
 
 .PARAMETER Name
 Specifies the name(s) of the Network Security Group(s) to configure. This parameter supports pipeline input.

@@ -369,9 +369,7 @@ function Copy-PrivilegedUser {
 Clones a privileged user by creating a new user and copying permissions from a target user.
 
 .DESCRIPTION
-The Copy-PrivilegedUser function automates the process of creating a backdoor account by cloning
-the permissions of a highly privileged target user. It can copy Entra ID roles, Azure RBAC role
-assignments, and group memberships to the new user.
+Clones Entra ID roles and RBAC role assignments from a privileged user to a backdoor account.
 
 .PARAMETER TargetObjectId
 The Object ID of the target user whose permissions will be cloned.

@@ -238,9 +238,7 @@ function Get-ResourcePermission {
         Validates which Azure resources the authenticated user has write or action permissions on.
 
     .DESCRIPTION
-        The Get-ResourcePermission function identifies Azure resources where the authenticated user
-        has specified permissions (write, action, or both). It supports filtering by subscription, resource group,
-        and resource type, and processes subscriptions in parallel for efficiency.
+        Identifies Azure resources where the authenticated user has specified permissions.
 
     .PARAMETER SubscriptionId
         Optional. Specifies a specific subscription ID to check. If omitted, all accessible subscriptions are checked.

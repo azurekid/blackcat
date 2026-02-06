@@ -270,9 +270,7 @@ function Get-PrivilegedApp {
     Retrieves Microsoft Entra ID (Azure AD) applications with privileged permissions.
 
 .DESCRIPTION
-    The Get-PrivilegedApp function identifies and returns Enterprise Applications that have been granted high-risk
-    permissions in Microsoft Entra ID. It specifically looks for applications with permissions such as Directory.ReadWrite.All,
-    PrivilegedAccess.ReadWrite.AzureAD, and other sensitive permissions that could pose security risks.
+    Identifies Enterprise Applications granted high-risk permissions in Microsoft Entra ID.
 
 .PARAMETER ThrottleLimit
     Specifies the maximum number of concurrent operations that can be performed in parallel.

@@ -319,7 +319,7 @@ function Get-KeyVaultSecret {
 Retrieves secrets from specified Azure Key Vaults.
 
 .DESCRIPTION
-The Get-KeyVaultSecret function retrieves secrets from the specified Azure Key Vaults. It supports parallel processing to handle multiple vaults and secrets efficiently with beautiful emoji progress indicators and comprehensive output formatting options.
+Retrieves secrets from specified Azure Key Vaults with parallel processing and emoji feedback indicators.
 
 .PARAMETER Name
 An array of Key Vault names from which to retrieve secrets. This parameter is optional and accepts pipeline input by property name. If not specified, all available Key Vaults will be processed.

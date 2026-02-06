@@ -71,7 +71,7 @@ function ConvertFrom-JWT {
 Converts a JSON Web Token (JWT) from Base64 encoding to a PowerShell object.
 
 .DESCRIPTION
-The ConvertFrom-JWT function takes a Base64-encoded JWT as input and converts it into a PowerShell object. It splits the JWT into its header and payload parts, decodes them from Base64, and converts them into JSON objects. It also extracts specific properties from the payload and returns them as properties of the resulting object.
+Converts Base64-encoded JWT to PowerShell object with decoded header and payload properties.
 
 .PARAMETER Base64JWT
 The Base64-encoded JWT to convert.

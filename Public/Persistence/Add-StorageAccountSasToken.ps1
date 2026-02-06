@@ -58,7 +58,7 @@ function Add-StorageAccountSasToken {
         This function adds a SAS token to a specified storage account using the REST API.
 
     .DESCRIPTION
-        The Add-StorageAccountSasToken function makes a POST request to add a SAS token to a specified storage account using the provided session variables and authentication headers. It handles errors and logs messages accordingly.
+        Adds a SAS token to a specified Azure storage account for delegation of access.
 
     .PARAMETER Name
         The name parameter is a mandatory string that specifies the name of the storage account.

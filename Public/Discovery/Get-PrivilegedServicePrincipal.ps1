@@ -384,9 +384,7 @@ function Get-PrivilegedServicePrincipal {
         Discovers service principals with privileged permissions in Entra ID.
 
     .DESCRIPTION
-        This function identifies service principals that have been granted privileged permissions in Entra ID.
-        It checks both application permissions (app roles) and delegated permissions (OAuth2 scopes) to identify
-        service principals with high-risk access. Permissions are categorized by criticality level (Critical, High, Medium, Low).
+        Identifies service principals with privileged permissions in Entra ID by criticality.
 
     .PARAMETER Criticality
         Filter results by permission criticality level.

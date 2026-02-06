@@ -552,9 +552,7 @@ function Get-RoleAssignment {
         Retrieves Azure Role-Based Access Control (RBAC) role assignments for the authenticated context.
 
     .DESCRIPTION
-        The `Get-RoleAssignment` function retrieves RBAC role assignments across Azure subscriptions for the authenticated user or specified criteria.
-        It supports filtering by principal type, object ID, subscription ID, and custom roles. The function uses parallel processing to optimize performance
-        when querying multiple subscriptions, with a configurable throttle limit to respect API rate limits.
+        Retrieves RBAC role assignments across Azure subscriptions with parallel processing.
 
     .PARAMETER CurrentUser
         Filters results to show role assignments for the currently authenticated user. This parameter is a switch.

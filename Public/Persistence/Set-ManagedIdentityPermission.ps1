@@ -232,14 +232,7 @@ function Set-ManagedIdentityPermission {
 Assigns or removes a specific app role to/from a managed identity (service principal) in Azure using Microsoft Graph API.
 
 .DESCRIPTION
-The `Set-ManagedIdentityPermission` function assigns or removes an app role to/from a service principal using the Microsoft Graph API.
-It supports specifying the service principal ID, resource ID, app role ID, and app role name. If the app role ID is not provided, it will
-be resolved based on the app role name.
-
-Use the -Remove switch to delete an existing app role assignment instead of adding one.
-
-The function includes intelligent tab completion for the appRoleName parameter, showing all available Microsoft Graph application permissions.
-If the BlackCat session data is not available, it falls back to common permissions.
+Assigns or removes app roles to/from service principals using Microsoft Graph API.
 
 .PARAMETER servicePrincipalId
 The unique identifier (GUID) of the service principal to which the app role will be assigned. This parameter is mandatory.

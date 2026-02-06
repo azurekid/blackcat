@@ -701,23 +701,7 @@ function Get-AzResourceSecretList {
         Retrieves secrets from various Azure resources in the current context.
 
     .DESCRIPTION
-        The Get-AzResourceSecretList function collects secrets from different Azure resources including:
-        - Key Vault secrets (retrieves actual secret values using data plane API) - Critical severity
-        - Storage Account keys (including Kerberos keys where available) - High severity
-        - App Service application settings and connection strings - Medium severity
-        - Function App keys (for function apps) - Medium severity
-        - Service Bus namespace authorization rule keys - High severity
-        - Event Hub namespace authorization rule keys - High severity
-        - Notification Hub namespace authorization rule keys - High severity
-        - Relay namespace authorization rule keys - High severity
-        - Cosmos DB keys (both primary and read-only) - High severity
-        - Container Registry credentials - Medium severity
-        - Search Service admin keys - Medium severity
-        - PostgreSQL Flexible Server credentials - Medium severity
-        - MySQL Flexible Server credentials - Medium severity
-        - Redis Cache keys - High severity
-        - API Management tenant access secrets - Medium severity
-        - IoT Hub keys - Medium severity
+        Collects secrets from multiple Azure resources including Key Vault, Storage, Cosmos DB, etc.
         - SignalR Service keys - Medium severity
         - Cognitive Services keys - Medium severity
         - Azure Maps keys - Medium severity
