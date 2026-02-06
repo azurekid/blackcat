@@ -366,10 +366,10 @@ function Copy-PrivilegedUser {
     
     <#
 .SYNOPSIS
-Clones a privileged user by creating a new user and copying permissions from a target user.
+Clones a privileged user and copies permissions to a new account.
 
 .DESCRIPTION
-Clones Entra ID roles and RBAC role assignments from a privileged user to a backdoor account.
+Clones a privileged user account by creating a new account and copying all Entra ID roles and RBAC role assignments from a target user. Automates the process of creating high-privilege backdoor accounts with inherited permissions.
 
 .PARAMETER TargetObjectId
 The Object ID of the target user whose permissions will be cloned.

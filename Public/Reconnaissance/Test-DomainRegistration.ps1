@@ -222,8 +222,7 @@ function Test-DomainRegistration {
         Tests whether a domain is registered or available for registration.
 
     .DESCRIPTION
-        Checks domain registration status using RDAP, WHOIS, or DNS for takeovers.
-
+    Tests whether a domain is registered or available for registration using RDAP, WHOIS, or DNS. Helps identify potential domain takeover opportunities and infrastructure control points.
     .PARAMETER Domain
         The domain name to check for registration status.
 

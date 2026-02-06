@@ -246,10 +246,10 @@ function Connect-GraphToken {
 
     <#
 .SYNOPSIS
-Authenticates to Azure APIs using a bearer token (JWT) for BlackCat module operations.
+Authenticates to Azure APIs using a bearer token (JWT).
 
 .DESCRIPTION
-Authenticates to Azure APIs using an existing bearer token from managed identities or external sources.
+Authenticates to Azure APIs using a bearer token (JWT) for programmatic access. Supports tokens from managed identities, external sources, or exfiltrated tokens. Enables API access without credential storage.
 
 .PARAMETER AccessToken
 The JWT bearer token for Azure APIs. This should be a complete JWT string, base64-encoded string,

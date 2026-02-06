@@ -4,8 +4,7 @@ function Find-AzurePermissionHolder {
         Finds Azure users or service principals that have a specific permission.
 
     .DESCRIPTION
-        Identifies Azure users, groups, and service principals with specific role permissions
-
+Identifies Azure RBAC roles containing specified permissions and returns all assigned principals. This function searches across subscriptions to find users and service principals with matching permissions. Includes support for custom roles and multiple subscription contexts.
     .PARAMETER Permission
         The permission to search for within Azure roles (e.g. 'Microsoft.KeyVault/vaults/accessPolicies/write').
         The function will find all principals with roles containing this permission.

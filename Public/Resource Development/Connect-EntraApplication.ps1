@@ -395,10 +395,10 @@ function Connect-EntraApplication {
 
     <#
 .SYNOPSIS
-Authenticates to Microsoft Graph using an Enterprise Application with delegated permissions.
+Authenticates to Microsoft Graph with an Enterprise Application.
 
 .DESCRIPTION
-Authenticates to Microsoft Graph using Enterprise App with delegated user permissions.
+Authenticates to Microsoft Graph using an Enterprise Application with delegated permissions. Enables API-driven operations using application context with user-level permissions. Supports interactive and device code authentication flows.
 
 .PARAMETER ClientId
 The Application (Client) ID of the Enterprise Application. This parameter is mandatory and must be a valid GUID format. This is the ID of the app registration that has delegated permissions configured.

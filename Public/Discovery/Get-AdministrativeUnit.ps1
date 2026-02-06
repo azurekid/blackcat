@@ -86,9 +86,7 @@ function Get-AdministrativeUnit {
         Retrieves administrative units from Entra ID.
 
     .DESCRIPTION
-        The Get-AdministrativeUnit function retrieves administrative units from Microsoft Entra ID,
-        including their membership rules and optionally their members.
-
+Retrieves administrative units from Microsoft Entra ID with optional member enumeration. Administrative units scope role assignments to specific users/groups, limiting an admin's permissions. This function helps identify AU-scoped assignments and their membership.
     .PARAMETER AdministrativeUnit
         The display name or partial name of the administrative unit to search for.
 

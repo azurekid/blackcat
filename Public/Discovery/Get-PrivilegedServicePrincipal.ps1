@@ -381,11 +381,10 @@ function Get-PrivilegedServicePrincipal {
 
     <#
     .SYNOPSIS
-        Discovers service principals with privileged permissions in Entra ID.
+        Discovers service principals with privileged permissions.
 
     .DESCRIPTION
-        Identifies service principals with privileged permissions in Entra ID by criticality.
-
+Discovers service principals with privileged permissions in Entra ID by criticality level. This function identifies service principals assigned critical, high, or medium-risk roles that could be exploited for privilege escalation or lateral movement.
     .PARAMETER Criticality
         Filter results by permission criticality level.
         Valid values: Critical, High, Medium, Low, All

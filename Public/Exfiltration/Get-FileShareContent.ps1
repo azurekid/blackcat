@@ -309,10 +309,10 @@ function Get-DirectoryContents {
 
 <#
     .SYNOPSIS
-        Lists file shares or contents from an Azure Storage Account using SAS token or authenticated context.
+        Lists file shares or contents from an Azure Storage Account.
 
     .DESCRIPTION
-        Enumerates files/directories in Azure File Shares with SAS token or auth access.
+        Lists file shares or contents from an Azure Storage Account using SAS tokens or authenticated context. Enumerates directory structures and files in Azure File Shares. Useful for discovering and exfiltrating file-based data from storage services.
 
     .PARAMETER StorageAccountName
         The name of the Azure Storage Account (3-24 lowercase alphanumeric characters).

@@ -77,7 +77,7 @@ function Get-AppRolePermission {
 Retrieves the permissions for a specified Microsoft App Role.
 
 .DESCRIPTION
-Retrieves permissions associated with a specified Microsoft App Role with emoji feedback.
+Retrieves permissions associated with a specified Microsoft App Role. This function queries the session variables to look up the specific permissions granted by an app role, supporting both application and delegated permission types. Helpful for understanding what capabilities are granted by specific app roles in Azure AD.
 
 .PARAMETER appRoleId
 The unique identifier (GUID) of the App Role. Must match the expected GUID pattern.

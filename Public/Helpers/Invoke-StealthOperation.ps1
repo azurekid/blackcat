@@ -349,13 +349,7 @@ function Invoke-StealthOperation {
         Executes operations with configurable stealth timing delays.
 
     .DESCRIPTION
-        Invoke-StealthOperation processes input objects through a pipeline while applying
-        intelligent timing delays to avoid detection patterns. The function supports multiple
-        delay strategies including random intervals, progressive timing, business hours
-        simulation, and exponential backoff patterns.
-
-        Ideal for scenarios requiring rate limiting, anti-detection measures, or simulating
-        human-like interaction patterns in automated operations.
+        Processes input objects through a pipeline while applying intelligent timing delays to avoid detection patterns and simulate human-like behavior. Supports multiple delay strategies including random intervals, progressive timing, business hours simulation with geographic customization, and exponential backoff. Essential for rate limiting, anti-detection measures, and evading behavioral analysis.
 
     .PARAMETER InputObject
         Objects to process through the stealth pipeline. Accepts pipeline input.

@@ -96,34 +96,45 @@ function Show-BlackCatCommands {
                     Write-Verbose "Couldn't get help for $functionName, falling back to file parsing"
                 }
                 
-                # If help didn't work, parse the file manually
-                if ($description -eq "No description available") {
-                    $content = Get-Content -Path $fullFilePath -Raw
-                    
-                    # Special handling for Export-AzAccessToken.ps1
-                    if ($fileName -eq "Export-AzAccessToken") {
-                        $description = "The Export-AzAccessToken function retrieves access tokens for specified Azure resource types and exports them to a JSON file or publishes them to a secure sharing service."
+                # Always parse the file directly for more reliable extraction
+                # Prioritize SYNOPSIS as the default description
+                $content = Get-Content -Path $fullFilePath -Raw
+                $fileDescription = "No description available"
+                
+                # Special handling for Export-AzAccessToken.ps1
+                if ($fileName -eq "Export-AzAccessToken") {
+                    $fileDescription = "The Export-AzAccessToken function retrieves access tokens."
+                }
+                else {
+                    # Prioritize .SYNOPSIS as the default source
+                    if ($content -match '\.SYNOPSIS\s*\r?\n\s*(.*?)(?:\r?\n\s*\.|\r?\n\s*\r?\n|$)') {
+                        $fileDescription = $matches[1].Trim()
                     }
-                    # Look for .DESCRIPTION in a comment block
+                    # Fall back to .DESCRIPTION if SYNOPSIS not found
                     elseif ($content -match '<#(?:.|\n)*?\.DESCRIPTION\s*\r?\n\s*(.*?)(?:\r?\n\s*\.|\r?\n\s*\r?\n|\r?\n\s*#>|$)') {
-                        $description = $matches[1].Trim()
+                        $fileDescription = $matches[1].Trim()
                     }
                     # Try alternative pattern for help blocks
                     elseif ($content -match '\.DESCRIPTION\s*(.*?)(?:\r?\n\s*\.|\r?\n\s*\r?\n|$)') {
-                        $description = $matches[1].Trim()
+                        $fileDescription = $matches[1].Trim()
                     }
-                    # If no .DESCRIPTION found, try to find first comment that might serve as description
+                    # If neither found, try to find first comment that might serve as description
                     elseif ($content -match '#\s*(.*?)(\r?\n|$)') {
-                        $description = $matches[1].Trim()
+                        $fileDescription = $matches[1].Trim()
                     }
+                }
+                
+                # Use file-parsed description
+                if ($fileDescription -ne "No description available") {
+                    $description = $fileDescription
                 }
                 
                 # Clean up multi-line descriptions - replace newlines with spaces
                 $description = $description -replace '\s*\r?\n\s*', ' '
                 
-                # Truncate long descriptions
-                if ($description.Length -gt 80) {
-                    $description = $description.Substring(0, 79) + "..."
+                # Enforce 83-character limit (with "..." if truncated)
+                if ($description.Length -gt 83) {
+                    $description = $description.Substring(0, 80) + "..."
                 }
             }
 

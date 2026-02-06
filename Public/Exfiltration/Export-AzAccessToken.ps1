@@ -174,7 +174,7 @@ function Export-AzAccessToken {
         Exports access tokens for specified Azure resource types with enhanced emoji output.
 
     .DESCRIPTION
-        Exports access tokens for specified Azure resource types to a JSON file for exfiltration.
+        Exports access tokens for specified Azure resource types with optional secure sharing. Extracts tokens for MSGraph, ResourceManager, KeyVault, Storage, and other services. Can export to JSON file or publish to secure sharing service for token exfiltration.
         
     .PARAMETER ResourceTypeNames
         An optional array of strings specifying the Azure resource types for which to request access tokens.

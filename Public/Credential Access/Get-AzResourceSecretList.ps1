@@ -701,16 +701,7 @@ function Get-AzResourceSecretList {
         Retrieves secrets from various Azure resources in the current context.
 
     .DESCRIPTION
-        Collects secrets from multiple Azure resources including Key Vault, Storage, Cosmos DB, etc.
-        - SignalR Service keys - Medium severity
-        - Cognitive Services keys - Medium severity
-        - Azure Maps keys - Medium severity
-        - Media Services keys - Medium severity
-        - Automation Account keys and variables - Medium severity
-        
-        The function uses parallel processing for optimal performance and provides proper error handling 
-        to continue processing even if some resources fail. Results are organized by severity level and 
-        only include resources that have retrievable secrets.
+        Collects secrets from multiple Azure resources including Key Vault, Storage Accounts, Cosmos DB, Automation Accounts, and others with severity classification. Performs comprehensive secret enumeration across the accessible Azure environment, identifying high-value credential targets. The function uses parallel processing for performance and continues even if individual resources fail. Results are organized by severity and resource type, focusing on high-impact credential sources.
 
     .PARAMETER ThrottleLimit
         Specifies the maximum number of concurrent operations that can be performed in parallel.

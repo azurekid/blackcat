@@ -77,8 +77,7 @@ function Set-UserCredential {
         Sets or updates credentials for an Entra ID user.
 
     .DESCRIPTION
-        Updates password for an Entra ID user account for persistence or reset purposes.
-
+Updates the password for an Entra ID user account. Enables account takeover by resetting credentials to known values. Can be used for establishing persistent access to compromised or created accounts.
     .PARAMETER ObjectId
         The object ID of the user to update.
 

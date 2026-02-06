@@ -208,19 +208,10 @@ function Get-ServicePrincipalsPermission {
     }
     <#
 .SYNOPSIS
-Conducts a comprehensive security analysis of a service principal, including its permissions, roles, and relationships.
+Analyzes service principal permissions, roles, and relationships.
 
 .DESCRIPTION
-The Get-ServicePrincipalsPermission function performs an in-depth analysis of an Azure service principal's
-security posture and permissions. It provides a centralized view of critical information including:
-
-- Core identity details (DisplayName, ObjectId/ServicePrincipalId, AppId)
-- Application permissions with both IDs and human-readable names
-- Delegated OAuth2 permissions and their scopes
-- Group memberships and directory role assignments
-- Owned objects with their types and names
-- Security indicators like privileged role assignments
-- Exposure assessment through permissions assigned to others
+Analyzes service principal permissions, roles, and relationships. This function performs comprehensive security analysis of a service principal including its app roles, directory permissions, API permissions, and relationships to other resources. Useful for assessing service principal attack surface.
 
 .PARAMETER servicePrincipalId
 The unique identifier (GUID) of the service principal to analyze. This can be passed from the pipeline.

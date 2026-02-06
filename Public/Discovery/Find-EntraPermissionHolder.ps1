@@ -369,11 +369,10 @@ function Resolve-GroupMembers {
 function Find-EntraPermissionHolder {
     <#
     .SYNOPSIS
-        Find Microsoft Entra ID (Azure AD) principals that have a specific permission.
+        Find Entra ID principals that have a specific permission.
 
     .DESCRIPTION
-        Identifies Entra ID roles containing a permission and returns all assigned principals.
-
+Identifies Entra ID roles containing a specified permission and returns all assigned principals. This function supports wildcard permission patterns and can optionally resolve group memberships to show transitive assignments. Includes support for PIM eligible assignments and Administrative Unit scoped roles.
     .PARAMETER Permission
         The specific permission string to search for (e.g., "microsoft.directory/applications/create").
         The function supports exact permission strings as well as various wildcard patterns:

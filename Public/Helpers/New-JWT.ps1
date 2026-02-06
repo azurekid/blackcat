@@ -50,7 +50,7 @@ function New-JWT {
 Generates a new JSON Web Token (JWT) with the specified parameters.
 
 .DESCRIPTION
-Creates a new JWT token using HS256 algorithm with specified audience, issuer, and expiration.
+Creates a new JWT token using HS256 algorithm with specified audience, issuer, and expiration. Supports custom claims and signing keys for token generation. Useful for testing authentication mechanisms and creating test tokens for Azure services.
 
 .PARAMETER Audience
 Specifies the audience (aud) claim for the JWT. This is typically the intended recipient of the token.

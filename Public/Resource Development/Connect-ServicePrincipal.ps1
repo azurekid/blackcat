@@ -122,10 +122,10 @@ function Connect-ServicePrincipal {
 
     <#
 .SYNOPSIS
-Authenticates to Azure using service principal credentials for BlackCat module operations.
+Authenticates to Azure using service principal credentials.
 
 .DESCRIPTION
-Authenticates to Azure securely using service principal credentials (client ID and secret).
+Authenticates to Azure using service principal credentials (client ID and secret/certificate). Essential for programmatic access and automation using service principal identities. Supports configurable Azure environments and subscription selection.
 
 .PARAMETER ServicePrincipalId
 The Application (Client) ID of the service principal. This parameter is mandatory and must be a valid GUID format.

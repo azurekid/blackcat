@@ -130,7 +130,7 @@ function Set-AdministrativeUnit {
 Updates properties of an Azure Active Directory Administrative Unit.
 
 .DESCRIPTION
-Updates Azure AD Administrative Unit properties including name, membership type, rules.
+Updates Azure AD Administrative Unit properties including name, membership type, and rules. Administrative Units scope role assignments, affecting who has permissions over specific users/groups. Modifications can expand or contract the managed scope.
 
 .PARAMETER AdministrativeUnit
 The display name or alias of the administrative unit to update. Can also be specified as 'administrative-unit', 'displayName', 'display-name', or 'name'.

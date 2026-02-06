@@ -250,7 +250,7 @@ function Find-AzurePublicResource {
     Finds publicly accessible Azure resources.
 
 .DESCRIPTION
-    Discovers publicly accessible Azure resources by DNS enumeration and permutation testing.
+    Discovers publicly accessible Azure resources through DNS permutation and testing. Enumerates potential Azure resource names in specific patterns and tests each for public accessibility. Useful for identifying overlooked exposed resources and weak naming conventions.
 
 .PARAMETER Name
     The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.

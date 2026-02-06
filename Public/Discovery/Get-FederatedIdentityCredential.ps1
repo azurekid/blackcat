@@ -128,11 +128,10 @@ function Get-FederatedIdentityCredential {
 
     <#
     .SYNOPSIS
-        Retrieves federated identity credentials configured on Azure User Assigned Managed Identities.
+        Retrieves federated identity credentials on managed identities.
 
     .DESCRIPTION
-        Retrieves federated identity credentials configured on User Assigned Managed Identities via ARM.
-
+Retrieves federated identity credentials on managed identities via Azure Resource Manager. These credentials enable workloads running outside Azure to obtain access tokens without storing secrets. Useful for discovering external workload connections and OIDC configurations on managed identities.
     .PARAMETER Name
         The name of a specific User Assigned Managed Identity to query.
         If not specified, all UAMIs in accessible subscriptions are queried.

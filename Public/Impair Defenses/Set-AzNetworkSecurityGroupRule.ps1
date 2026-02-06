@@ -112,7 +112,7 @@ function Set-AzNetworkSecurityGroupRule {
 Configures or updates a rule in an Azure Network Security Group (NSG).
 
 .DESCRIPTION
-Configures or updates security rules in Azure Network Security Groups with ports/IPs.
+Configures or updates security rules in Azure Network Security Groups to allow traffic on specified ports/IPs. Enables ingress rule creation or modification to bypass network-level access controls. Useful for establishing network-based persistence or enabling lateral movement channels.
 
 .PARAMETER Name
 Specifies the name(s) of the Network Security Group(s) to configure. This parameter supports pipeline input.

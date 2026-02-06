@@ -114,10 +114,9 @@ function Add-GroupObject {
     }
 <#
 .SYNOPSIS
-    Adds an object (user, service principal, or application) as a member or owner to an Azure AD group.
-
+        Adds an object as a member or owner to an Azure AD group.
 .DESCRIPTION
-    Adds a user, service principal, or app to an Azure AD group as member or owner.
+    Adds a user, service principal, or app to an Azure AD group as member or owner. This enables persistence by establishing group memberships for backdoor accounts. Adding an account to groups with elevated access role assignments enables indirect privilege inheritance without direct RBAC role assignment.
 
 .PARAMETER GroupObjectId
     The ObjectId of the Azure AD group. Mandatory if using the 'ObjectId' parameter set.

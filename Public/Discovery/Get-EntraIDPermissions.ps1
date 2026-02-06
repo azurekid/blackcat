@@ -99,8 +99,7 @@ function Get-EntraIDPermissions {
     Retrieves and lists all permissions a user or group has in Microsoft Entra ID.
 
 .DESCRIPTION
-    Queries Microsoft Graph API for roles and permissions of Entra ID users or groups.
-
+Retrieves and lists all permissions a user or group has in Microsoft Entra ID. This function queries the Microsoft Graph API for Entra ID roles, group memberships, and their associated permissions. Provides a comprehensive view of a principal's effective permissions and role assignments in Entra ID.
 .PARAMETER ObjectId
     The unique Object ID of the user or group in Entra ID.
 

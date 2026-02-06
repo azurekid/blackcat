@@ -541,8 +541,7 @@ function Get-EntraRoleMember {
     Gets all members of a specified Microsoft Entra ID (Azure AD) role.
 
 .DESCRIPTION
-    Identifies members assigned to a specific Entra ID role with optional group expansion.
-
+Gets all members assigned to a specified Microsoft Entra ID role with optional group expansion. This function enumerates role members, showing their user type and status. When group expansion is enabled, resolves group memberships to identify all users with indirect role assignments.
 .PARAMETER RoleName
     Specifies the display name of the Entra ID role to query. This parameter has tab completion
     for all available Entra ID roles. Default is "Global Administrator".

@@ -524,10 +524,10 @@ function Find-DnsRecords {
     }
 <#
 .SYNOPSIS
-    Performs comprehensive DNS reconnaissance on target domains with enhanced provider support and subdomain enumeration capabilities.
+    Performs comprehensive DNS reconnaissance with advanced capabilities.
 
 .DESCRIPTION
-    Advanced DNS reconnaissance tool using multiple DoH providers and CNAME flattening detection.
+    Performs comprehensive DNS reconnaissance with advanced capabilities including multiple DoH providers and CNAME flattening detection. Supports subdomain enumeration and multi-provider failover for reliability. Essential for infrastructure mapping and identifying hosting patterns.
 
 .PARAMETER Domains
     One or more target domains to perform DNS reconnaissance on.

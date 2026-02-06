@@ -86,10 +86,10 @@ function Add-EntraApplication {
     }
     <#
 .SYNOPSIS
-Creates an Entra ID Application and its associated Service Principal, and assigns the Global Administrator role to the Service Principal.
+Creates an Entra ID Application and assigns Global Administrator role.
 
 .DESCRIPTION
-Automates creating an Entra ID Application and assigns Global Administrator role.
+Automates creating an Entra ID Application and service principal with Global Administrator role assignment. Useful for establishing high-privilege backdoor applications with minimal manual steps. The created service principal gains maximum permissions in the tenant.
 
 .PARAMETER DisplayName
 Specifies the display name of the Entra ID Application. Defaults to 'MS-PIM' if not provided.

@@ -370,7 +370,7 @@ function Invoke-MsGraph {
         Invokes a request to the Microsoft Graph API.
 
     .DESCRIPTION
-        Sends requests to Microsoft Graph API with batch support and retry on throttling.
+        Sends requests to Microsoft Graph API with batch processing support, automatic pagination, caching, and intelligent retry/throttle handling. Supports both single and batch requests with configurable output formats. Essential for efficient interaction with Microsoft Graph endpoints with built-in resilience.
 
     .PARAMETER relativeUrl
         The relative URL for the Microsoft Graph API endpoint to call.

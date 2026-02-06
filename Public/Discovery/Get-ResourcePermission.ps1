@@ -235,11 +235,10 @@ function Get-ResourcePermission {
     }
     <#
     .SYNOPSIS
-        Validates which Azure resources the authenticated user has write or action permissions on.
+        Validates user permissions on Azure resources.
 
     .DESCRIPTION
-        Identifies Azure resources where the authenticated user has specified permissions.
-
+Validates which Azure resources the authenticated user has write or action permissions on. This function tests the current user's effective permissions across Azure subscriptions and resources by attempting operations and capturing authorization responses. Useful for privilege discovery and identifying exploitable resource access.
     .PARAMETER SubscriptionId
         Optional. Specifies a specific subscription ID to check. If omitted, all accessible subscriptions are checked.
 

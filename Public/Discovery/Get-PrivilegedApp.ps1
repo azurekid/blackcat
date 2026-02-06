@@ -267,11 +267,10 @@ function Get-PrivilegedApp {
     }
     <#
 .SYNOPSIS
-    Retrieves Microsoft Entra ID (Azure AD) applications with privileged permissions.
+    Retrieves Entra ID applications with privileged permissions.
 
 .DESCRIPTION
-    Identifies Enterprise Applications granted high-risk permissions in Microsoft Entra ID.
-
+Retrieves Entra ID applications with privileged permissions. This function identifies Enterprise Applications (service principals) granted high-risk permissions that could be leveraged for privilege escalation or lateral movement.
 .PARAMETER ThrottleLimit
     Specifies the maximum number of concurrent operations that can be performed in parallel.
     Default value is 1000.
