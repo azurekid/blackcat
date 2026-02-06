@@ -59,6 +59,7 @@ function Invoke-BlackCat {
             }
 
             # Set the subscription from AzContext
+            $script:SessionVariables.armUri  = 'https://management.azure.com'
             $script:SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($script:SessionVariables.subscriptionId)"
             $script:SessionVariables.UserAgent = $randomUserAgent
 

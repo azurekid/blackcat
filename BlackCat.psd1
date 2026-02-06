@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.32.0'
+    ModuleVersion     = '0.33.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -76,6 +76,7 @@
         'Write-CacheTypeStats',
 
         # Impair Defenses
+        'Disable-DiagnosticSetting',
         'Set-AzNetworkSecurityGroupRule',
 
         # Initial Access
@@ -182,6 +183,7 @@
         'Public\Helpers\Get-UserAgentStatus.ps1',
 
         # Impair Defenses
+        'Public\Impair Defenses\Disable-DiagnosticSetting.ps1',
         'Public\Impair Defenses\Set-AzNetworkSecurityGroupRule.ps1',
 
         # Persistence

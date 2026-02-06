@@ -375,6 +375,36 @@ MITRE ATT&CK references (if applicable)
 
 ## 9. Coding Standards
 
+### No Hardcoded Endpoint URLs
+
+**NEVER hardcode Azure endpoint URLs in functions.** Use `$script:SessionVariables` which are set by `Invoke-BlackCat` during initialization.
+
+Available session variables:
+
+| Variable | Value | Use For |
+|----------|-------|---------|
+| `$script:SessionVariables.armUri` | `https://management.azure.com` | ARM API calls (bare endpoint) |
+| `$script:SessionVariables.baseUri` | `https://management.azure.com/subscriptions/{id}` | Subscription-scoped ARM calls |
+| `$script:SessionVariables.graphUri` | `https://graph.microsoft.com/beta` | Microsoft Graph API calls |
+| `$script:SessionVariables.batchUri` | Resource Graph batch endpoint | Azure Resource Graph queries |
+| `$script:SessionVariables.userAgent` | `BlackCat/{version} PowerShell Client` | User-Agent header |
+| `$script:SessionVariables.tenantId` | Current tenant GUID | Tenant identification |
+| `$script:SessionVariables.subscriptionId` | Current subscription GUID | Subscription identification |
+| `$script:authHeader` | `@{ Authorization = 'Bearer ...' }` | ARM authentication header |
+| `$script:graphHeader` | `@{ Authorization = 'Bearer ...' }` | Graph authentication header |
+
+In `-Parallel` blocks, access these via `$using:script:SessionVariables`:
+
+```powershell
+$items | ForEach-Object -Parallel {
+    $sv        = $using:script:SessionVariables
+    $auth      = $using:script:authHeader
+    $userAgent = $sv.userAgent
+    $base      = $sv.armUri
+    # ... use $base, $auth, $userAgent
+} -ThrottleLimit $ThrottleLimit
+```
+
 ### Line Length
 
 - **Maximum line length: 80 characters** (with rare exceptions for long URLs)

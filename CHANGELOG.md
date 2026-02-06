@@ -4,6 +4,27 @@
 
 # CHANGELOG
 
+## v0.33.0 [2026-02-06] 🛡️ Impair Defenses: Disable or Modify Cloud Logs
+
+_New function to enumerate, disable, or remove Azure diagnostic settings_
+
+**New Function: `Disable-DiagnosticSetting`**
+* Enumerates Azure Monitor diagnostic settings on target resources
+* **List mode** (default): shows active log/metric categories and destinations (Log Analytics, Storage, Event Hub)
+* **Disable mode** (`-Disable`): sets enabled = false on log and/or metric categories, preserving the setting
+* **Remove mode** (`-Remove`): deletes diagnostic settings entirely from resources
+* **Category filter** (`-Category Logs|Metrics|All`): selectively disable only logs or metrics
+* Supports resource discovery via `Invoke-AzBatch` with `-ResourceType` and `-Name`
+* Supports direct targeting via `-Id` for specific resource IDs
+* Parallel processing with configurable `-ThrottleLimit`
+* MITRE ATT&CK: T1562.008 - Impair Defenses: Disable or Modify Cloud Logs
+* Example: `Disable-DiagnosticSetting -ResourceType 'Microsoft.KeyVault/vaults' -Disable`
+
+**Module Enhancements:**
+* Updated FunctionsToExport and FileList in BlackCat.psd1
+
+---
+
 ## v0.30.0 [2026-02-02] 📁 Azure File Share Enumeration & MITRE ATT&CK Alignment
 
 _New File Share discovery capabilities and improved function organization_
