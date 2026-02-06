@@ -1,9 +1,14 @@
 function Connect-GraphToken {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [Alias('BearerToken', 'Token', 'JWT')]
         [string]$AccessToken,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateScript({ Test-Path $_ -PathType Leaf })]
+        [Alias('Path')]
+        [string]$FilePath,
 
         [Parameter(Mandatory = $false)]
         [switch]$asBase64,
@@ -28,6 +33,19 @@ function Connect-GraphToken {
 
     process {
         try {
+            # Handle file input — read content and auto-detect compressed format
+            if ($FilePath) {
+                Write-Verbose "Reading token from file: $FilePath"
+                $AccessToken = (Get-Content -Path $FilePath -Raw).Trim()
+                if (-not $asBase64) {
+                    $asCompressed = $true
+                }
+            }
+
+            if ([string]::IsNullOrWhiteSpace($AccessToken)) {
+                throw "No token provided. Use -AccessToken or -FilePath to supply a token."
+            }
+
             # Decode token based on encoding format
             $decodedToken = $AccessToken
             if ($asCompressed) {
@@ -247,8 +265,14 @@ This function is particularly useful for:
 - Multi-cloud and multi-endpoint scenarios
 
 .PARAMETER AccessToken
-The JWT bearer token for Azure APIs. This should be a complete JWT string or base64-encoded string.
-Can be obtained from various sources like Get-AzAccessToken, OIDC token exchange, etc.
+The JWT bearer token for Azure APIs. This should be a complete JWT string, base64-encoded string,
+or GZip compressed + Base64 string. Can be obtained from various sources like Get-AzAccessToken,
+OIDC token exchange, etc. Either this or -FilePath must be provided.
+
+.PARAMETER FilePath
+Path to a file containing the token. Typically the .gz.b64 artifact downloaded from the GitHub
+Actions workflow. The file content is read automatically and treated as GZip + Base64 compressed
+unless -asBase64 is specified.
 
 .PARAMETER asBase64
 Switch parameter to indicate that the AccessToken parameter contains a base64-encoded token.
@@ -293,6 +317,12 @@ $compressed = "H4sIAAAAAAAAA..."
 Connect-GraphToken -AccessToken $compressed -asCompressed -EndpointType MSGraph
 
 This example decompresses a GZip + Base64 encoded token (as output by the GitHub Actions workflow) and connects to Microsoft Graph.
+
+.EXAMPLE
+# Connect using the downloaded artifact file from the GitHub Actions workflow
+Connect-GraphToken -FilePath ./token.gz.b64 -EndpointType MSGraph
+
+This example reads the compressed token from the downloaded artifact file and connects to Microsoft Graph.
 
 .EXAMPLE
 # Connect to Azure Resource Manager (ARM)
