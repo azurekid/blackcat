@@ -9,6 +9,9 @@ function Connect-GraphToken {
         [switch]$asBase64,
 
         [Parameter(Mandatory = $false)]
+        [switch]$asCompressed,
+
+        [Parameter(Mandatory = $false)]
         [ValidateSet('Azure', 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid', 'EventHub',
                      'IoTHub', 'KeyVault', 'LogAnalytics', 'MSGraph', 'RedisCache', 'SQLDatabase',
                      'ServiceBus', 'Storage', 'Synapse', 'Other')]
@@ -25,9 +28,23 @@ function Connect-GraphToken {
 
     process {
         try {
-            # Decode base64 token if requested
+            # Decode token based on encoding format
             $decodedToken = $AccessToken
-            if ($asBase64) {
+            if ($asCompressed) {
+                Write-Verbose "Decompressing GZip + Base64 encoded token"
+                try {
+                    $compressedBytes = [System.Convert]::FromBase64String($AccessToken)
+                    $memoryStream    = [System.IO.MemoryStream]::new($compressedBytes)
+                    $gzipStream      = [System.IO.Compression.GZipStream]::new($memoryStream, [System.IO.Compression.CompressionMode]::Decompress)
+                    $reader          = [System.IO.StreamReader]::new($gzipStream)
+                    $decodedToken    = $reader.ReadToEnd()
+                    $reader.Close()
+                }
+                catch {
+                    throw "Failed to decompress token. Ensure the value is a valid GZip + Base64 string: $($_.Exception.Message)"
+                }
+            }
+            elseif ($asBase64) {
                 Write-Verbose "Decoding base64-encoded token"
                 try {
                     $decodedToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($AccessToken))
@@ -237,6 +254,11 @@ Can be obtained from various sources like Get-AzAccessToken, OIDC token exchange
 Switch parameter to indicate that the AccessToken parameter contains a base64-encoded token.
 When specified, the function will decode the base64 string before processing.
 
+.PARAMETER asCompressed
+Switch parameter to indicate that the AccessToken parameter contains a GZip compressed + Base64
+encoded token. This is the format produced by the exploit.yml GitHub Actions workflow, which
+compresses the token to avoid log truncation. The function will decompress and decode automatically.
+
 .PARAMETER EndpointType
 The type of Azure endpoint to authenticate against.
 Acceptable values are: 'Azure' (ARM), 'Batch', 'Cache', 'CosmosDB', 'DataLake', 'DevOps', 'EventGrid',
@@ -264,6 +286,13 @@ $b64Token = "ZXlKMGVYQWlPaUpLVjFRaUxDSnViMjVqWlNJNklt..."
 Connect-GraphToken -AccessToken $b64Token -asBase64
 
 This example decodes a base64-encoded token and uses it to connect to Microsoft Graph.
+
+.EXAMPLE
+# Connect using a GZip compressed token from the exploit.yml workflow
+$compressed = "H4sIAAAAAAAAA..."
+Connect-GraphToken -AccessToken $compressed -asCompressed -EndpointType MSGraph
+
+This example decompresses a GZip + Base64 encoded token (as output by the GitHub Actions workflow) and connects to Microsoft Graph.
 
 .EXAMPLE
 # Connect to Azure Resource Manager (ARM)
