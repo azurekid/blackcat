@@ -550,10 +550,113 @@ Before marking code as complete, verify:
 - [ ] FileList updated in `BlackCat.psd1` (if new public function)
 - [ ] FunctionsToExport updated in `BlackCat.psd1` (if new public function)
 - [ ] Module manifest syntax is valid
+- [ ] **Tests created in `Tests/` directory** (if new public function)
+- [ ] **Tests verify core functionality and edge cases**
 
 ---
 
-## 15. Example Complete Function
+## 15. Testing Requirements
+
+### Test File Creation (REQUIRED for New Public Functions)
+
+Every new public function MUST include comprehensive tests. Tests should be created in the `Tests/` directory.
+
+### Test File Location & Naming
+
+```
+Tests/<FunctionName>.Tests.ps1
+```
+
+Example:
+```
+Tests/Get-ExampleAzureUsers.Tests.ps1
+```
+
+### Test Template
+
+```powershell
+BeforeAll {
+    # Import the module
+    Import-Module ./BlackCat.psd1 -Force
+}
+
+Describe 'Get-ExampleAzureUsers' {
+    Context 'When called with valid parameters' {
+        It 'Returns user objects' {
+            # Arrange
+            $params = @{
+                Filter = "accountEnabled eq true"
+            }
+            
+            # Act
+            $result = Get-ExampleAzureUsers @params -ErrorAction Stop
+            
+            # Assert
+            $result | Should -Not -BeNullOrEmpty
+        }
+    }
+    
+    Context 'When called without parameters' {
+        It 'Returns default behavior' {
+            # Arrange & Act
+            $result = Get-ExampleAzureUsers
+            
+            # Assert
+            $result | Should -Not -BeNullOrEmpty
+        }
+    }
+    
+    Context 'When OutputFormat is specified' {
+        It 'Returns Object format by default' {
+            $result = Get-ExampleAzureUsers -OutputFormat Object
+            $result | Should -BeOfType [PSCustomObject]
+        }
+    }
+    
+    Context 'Error handling' {
+        It 'Handles null input gracefully' {
+            { Get-ExampleAzureUsers -Filter $null } | Should -Not -Throw
+        }
+    }
+}
+```
+
+### Test Coverage Expectations
+
+Tests MUST cover:
+- ✅ **Core Functionality**: Happy path scenarios
+- ✅ **Parameters**: Valid and invalid parameter combinations
+- ✅ **Error Handling**: Null/empty inputs, API failures
+- ✅ **Output Formats**: Object, JSON, CSV, Table (if applicable)
+- ✅ **Edge Cases**: Large datasets, special characters, boundary conditions
+- ✅ **Mocking**: Use Pester mocks to avoid actual API calls
+
+### Running Tests
+
+```powershell
+# Run all tests
+Invoke-Pester -Path Tests/
+
+# Run specific test file
+Invoke-Pester -Path Tests/Get-ExampleAzureUsers.Tests.ps1
+
+# Run with coverage analysis
+Invoke-Pester -Path Tests/ -CodeCoverage Public/
+```
+
+### Test Quality Standards
+
+- Tests should use **Arrange-Act-Assert** pattern
+- Mock external API calls to avoid dependencies
+- Use **descriptive test names** that explain what is being tested
+- Avoid hardcoding values - use variables or test data
+- Tests should be **deterministic** (same result every run)
+- Include **negative tests** for error conditions
+- Each `It` block should test one specific behavior
+
+---
+
+## 16. Example Complete Function
 
 ```powershell
 function Get-ExampleAzureUsers {
@@ -689,7 +792,7 @@ function Get-ExampleAzureUsers {
 
 ---
 
-## 16. Changelog Entry for This Update
+## 17. Changelog Entry for This Update
 
 When creating new functions or features, ALWAYS update `CHANGELOG.md`:
 
@@ -717,14 +820,16 @@ _New functions and improvements for Azure user enumeration_
 
 1. **ALWAYS update version number** in `BlackCat.psd1` when making changes
 2. **ALWAYS add changelog entry** to `CHANGELOG.md` (at the top with current date)
-3. **SYNOPSIS must be ≤ 83 characters** - this is enforced
-4. **Every function must include MITRE ATT&CK references**
-5. **Use batch API** for multiple operations
-6. **Support all output formats**: Object, JSON, CSV, Table
-7. **80-character line limit** (use line continuation for URLs)
-8. **4-space indentation** (never tabs)
-9. **Update module manifest** when adding new public functions
-10. **Follow PowerShell naming conventions** with approved verbs
+3. **ALWAYS create comprehensive tests** for new public functions in `Tests/`
+4. **SYNOPSIS must be ≤ 83 characters** - this is enforced
+5. **Every function must include MITRE ATT&CK references**
+6. **Use batch API** for multiple operations
+7. **Support all output formats**: Object, JSON, CSV, Table
+8. **80-character line limit** (use line continuation for URLs)
+9. **4-space indentation** (never tabs)
+10. **Update module manifest** when adding new public functions
+11. **Follow PowerShell naming conventions** with approved verbs
+12. **Test coverage must include**: core functionality, parameters, error handling, edge cases
 
 ---
 
