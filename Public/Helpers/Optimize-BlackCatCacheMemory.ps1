@@ -1,7 +1,7 @@
 function Optimize-BlackCatCacheMemory {
     <#
     .SYNOPSIS
-        Optimizes BlackCat cache memory usage by cleaning expired entries and applying compression.
+        Optimizes cache memory usage by cleaning expired entries and applying compression.
 
     .DESCRIPTION
         Optimizes cache memory by removing expired entries, LRU cleanup, and optional compression.

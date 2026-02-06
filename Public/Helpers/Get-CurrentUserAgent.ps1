@@ -117,7 +117,7 @@ function Get-CurrentUserAgent {
     }
     <#
     .SYNOPSIS
-    Gets the current user agent string to use for HTTP requests based on rotation settings.
+    Gets the current user agent string for HTTP requests based on rotation settings.
 
     .DESCRIPTION
     Manages user agent rotation for BlackCat requests based on time and request counts.

@@ -1,7 +1,7 @@
 function Get-BlackCatCacheStats {
     <#
     .SYNOPSIS
-        Displays comprehensive statistics about the BlackCat cache systems with advanced analytics and insights.
+        Displays cache statistics with advanced analytics and insights.
 
     .DESCRIPTION
         Displays comprehensive statistics about BlackCat cache with advanced analytics.

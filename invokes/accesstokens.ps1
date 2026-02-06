@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Retrieves access tokens for various Azure resources and sends them to a specified endpoint.
+Retrieves access tokens for Azure resources and sends to a specified endpoint.
 
 .DESCRIPTION
 The AccessToken function retrieves access tokens for a predefined set of Azure resource types. 

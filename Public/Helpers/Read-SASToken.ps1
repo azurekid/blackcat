@@ -138,7 +138,7 @@ function Read-SASToken {
     }
 <#
     .SYNOPSIS
-        Reads and processes the information from a Shared Access Signature (SAS) token or URI.
+        Reads and processes a Shared Access Signature (SAS) token or URI.
 
     .DESCRIPTION
         Parses SAS URI or token to extract properties including permissions and signature.

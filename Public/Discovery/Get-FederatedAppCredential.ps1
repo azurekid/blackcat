@@ -97,7 +97,7 @@ function Get-FederatedAppCredential {
 
 <#
 .SYNOPSIS
-Retrieves federated identity credentials for a specified Microsoft Entra application.
+Retrieves federated identity credentials for Microsoft Entra applications.
 
 .DESCRIPTION
 Retrieves federated identity credentials configured for Entra applications. These credentials enable OIDC token exchange patterns commonly used in CI/CD pipelines and external workload identities. The function queries Microsoft Graph to enumerate all federated credentials on specified applications.
