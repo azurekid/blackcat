@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.33.0'
+    ModuleVersion     = '1.0.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -98,8 +98,6 @@
         'Find-DnsRecords',
         'Find-PublicStorageContainer',
         'Find-SubDomain',
-        'Get-EntraRoleAssignment',
-        'Get-EntraRoleAssignmentMap',
         'Test-DomainRegistration',
 
         # Resource Development
@@ -152,8 +150,6 @@
         'Public\Discovery\Get-FederatedIdentityCredential.ps1',
         'Public\Discovery\Get-ManagedIdentity.ps1',
         'Public\Discovery\Get-StorageContainerList.ps1',
-        'Public\Reconnaissance\Get-EntraRoleAssignmentMap.ps1',
-        'Public\Reconnaissance\Get-EntraRoleAssignment.ps1',
 
         # Exfiltration
         'Public\Exfiltration\Export-AzAccessToken.ps1',

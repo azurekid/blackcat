@@ -4,6 +4,26 @@
 
 # CHANGELOG
 
+## v1.0.0 [2026-02-10] 📰 Security Blog & Module Polish
+
+**New Content & Documentation:**
+* Published introductory guide: "[Getting Started with the BlackCat PowerShell Module](https://azurehacking.com/post.html?slug=blackcat-module-getting-started)" covering installation, authentication, and basic usage
+* Added research posts on Azure Key Vault hardening and detecting privilege escalation in Entra ID
+* Generated `sitemap.xml` and updated `posts/index.json` for better SEO and blog navigation
+
+**`Set-FederatedIdentity` Improvements:**
+* Ensured `Set-FederatedIdentity` always calls `Get-ManagedIdentity` with `-OutputFormat Object` to avoid side effects from non-object output formats
+* Improves reliability when used in pipelines or when default output formats are changed by callers
+
+**Module Enhancements:**
+* Cleaned up `BlackCat.psd1` by removing deprecated `Get-EntraRoleAssignment` and `Get-EntraRoleAssignmentMap` from `FunctionsToExport` and `FileList`
+* Keeps the manifest aligned with the actual public surface area of the module
+
+**Bug Fixes:**
+* Fixed a subtle issue where `Set-FederatedIdentity` could fail or behave unexpectedly if `Get-ManagedIdentity` returned non-object output due to a different `-OutputFormat` setting
+
+---
+
 ## v0.33.0 [2026-02-06] 🛡️ Impair Defenses: Disable or Modify Cloud Logs
 
 _New function to enumerate, disable, or remove Azure diagnostic settings_

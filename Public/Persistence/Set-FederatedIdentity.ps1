@@ -48,7 +48,7 @@ function Set-FederatedIdentity {
         # Resolve managed identity name to resource ID if needed
         if ($ManagedIdentityName -and -not $Id) {
             Write-Host " Looking up Managed Identity: $ManagedIdentityName..." -ForegroundColor Cyan
-            $uami = Get-ManagedIdentity -Name $ManagedIdentityName
+            $uami = Get-ManagedIdentity -Name $ManagedIdentityName -OutputFormat Object
             if ($uami) {
                 $Id = $uami.id
                 Write-Host "     Found: $($uami.name)" -ForegroundColor Green
