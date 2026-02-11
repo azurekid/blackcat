@@ -1,3 +1,5 @@
+![logo](https://azurehacking4i2hz32h.blob.core.windows.net/media/1770805254145-blackcat-transparent-small-hero.png)
+
 **Author:** Rogier Dijkman
 **Date:** May 13, 2025
 **Classification:** Product Development
