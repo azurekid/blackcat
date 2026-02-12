@@ -29,7 +29,7 @@ function Invoke-FederatedTokenExchange {
         [Alias('issuer')]
         [string]$IssuerUrl,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [Alias('key', 'pem')]
         [string]$PrivateKeyPath,
 
@@ -82,12 +82,26 @@ function Invoke-FederatedTokenExchange {
             $CredentialName = 'bc-fic-{0}' -f $suffix
         }
 
-        if (-not (Test-Path -Path $PrivateKeyPath)) {
-            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Private key not found: $PrivateKeyPath" -Severity 'Error'
-            return
+        # Auto-download private key from issuer URL if not provided locally
+        if (-not $PrivateKeyPath) {
+            $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl.TrimEnd('/')
+            Write-Verbose "Downloading private key from: $keyUrl"
+            try {
+                $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
+                Write-Verbose "Private key downloaded successfully"
+            }
+            catch {
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
+                return
+            }
         }
-
-        $pemContent = Get-Content -Path $PrivateKeyPath -Raw
+        else {
+            if (-not (Test-Path -Path $PrivateKeyPath)) {
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Private key not found: $PrivateKeyPath" -Severity 'Error'
+                return
+            }
+            $pemContent = Get-Content -Path $PrivateKeyPath -Raw
+        }
         $pemClean = $pemContent `
             -replace '-----BEGIN.*-----', '' `
             -replace '-----END.*-----', '' `
@@ -370,7 +384,9 @@ function Invoke-FederatedTokenExchange {
         (e.g., https://myoidc.blob.core.windows.net/oidc).
 
     .PARAMETER PrivateKeyPath
-        Path to RSA private key PEM (PKCS1/PKCS8).
+        Path to RSA private key PEM (PKCS1/PKCS8). Optional:
+        auto-downloads from {IssuerUrl}/private-key.pem if not
+        provided.
 
     .PARAMETER KeyId
         JWT 'kid' claim (auto-detected from JWKS if omitted).
@@ -394,13 +410,23 @@ function Invoke-FederatedTokenExchange {
     .EXAMPLE
         Invoke-FederatedTokenExchange -Name uami-prod `
             -IssuerUrl https://bc.blob.core.windows.net/oidc `
-            -PrivateKeyPath ./key.pem -Cleanup
+            -Cleanup
+        
+        Auto-downloads private key from issuer URL.
 
     .EXAMPLE
         Invoke-FederatedTokenExchange -Name uami-cicd `
             -IssuerUrl https://bc.blob.core.windows.net/oidc `
-            -PrivateKeyPath ./key.pem `
+            -PrivateKeyPath ./key.pem -Cleanup
+        
+        Uses local private key file.
+
+    .EXAMPLE
+        Invoke-FederatedTokenExchange -Name uami-automation `
+            -IssuerUrl https://bc.blob.core.windows.net/oidc `
             -EndpointType MSGraph -Decode
+        
+        Auto-downloads key, extracts Graph token, decodes JWT.
 
     .OUTPUTS
         [PSCustomObject]
