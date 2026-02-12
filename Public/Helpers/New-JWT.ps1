@@ -1,5 +1,8 @@
 function New-JWT {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding(
+        SupportsShouldProcess = $true,
+        DefaultParameterSetName = 'HMAC'
+    )]
     [OutputType([string])]
     Param
     (
@@ -15,71 +18,186 @@ function New-JWT {
         [Parameter(Mandatory = $true)]
         [int]$ExpirationMinutes,
 
-        [Parameter(Mandatory = $true)]
-        [string]$SigningKey
+        [Parameter(
+            Mandatory = $true,
+            ParameterSetName = 'HMAC'
+        )]
+        [string]$SigningKey,
+
+        [Parameter(
+            Mandatory = $true,
+            ParameterSetName = 'RSA'
+        )]
+        [System.Security.Cryptography.RSA]$RSAKey,
+
+        [Parameter(
+            Mandatory = $false,
+            ParameterSetName = 'RSA'
+        )]
+        [string]$KeyId,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$AdditionalClaims
     )
 
-    if ($PSCmdlet.ShouldProcess("Creating a new JWT token")) {
+    if ($PSCmdlet.ShouldProcess(
+        "Creating a new JWT token"
+    )) {
+        $isRSA = $PSCmdlet.ParameterSetName -eq 'RSA'
+
         $header = @{
-            alg = "HS256"
-            typ = "JWT"
+            alg = if ($isRSA) { 'RS256' } else { 'HS256' }
+            typ = 'JWT'
         }
+        if ($KeyId) { $header.kid = $KeyId }
+
+        $now = [math]::Floor(
+            [System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        )
+        $exp = [math]::Floor(
+            ([System.DateTimeOffset]::UtcNow.AddMinutes(
+                $ExpirationMinutes
+            )).ToUnixTimeSeconds()
+        )
 
         $payload = @{
-            aud         = $Audience
-            iss         = $Issuer
-            iat         = [math]::Floor([System.DateTimeOffset]::Now.ToUnixTimeSeconds())
-            nbf         = [math]::Floor([System.DateTimeOffset]::Now.ToUnixTimeSeconds())
-            exp         = [math]::Floor(([System.DateTimeOffset]::Now.AddMinutes($ExpirationMinutes)).ToUnixTimeSeconds())
-            sub         = $Subject
+            aud = $Audience
+            iss = $Issuer
+            iat = $now
+            nbf = $now
+            exp = $exp
+            sub = $Subject
+        }
+
+        if ($AdditionalClaims) {
+            foreach ($key in $AdditionalClaims.Keys) {
+                $payload[$key] = $AdditionalClaims[$key]
+            }
         }
 
         $headerJson = $header | ConvertTo-Json -Compress
         $payloadJson = $payload | ConvertTo-Json -Compress
 
-        $headerBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($headerJson))
-        $payloadBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payloadJson))
+        if ($isRSA) {
+            $headerB64 = ConvertTo-Base64Url -Bytes (
+                [System.Text.Encoding]::UTF8.GetBytes(
+                    $headerJson
+                )
+            )
+            $payloadB64 = ConvertTo-Base64Url -Bytes (
+                [System.Text.Encoding]::UTF8.GetBytes(
+                    $payloadJson
+                )
+            )
 
-        $signature = [System.Convert]::ToBase64String([System.Security.Cryptography.HMACSHA256]::new([System.Text.Encoding]::UTF8.GetBytes($SigningKey)).ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$headerBase64.$payloadBase64")))
+            $sigInput = '{0}.{1}' -f $headerB64, $payloadB64
+            $sigBytes = $RSAKey.SignData(
+                [System.Text.Encoding]::UTF8.GetBytes(
+                    $sigInput
+                ),
+                [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+            )
+            $signature = ConvertTo-Base64Url -Bytes $sigBytes
 
-        $jwt = "$headerBase64.$payloadBase64.$signature"
-        return $jwt
+            return '{0}.{1}.{2}' -f `
+                $headerB64, $payloadB64, $signature
+        }
+        else {
+            $headerBase64 = [System.Convert]::ToBase64String(
+                [System.Text.Encoding]::UTF8.GetBytes(
+                    $headerJson
+                )
+            )
+            $payloadBase64 = [System.Convert]::ToBase64String(
+                [System.Text.Encoding]::UTF8.GetBytes(
+                    $payloadJson
+                )
+            )
+
+            $signature = [System.Convert]::ToBase64String(
+                [System.Security.Cryptography.HMACSHA256]::new(
+                    [System.Text.Encoding]::UTF8.GetBytes(
+                        $SigningKey
+                    )
+                ).ComputeHash(
+                    [System.Text.Encoding]::UTF8.GetBytes(
+                        "$headerBase64.$payloadBase64"
+                    )
+                )
+            )
+
+            $jwt = "$headerBase64.$payloadBase64.$signature"
+            return $jwt
+        }
     }
 <#
 .SYNOPSIS
-Generates a new JSON Web Token (JWT) with the specified parameters.
+Generates a new JWT with HS256 or RS256 signing.
 
 .DESCRIPTION
-Creates a new JWT token using HS256 algorithm with specified audience, issuer, and expiration. Supports custom claims and signing keys for token generation. Useful for testing authentication mechanisms and creating test tokens for Azure services.
+Creates a new JWT token using HS256 (HMAC-SHA256) or RS256
+(RSA-SHA256) algorithm. Supports custom claims via the
+AdditionalClaims parameter. RS256 mode uses proper Base64URL
+encoding as required by RFC 7515 and the Entra token endpoint.
 
 .PARAMETER Audience
-Specifies the audience (aud) claim for the JWT. This is typically the intended recipient of the token.
+The audience (aud) claim. Typically the intended recipient.
 
 .PARAMETER Issuer
-Specifies the issuer (iss) claim for the JWT. This is typically the entity that issued the token.
+The issuer (iss) claim. The entity that issued the token.
 
 .PARAMETER Subject
-Specifies the subject (sub) claim for the JWT. This is typically the principal that is the subject of the token.
+The subject (sub) claim. The principal of the token.
 
 .PARAMETER ExpirationMinutes
-Specifies the expiration time (exp) claim for the JWT in minutes. This determines how long the token is valid.
+Expiration time in minutes from now.
 
 .PARAMETER SigningKey
-Specifies the secret key used to sign the JWT. This key is used to generate the signature for the token.
+Secret key for HS256 signing. Required for HMAC parameter set.
+
+.PARAMETER RSAKey
+RSA key object for RS256 signing. Required for RSA parameter
+set. Generate with [System.Security.Cryptography.RSA]::Create().
+
+.PARAMETER KeyId
+Optional key identifier (kid) added to the JWT header.
+Required when the JWKS contains multiple keys.
+
+.PARAMETER AdditionalClaims
+Hashtable of extra claims to include in the payload.
+Example: @{ jti = [guid]::NewGuid().ToString() }
 
 .EXAMPLE
-PS> New-JWT -Audience "example.com" -Issuer "my-app" -Subject "user123" -ExpirationMinutes 60 -SigningKey "my-secret-key"
-Generates a JWT token for the specified audience, issuer, subject, and expiration time using the provided signing key.
+New-JWT -Audience "example.com" -Issuer "my-app" `
+    -Subject "user123" -ExpirationMinutes 60 `
+    -SigningKey "my-secret-key"
+
+Generates an HS256-signed JWT token.
+
+.EXAMPLE
+$rsa = [System.Security.Cryptography.RSA]::Create(2048)
+New-JWT -Audience "api://AzureADTokenExchange" `
+    -Issuer "https://myissuer.example.com" `
+    -Subject "workload-identity" `
+    -ExpirationMinutes 10 `
+    -RSAKey $rsa -KeyId "key-1" `
+    -AdditionalClaims @{ jti = [guid]::NewGuid().ToString() }
+
+Generates an RS256-signed JWT for Entra ID federated
+identity credential token exchange.
 
 .NOTES
-    This function can be used to forge JWT tokens for testing or attack scenarios.
+    RS256 tokens use Base64URL encoding (RFC 7515).
+    HS256 tokens preserve legacy Base64 encoding for
+    backward compatibility.
 
 .LINK
     MITRE ATT&CK Tactic: TA0006 - Credential Access
     https://attack.mitre.org/tactics/TA0006/
 
 .LINK
-    MITRE ATT&CK Technique: T1606.002 - Forge Web Credentials: SAML Tokens
+    MITRE ATT&CK Technique: T1606.002 - Forge Web Credentials
     https://attack.mitre.org/techniques/T1606/002/
 #>
 }

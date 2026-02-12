@@ -1,13 +1,13 @@
 function Set-FederatedIdentity {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = "GitHub")]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = "ByResourceId")]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
             "Microsoft.ManagedIdentity/userAssignedIdentities"
         )][string]$Id,
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "ByName")]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
             "Microsoft.ManagedIdentity/userAssignedIdentities",
             "ResourceGroupName"
@@ -24,136 +24,238 @@ function Set-FederatedIdentity {
         [Alias('federated-identity-name', 'credential-name')]
         [string]$Name = 'federatedCredential',
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "GitHub")]
         [Alias('github-organization')]
         [string]$GitHubOrganization,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "GitHub")]
         [Alias('github-repository')]
         [string]$GitHubRepository,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = "GitHub")]
         [Alias('branch-name')]
-        [string]$Branch = 'main'
+        [string]$Branch = 'main',
+
+        [Parameter(Mandatory = $true, ParameterSetName = "Custom")]
+        [Alias('issuer-url')]
+        [string]$Issuer,
+
+        [Parameter(Mandatory = $true, ParameterSetName = "Custom")]
+        [string]$Subject,
+
+        [Parameter(Mandatory = $false, ParameterSetName = "Custom")]
+        [Parameter(Mandatory = $false, ParameterSetName = "GitHub")]
+        [string[]]$Audiences = @("api://AzureADTokenExchange"),
+
+        [Parameter(Mandatory = $false, ParameterSetName = "Remove")]
+        [switch]$Remove,
+
+        [Parameter(Mandatory = $false, ParameterSetName = "Get")]
+        [switch]$Get
     )
 
     begin {
-        [void] $ResourceGroupName # Only used to trigger the ResourceGroupCompleter
-        
-        Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
+        [void] $ResourceGroupName
+        Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
 
     process {
         # Resolve managed identity name to resource ID if needed
         if ($ManagedIdentityName -and -not $Id) {
-            Write-Host " Looking up Managed Identity: $ManagedIdentityName..." -ForegroundColor Cyan
+            Write-Verbose "Resolving ManagedIdentity: $ManagedIdentityName"
             $uami = Get-ManagedIdentity -Name $ManagedIdentityName -OutputFormat Object
             if ($uami) {
                 $Id = $uami.id
-                Write-Host "     Found: $($uami.name)" -ForegroundColor Green
             }
             else {
-                Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Managed identity not found: $ManagedIdentityName" -Severity 'Error'
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Managed identity not found: $ManagedIdentityName" -Severity 'Error'
                 return
             }
         }
 
         if (-not $Id) {
-            Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Either -Id or -ManagedIdentityName must be provided" -Severity 'Error'
+            Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "No managed identity specified. Use -Id or -ManagedIdentityName (-Name is the FIC credential name)" -Severity 'Error'
             return
         }
 
-        if ($PSCmdlet.ShouldProcess("Federated Identity Credential for $GitHubOrganization/$GitHubRepository on branch $Branch")) {
-            try {
-                $baseUri = 'https://management.azure.com'
-                $uri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $baseUri, $Id, $Name
+        $ficUri = '{0}{1}/federatedIdentityCredentials/{2}?api-version=2023-01-31' -f $script:SessionVariables.armUri, $Id, $Name
 
-                $body = @{
+        # Handle Get operation
+        if ($Get) {
+            $ficListUri = '{0}{1}/federatedIdentityCredentials?api-version=2023-01-31' -f $script:SessionVariables.armUri, $Id
+            $ficListParams = @{
+                Uri       = $ficListUri
+                Headers   = $script:authHeader
+                Method    = 'GET'
+                UserAgent = $script:SessionVariables.userAgent
+            }
+            try {
+                $result = Invoke-RestMethod @ficListParams
+                return $result.value
+            }
+            catch {
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message $_.Exception.Message -Severity 'Error'
+                return
+            }
+        }
+
+        # Handle Remove operation
+        if ($Remove) {
+            if ($PSCmdlet.ShouldProcess("Federated Identity Credential: $Name", "Remove")) {
+                $ficParams = @{
+                    Uri       = $ficUri
+                    Headers   = $script:authHeader
+                    Method    = 'DELETE'
+                    UserAgent = $script:SessionVariables.userAgent
+                }
+                try {
+                    Invoke-RestMethod @ficParams | Out-Null
+                    Write-Host "Removed FIC: $Name" -ForegroundColor Green
+                    return $true
+                }
+                catch {
+                    if ($_.Exception.Response.StatusCode -eq 404) {
+                        Write-Warning "FIC not found: $Name"
+                    }
+                    else {
+                        Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message $_.Exception.Message -Severity 'Error'
+                    }
+                    return $false
+                }
+            }
+            return
+        }
+
+        # Build issuer and subject based on parameter set
+        switch ($PSCmdlet.ParameterSetName) {
+            "GitHub" {
+                $issuerUrl = "https://token.actions.githubusercontent.com"
+                $subjectClaim = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
+                $description = "GitHub Actions: $GitHubOrganization/$GitHubRepository (branch: $Branch)"
+            }
+            "Custom" {
+                $issuerUrl = $Issuer
+                $subjectClaim = $Subject
+                $description = "Custom OIDC: $Issuer"
+            }
+        }
+
+        # Create or update FIC
+        if ($PSCmdlet.ShouldProcess($description, "Set Federated Identity Credential")) {
+            try {
+                $ficBody = @{
                     properties = @{
-                        issuer    = "https://token.actions.githubusercontent.com"
-                        subject   = "repo:$($GitHubOrganization)/$($GitHubRepository):ref:refs/heads/$Branch"
-                        audiences = @("api://AzureADTokenExchange")
+                        issuer    = $issuerUrl
+                        subject   = $subjectClaim
+                        audiences = $Audiences
                     }
                 } | ConvertTo-Json
 
-                $requestParam = @{
+                $ficParams = @{
                     Headers     = $script:authHeader
-                    Uri         = $uri
+                    Uri         = $ficUri
                     Method      = 'PUT'
                     ContentType = 'application/json'
-                    Body        = $body
-                    UserAgent   = $($sessionVariables.userAgent)
+                    Body        = $ficBody
+                    UserAgent   = $script:SessionVariables.userAgent
                 }
 
-                (Invoke-RestMethod @requestParam)
+                $result = Invoke-RestMethod @ficParams
+                Write-Host "Set FIC: $Name" -ForegroundColor Green
+                return $result
             }
             catch {
-                Write-Message $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message $_.Exception.Message -Severity 'Error'
+                return $null
             }
         }
     }
 <#
 .SYNOPSIS
-Sets a federated identity credential for a managed identity.
+Sets or removes federated identity credentials for managed identities.
 
 .DESCRIPTION
-Sets a federated identity credential for a managed identity to enable OIDC-based authentication. This enables external workloads (GitHub Actions, GitLab CI, etc.) to obtain Azure access tokens without storing credentials. Useful for establishing persistent access from external CI/CD systems.
+Manages federated identity credentials for UAMIs to enable OIDC-based authentication. Supports:
+- GitHub Actions integration (default)
+- Custom OIDC providers with custom issuer/subject
+- Removal of existing credentials
+- Querying existing credentials
 
 .PARAMETER Id
-The resource ID of the user-assigned managed identity in Azure. This should be the full resource ID path.
-Aliases: resource-id
+Full ARM resource ID of the UAMI.
 
 .PARAMETER ManagedIdentityName
-The name of the user-assigned managed identity. The function will automatically look up the resource ID.
-Aliases: identity-name, user-assigned-identity
+UAMI display name (resolved via Get-ManagedIdentity).
+
+.PARAMETER ResourceGroupName
+Resource group for tab-completion. Not required.
 
 .PARAMETER Name
-The name of the federated credential to create. Defaults to 'federatedCredential'.
-Aliases: federated-identity-name, credential-name
+FIC name. Defaults to 'federatedCredential'.
 
 .PARAMETER GitHubOrganization
-The GitHub organization name where the repository is located.
+GitHub organization name (for GitHub Actions).
 
 .PARAMETER GitHubRepository
-The name of the GitHub repository to federate with the managed identity.
+GitHub repository name (for GitHub Actions).
 
 .PARAMETER Branch
-The branch name to associate with the federated credential. Defaults to 'main'.
+GitHub branch name. Defaults to 'main'.
+
+.PARAMETER Issuer
+Custom OIDC issuer URL (e.g., https://myoidc.blob.core.windows.net/oidc).
+
+.PARAMETER Subject
+Custom OIDC subject claim (e.g., 'repo:org/repo:ref:refs/heads/main').
+
+.PARAMETER Audiences
+Audience claim(s). Defaults to 'api://AzureADTokenExchange'.
+
+.PARAMETER Remove
+Removes the specified FIC.
+
+.PARAMETER Get
+Lists all FICs for the UAMI.
 
 .EXAMPLE
-Set-FederatedIdentity -ManagedIdentityName "uami-hr-cicd-automation" -GitHubOrganization "myorg" -GitHubRepository "myrepo"
+Set-FederatedIdentity -ManagedIdentityName "uami-cicd" -GitHubOrganization "myorg" -GitHubRepository "myrepo"
 
-Creates a federated credential using the managed identity name, linking it to the main branch of the myorg/myrepo GitHub repository.
-
-.EXAMPLE
-Set-FederatedIdentity -Id "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/myRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity" -GitHubOrganization "myorg" -GitHubRepository "myrepo"
-
-Creates a federated credential using the full resource ID.
+Creates GitHub Actions FIC for main branch.
 
 .EXAMPLE
-Set-FederatedIdentity -ManagedIdentityName "myIdentity" -Name "dev-credential" -GitHubOrganization "myorg" -GitHubRepository "myrepo" -Branch "development"
+Set-FederatedIdentity -ManagedIdentityName "uami-prod" -Name "custom-fic" -Issuer "https://bc.blob.core.windows.net/oidc" -Subject "blackcat-token-exchange"
 
-Creates a federated credential named "dev-credential" linking to the development branch.
+Creates custom OIDC FIC.
 
 .EXAMPLE
-Get-ManagedIdentity -Name "myIdentity" | Set-FederatedIdentity -GitHubOrganization "myorg" -GitHubRepository "myrepo"
+Set-FederatedIdentity -ManagedIdentityName "uami-prod" -Name "old-fic" -Remove
 
-Pipes a managed identity to create a federated credential.
+Removes the specified FIC.
+
+.EXAMPLE
+Set-FederatedIdentity -ManagedIdentityName "uami-prod" -Get
+
+Lists all FICs for the UAMI.
+
+.OUTPUTS
+[PSCustomObject] FIC details (when creating/updating)
+[Boolean] Success status (when removing)
+[Array] List of FICs (when using -Get)
 
 .NOTES
-Requires appropriate Azure RBAC permissions to manage managed identities.
-The function uses Azure REST API version 2023-01-31.
+Author: BlackCat Security Framework
 
-.LINK
-https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust-github
+Required permissions:
+- Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write
+- Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/delete
 
 .LINK
 MITRE ATT&CK Tactic: TA0003 - Persistence
 https://attack.mitre.org/tactics/TA0003/
 
 .LINK
-MITRE ATT&CK Technique: T1098.001 - Account Manipulation: Additional Cloud Credentials
+MITRE ATT&CK Technique: T1098.001 - Additional Cloud Credentials
 https://attack.mitre.org/techniques/T1098/001/
 #>
 }
