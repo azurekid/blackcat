@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.2.0'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -27,7 +27,9 @@
     FunctionsToExport = @(
         # Credential Access
         'Get-KeyVaultSecret',
+        'Get-ManagedIdentityToken',
         'Get-StorageAccountKey',
+        'Invoke-FederatedTokenExchange',
 
         # Discovery
         'Find-EntraPermissionHolder',
@@ -125,12 +127,15 @@
         'Private\Invoke-SplitJWT.ps1',
         'Private\Write-Message.ps1',
         'Private\Get-AllPages.ps1',
+        'Private\ConvertTo-Base64Url.ps1',
         'Private\ConvertFrom-AzAccessToken.ps1',
         'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
+        'Public\Credential Access\Get-ManagedIdentityToken.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
+        'Public\Credential Access\Invoke-FederatedTokenExchange.ps1',
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',

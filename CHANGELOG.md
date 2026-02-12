@@ -4,6 +4,62 @@
 
 # CHANGELOG
 
+## v1.2.0 [2026-02-11] 🔑 Credential Access: Federated Token Exchange
+
+_New function to extract UAMI tokens via OIDC federated identity credential exchange_
+
+**New Function: `Invoke-FederatedTokenExchange`**
+* Obtains access tokens for user-assigned Managed Identities via federated identity credential exchange
+* Uses a pre-configured OIDC issuer (storage account with anonymous blob access) — no runtime storage creation
+* Loads RSA private key from PEM file (PKCS1 and PKCS8 supported)
+* Auto-detects KeyId from the published JWKS endpoint when not specified
+* Adds a temporary federated identity credential to the target UAMI
+* Signs RS256 JWT assertion and exchanges it at the Entra token endpoint
+* Significantly faster than `Get-ManagedIdentityToken` (no ACI container provisioning)
+* `-Cleanup` removes the federated credential after extraction
+* MITRE ATT&CK: T1528, T1098.001
+* Example: `Invoke-FederatedTokenExchange -Name "uami-prod" -ResourceGroupName "rg-prod" -IssuerUrl "https://bcoidc.blob.core.windows.net/oidc" -PrivateKeyPath "./key.pem" -Cleanup`
+
+**New Helper: `New-JWT` RS256 Support**
+* Extended `New-JWT` with RS256 (RSA-SHA256) signing via new `RSA` parameter set
+* Added `-RSAKey`, `-KeyId`, and `-AdditionalClaims` parameters
+* RS256 path uses proper Base64URL encoding (RFC 7515)
+* HS256 backward compatibility fully preserved
+
+**New Private Function: `ConvertTo-Base64Url`**
+* Base64URL encoding helper for JWT/JWKS generation
+* Strips padding and replaces URL-unsafe characters per RFC 7515
+
+**Module Enhancements:**
+* Added `Invoke-FederatedTokenExchange` to FunctionsToExport and FileList
+* Added `ConvertTo-Base64Url` to FileList
+* Version bump to 1.2.0
+
+---
+
+## v1.1.0 [2026-02-11] 🎯 Credential Access: Managed Identity Token Extraction
+
+_New function to extract bearer tokens from user-assigned Managed Identities via deployment scripts_
+
+**New Function: `Get-ManagedIdentityToken`**
+* Deploys an Azure Deployment Script (`Microsoft.Resources/deploymentScripts`) using `AzureCLI` kind with bash + curl
+* Uses the lightweight CLI container image instead of AzurePowerShell for significantly faster execution
+* Calls the IMDS endpoint via `curl` inside the container to extract bearer tokens from a target UAMI
+* Writes output to `$AZ_SCRIPTS_OUTPUT_PATH` for retrieval through the ARM API
+* Supports multiple resource audiences: ARM, Microsoft Graph, Key Vault, Storage, Azure SQL, PostgreSQL
+* `-Decode` flag decodes the retrieved JWT token using `ConvertFrom-JWT` for claim inspection
+* `-Cleanup` flag deletes the deployment script resource after extraction to reduce forensic footprint
+* Randomized deployment script names to avoid naming collisions
+* Polls deployment status with 5-second intervals for fast feedback
+* MITRE ATT&CK: T1528 - Steal Application Access Token
+* Example: `Get-ManagedIdentityToken -ManagedIdentityId "<client-id>" -ResourceGroupName "rg-prod" -Cleanup`
+
+**Module Enhancements:**
+* Added `Get-ManagedIdentityToken` to FunctionsToExport and FileList in BlackCat.psd1
+* Version bump to 1.1.0
+
+---
+
 ## v1.0.0 [2026-02-10] 📰 Security Blog & Module Polish
 
 **New Content & Documentation:**
