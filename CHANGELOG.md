@@ -4,6 +4,49 @@
 
 # CHANGELOG
 
+## v1.2.3 [2026-02-16] 🔍 Reconnaissance: Private Link Classification
+
+_Differentiates public vs privatelink endpoints and captures CNAME-only hits_
+
+**`Find-AzurePublicResource` Improvements:**
+* Maps privatelink zones directly in the resource-type switch for accurate classification
+* Returns `ResourceType` as `{Service}-PrivateLink` and adds `EndpointType`/`BaseResource`
+* Resolves CNAME first so privatelink aliases are retained even if A records are blocked
+* Includes CNAME in live output to avoid double-counting public vs private endpoints
+
+**Module Enhancements:**
+* Version bump to 1.2.3
+
+---
+
+## v1.2.2 [2026-02-16] 🔍 Reconnaissance: Private Link CNAMEs
+
+_Surfaced CNAME targets for private endpoint resolutions_
+
+**`Find-AzurePublicResource` Improvements:**
+* Resolves CNAME records for discovered hosts (including privatelink zones)
+* Adds `CNameTarget` and `PrivateLink` flags to returned objects and live output
+* Helps trace private endpoint aliases (e.g., storage, SQL, Key Vault, Event Grid)
+
+**Module Enhancements:**
+* Version bump to 1.2.2
+
+---
+
+## v1.2.1 [2026-02-16] 🔍 Reconnaissance: Private Link Discovery
+
+_Expanded Azure resource reconnaissance with private endpoint detection_
+
+**`Find-AzurePublicResource` Improvements:**
+* Adds privatelink DNS permutations for Key Vault, Storage, SQL, Cosmos DB, Redis, Service Bus, API Management, Web Apps, Synapse, and more
+* Flags results with `PrivateLink` and surfaces private-link status in the immediate output summary
+* Keeps Key Vault HTTP probing while classifying private-link hosts where reachable
+
+**Module Enhancements:**
+* Version bump to 1.2.1
+
+---
+
 ## v1.2.0 [2026-02-11] 🔑 Credential Access: Federated Token Exchange
 
 _New function to extract UAMI tokens via OIDC federated identity credential exchange_

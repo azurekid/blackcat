@@ -25,7 +25,7 @@ function Find-AzurePublicResource {
 
     process {
         Write-Host " Analyzing Azure resources for: $Name" -ForegroundColor Green
-        
+
         try {
             if ($WordList) {
                 Write-Host "   Loading permutations from word list..." -ForegroundColor Cyan
@@ -61,6 +61,11 @@ function Find-AzurePublicResource {
                 'table.core.windows.net',          # Table Storage
                 'queue.core.windows.net',          # Queue Storage
                 'dfs.core.windows.net',            # Data Lake Storage Gen2
+                'privatelink.blob.core.windows.net',   # Blob Private Link
+                'privatelink.file.core.windows.net',   # File Private Link
+                'privatelink.table.core.windows.net',  # Table Private Link
+                'privatelink.queue.core.windows.net',  # Queue Private Link
+                'privatelink.dfs.core.windows.net',    # ADLS Gen2 Private
 
                 # Databases
                 'database.windows.net',            # SQL Database
@@ -69,26 +74,43 @@ function Find-AzurePublicResource {
                 'mysql.database.azure.com',        # MySQL
                 'postgres.database.azure.com',     # PostgreSQL
                 'mariadb.database.azure.com',      # MariaDB
+                'privatelink.database.windows.net',    # SQL Private Link
+                'privatelink.documents.azure.com',     # Cosmos Private Link
+                'privatelink.redis.cache.windows.net', # Redis Private Link
+                'privatelink.mysql.database.azure.com',# MySQL Private Link
+                'privatelink.postgres.database.azure.com', # PostgreSQL Private
+                'privatelink.mariadb.database.azure.com',  # MariaDB Private
 
                 # Security
                 'vault.azure.net',                 # Key Vault
+                'privatelink.vaultcore.azure.net', # Key Vault Private Link
 
                 # Compute & Containers
                 'azurecr.io',                      # Container Registry
                 'azurewebsites.net',               # App Service/Functions
                 'scm.azurewebsites.net',           # App Service Kudu
+                'privatelink.azurecr.io',          # ACR Private Link
+                'privatelink.azurewebsites.net',   # App Service Private Link
+                'privatelink.scm.azurewebsites.net', # Kudu Private Link
 
                 # AI/ML
                 'cognitiveservices.azure.com',
                 'openai.azure.com',                # Azure OpenAI
                 'search.windows.net',              # Azure Search
                 'azureml.net',                     # Machine Learning
+                'privatelink.cognitiveservices.azure.com', # Cognitive Private
+                'privatelink.search.windows.net',  # Search Private Link
+                'privatelink.azureml.net',         # Machine Learning Private
 
                 # Integration
                 'servicebus.windows.net',
                 'azure-api.net',                   # API Management
                 'service.signalr.net',             # SignalR Service
                 'webpubsub.azure.com',             # Web PubSub
+                'privatelink.servicebus.windows.net', # Service Bus Private
+                'privatelink.azure-api.net',       # API Management Private
+                'privatelink.service.signalr.net', # SignalR Private Link
+                'privatelink.webpubsub.azure.com', # Web PubSub Private
 
                 # Other
                 'azureedge.net',                   # CDN
@@ -96,7 +118,10 @@ function Find-AzurePublicResource {
                 'eventgrid.azure.net',             # Event Grid
                 'azuremicroservices.io',           # Spring Apps
                 'azuresynapse.net',                # Synapse Analytics
-                'batch.azure.com'                  # Azure Batch
+                'batch.azure.com',                 # Azure Batch
+                'privatelink.eventgrid.azure.net', # Event Grid Private Link
+                'privatelink.azuremicroservices.io', # Spring Apps Private
+                'privatelink.azuresynapse.net'     # Synapse Private Link
             )
 
             $domains | ForEach-Object {
@@ -113,7 +138,7 @@ function Find-AzurePublicResource {
             Write-Host "   Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
             $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
-            
+
             # Create a thread-safe collection to track found resources for immediate display
             $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 
@@ -127,6 +152,11 @@ function Find-AzurePublicResource {
                         '\.table\.core\.windows\.net$'        { return 'StorageTable' }
                         '\.queue\.core\.windows\.net$'        { return 'StorageQueue' }
                         '\.dfs\.core\.windows\.net$'          { return 'DataLakeStorage' }
+                        '\.privatelink\.blob\.core\.windows\.net$' { return 'StorageBlob' }
+                        '\.privatelink\.file\.core\.windows\.net$' { return 'StorageFile' }
+                        '\.privatelink\.table\.core\.windows\.net$' { return 'StorageTable' }
+                        '\.privatelink\.queue\.core\.windows\.net$' { return 'StorageQueue' }
+                        '\.privatelink\.dfs\.core\.windows\.net$' { return 'DataLakeStorage' }
 
                         # Databases
                         '\.database\.windows\.net$'           { return 'SqlDatabase' }
@@ -135,26 +165,44 @@ function Find-AzurePublicResource {
                         '\.mysql\.database\.azure\.com$'      { return 'MySQL' }
                         '\.postgres\.database\.azure\.com$'   { return 'PostgreSQL' }
                         '\.mariadb\.database\.azure\.com$'    { return 'MariaDB' }
+                        '\.privatelink\.database\.windows\.net$' { return 'SqlDatabase' }
+                        '\.privatelink\.documents\.azure\.com$' { return 'CosmosDB' }
+                        '\.privatelink\.redis\.cache\.windows\.net$' { return 'RedisCache' }
+                        '\.privatelink\.mysql\.database\.azure\.com$' { return 'MySQL' }
+                        '\.privatelink\.postgres\.database\.azure\.com$' { return 'PostgreSQL' }
+                        '\.privatelink\.mariadb\.database\.azure\.com$' { return 'MariaDB' }
 
                         # Security
                         '\.vault\.azure\.net$'                { return 'KeyVault' }
+                        '\.vaultcore\.azure\.net$'            { return 'KeyVault' }
+                        '\.privatelink\.vaultcore\.azure\.net$' { return 'KeyVault' }
 
                         # Compute & Containers
                         '\.azurecr\.io$'                      { return 'ContainerRegistry' }
                         '\.azurewebsites\.net$'               { return 'AppService' }
                         '\.scm\.azurewebsites\.net$'          { return 'AppServiceKudu' }
+                        '\.privatelink\.azurecr\.io$'        { return 'ContainerRegistry' }
+                        '\.privatelink\.azurewebsites\.net$' { return 'AppService' }
+                        '\.privatelink\.scm\.azurewebsites\.net$' { return 'AppServiceKudu' }
 
                         # AI/ML
                         '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
                         '\.openai\.azure\.com$'               { return 'AzureOpenAI' }
                         '\.search\.windows\.net$'             { return 'AzureSearch' }
                         '\.azureml\.net$'                     { return 'MachineLearning' }
+                        '\.privatelink\.cognitiveservices\.azure\.com$' { return 'CognitiveServices' }
+                        '\.privatelink\.search\.windows\.net$' { return 'AzureSearch' }
+                        '\.privatelink\.azureml\.net$'       { return 'MachineLearning' }
 
                         # Integration
                         '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
                         '\.azure-api\.net$'                   { return 'APIManagement' }
                         '\.service\.signalr\.net$'            { return 'SignalR' }
                         '\.webpubsub\.azure\.com$'            { return 'WebPubSub' }
+                        '\.privatelink\.servicebus\.windows\.net$' { return 'ServiceBus' }
+                        '\.privatelink\.azure-api\.net$'     { return 'APIManagement' }
+                        '\.privatelink\.service\.signalr\.net$' { return 'SignalR' }
+                        '\.privatelink\.webpubsub\.azure\.com$' { return 'WebPubSub' }
 
                         # Other
                         '\.azureedge\.net$'                   { return 'CDN' }
@@ -163,6 +211,9 @@ function Find-AzurePublicResource {
                         '\.azuremicroservices\.io$'           { return 'SpringApps' }
                         '\.azuresynapse\.net$'                { return 'SynapseAnalytics' }
                         '\.batch\.azure\.com$'                { return 'AzureBatch' }
+                        '\.privatelink\.eventgrid\.azure\.net$' { return 'EventGrid' }
+                        '\.privatelink\.azuremicroservices\.io$' { return 'SpringApps' }
+                        '\.privatelink\.azuresynapse\.net$'  { return 'SynapseAnalytics' }
 
                         default                               { return 'Unknown' }
                     }
@@ -172,41 +223,84 @@ function Find-AzurePublicResource {
                     $validDnsNames = $using:validDnsNames
                     $results = $using:results
                     $foundResources = $using:foundResources
-                    $dnsResult = [System.Net.Dns]::GetHostEntry($_)
-                    if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
-                        $resourceType = Get-ResourceType -dnsName $_
-                        $ipAddresses = $dnsResult.AddressList.IPAddressToString -join ", "
+                    $recordTypes = [System.Collections.Generic.HashSet[string]]::new()
+                    $cnameTarget = $null
+                    $dnsResult = $null
+
+                    try {
+                        $dohUrl = "https://cloudflare-dns.com/dns-query?name=$_&type=CNAME"
+                        $dohResp = Invoke-RestMethod -Uri $dohUrl `
+                            -Headers @{ Accept = 'application/dns-json' } `
+                            -TimeoutSec 5 -ErrorAction Stop
+                        $cnameAnswer = $dohResp.Answer |
+                            Where-Object { $_.type -eq 5 }
+                        if ($cnameAnswer) {
+                            $cnameTarget = ($cnameAnswer | Select-Object -First 1).data
+                            if ($cnameTarget) {
+                                [void]$recordTypes.Add('CNAME')
+                            }
+                        }
+                    }
+                    catch {
+                    }
+
+                    try {
+                        $dnsResult = [System.Net.Dns]::GetHostEntry($_)
+                        if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
+                            [void]$recordTypes.Add('A')
+                        }
+                    }
+                    catch [System.Net.Sockets.SocketException] {
+                    }
+
+                    if ($recordTypes.Count -gt 0) {
+                        $resourceTypeBase = Get-ResourceType -dnsName $_
+                        $isPrivateLink = $_ -match '\.privatelink\.'
                         $resourceName = $_.Split('.')[0]
 
-                        # Create the result object
+                        $ipAddresses = if ($dnsResult) {
+                            $dnsResult.AddressList.IPAddressToString -join ", "
+                        }
+
+                        $endpointType = if ($isPrivateLink) { 'PrivateLink' } else { 'Public' }
+                        $resourceType = if ($isPrivateLink) {
+                            "$resourceTypeBase-PrivateLink"
+                        }
+                        else { $resourceTypeBase }
+
                         $obj = [PSCustomObject]@{
-                            Domain       = $_
-                            RecordType   = "A"
-                            Data         = $ipAddresses
-                            TTL          = $null
-                            DNSProvider  = "System.Net.Dns"
-                            ProviderType = "System"
+                            Domain         = $_
+                            RecordType     = ($recordTypes -join ',')
+                            Data           = $ipAddresses
+                            TTL            = $null
+                            DNSProvider    = "System.Net.Dns"
+                            ProviderType   = "System"
                             ProviderRegion = "Local"
-                            Reliability  = $null
-                            Timestamp    = Get-Date
-                            QueryMethod  = "GetHostEntry"
-                            ResourceName = $resourceName
-                            ResourceType = $resourceType
-                            Uri          = "https://$_"
-                            HostName     = $dnsResult.HostName
-                            IPAddress    = $dnsResult.AddressList
+                            Reliability    = $null
+                            Timestamp      = Get-Date
+                            QueryMethod    = "GetHostEntry"
+                            ResourceName   = $resourceName
+                            BaseResource   = $resourceTypeBase
+                            ResourceType   = $resourceType
+                            EndpointType   = $endpointType
+                            Uri            = "https://$_"
+                            HostName       = if ($dnsResult) { $dnsResult.HostName }
+                            IPAddress      = if ($dnsResult) { $dnsResult.AddressList }
+                            PrivateLink    = $isPrivateLink
+                            CNameTarget    = $cnameTarget
                         }
                         $results.Add($obj)
-                        
-                        # Add to found resources for immediate display
+
                         $foundMessage = "       $resourceName -> $ipAddresses [$resourceType]"
+                        if ($isPrivateLink) { $foundMessage = "$foundMessage [PrivateLink]" }
+                        if ($cnameTarget) { $foundMessage = "$foundMessage CNAME:$cnameTarget" }
                         $foundResources.Add($foundMessage)
                     }
                 }
-                catch [System.Net.Sockets.SocketException] {
+                catch {
                 }
             }
-            
+
             # Display found resources immediately after parallel processing
             if ($foundResources.Count -gt 0) {
                 foreach ($message in $foundResources) {
@@ -218,14 +312,14 @@ function Find-AzurePublicResource {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-    
+
     end {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
-        
+
         if ($results -and $results.Count -gt 0) {
             Write-Host "`n Azure Resource Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Resources Found: $($results.Count)" -ForegroundColor Yellow
-            
+
             # Group by resource type for summary
             $resourceTypeCounts = $results | Group-Object ResourceType | Sort-Object Count -Descending
             foreach ($group in $resourceTypeCounts) {

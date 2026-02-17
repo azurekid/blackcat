@@ -201,9 +201,7 @@ Get-KeyVaultSecret -OutputFormat JSON
 # Approach 1: Federated exchange (recommended — fast, ~20-30s, no ACI dependencies)
 Invoke-FederatedTokenExchange `
     -Name "my-uami" `
-    -ResourceGroupName "rg-prod" `
-    -IssuerUrl "https://bcoidc1a2b3c.blob.core.windows.net/oidc" `
-    -PrivateKeyPath "./blackcat-oidc.pem" `
+    -IssuerUrl "https://blackcatoidc.blob.core.windows.net/oidc" `
     -Cleanup
 
 # Approach 2: Deployment scripts (120-180s, requires ACI capacity)

@@ -159,6 +159,7 @@ function Invoke-FederatedTokenExchange {
                 $uamiName = ($Id -split '/')[-1]
                 Write-Host "  Resolving identity: $uamiName" -ForegroundColor Cyan
                 $uamiUri = '{0}{1}?api-version=2023-01-31' -f $script:SessionVariables.armUri, $Id
+                
                 $uamiGetParams = @{
                     Uri       = $uamiUri
                     Headers   = $script:authHeader
@@ -189,19 +190,42 @@ function Invoke-FederatedTokenExchange {
                 $staleName = ($stale.name -split '/')[-1]
                 Write-Host "    Found existing FIC: $staleName (reusing)" -ForegroundColor Yellow
                 $CredentialName = $staleName
+                $reusingIdenticalFic = $true
             }
             else {
-                $ficResult = Set-FederatedIdentity -Id $Id -Name $CredentialName -Issuer $IssuerUrl -Subject $Subject -Confirm:$false
+                $params = @{
+                    Id             = $Id
+                    Name           = $CredentialName
+                    Issuer         = $IssuerUrl
+                    Subject        = $Subject
+                    Confirm        = $false
+                }
+                $ficResult = Set-FederatedIdentity @params
+                
                 if (-not $ficResult) {
                     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to create FIC" -Severity 'Error'
                     $stats.ErrorCount++
                     return
                 }
+                $ficCreated = $true
             }
 
             Write-Host "    Subject: $Subject" -ForegroundColor White
-            Write-Host "  Waiting for FIC propagation..." -ForegroundColor Yellow
-            Start-Sleep -Seconds 15
+            
+            # Only wait for propagation if we created a new FIC
+            # Skip wait if reusing FIC with identical issuer + subject
+            if ($ficCreated) {
+                Write-Host "  Waiting for FIC propagation..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 15
+            }
+            elseif ($reusingIdenticalFic) {
+                Write-Host "  Skipping propagation wait (FIC already exists with same issuer + subject)" -ForegroundColor Green
+            }
+            else {
+                # Safety fallback: wait if state is uncertain
+                Write-Host "  Waiting for FIC propagation (safety)..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 15
+            }
 
             Write-Host "  Signing JWT assertion (RS256)..." -ForegroundColor Cyan
 
@@ -240,7 +264,6 @@ function Invoke-FederatedTokenExchange {
                 ContentType = 'application/x-www-form-urlencoded'
             }
 
-            # Retry loop for FIC propagation delays
             $maxRetries = 3
             for ($i = 1; $i -le $maxRetries; $i++) {
                 try {
@@ -251,44 +274,35 @@ function Invoke-FederatedTokenExchange {
                     $errBody = $null
                     if ($_.ErrorDetails.Message) {
                         try {
-                            $errBody = $_.ErrorDetails.Message |
-                                ConvertFrom-Json
+                            $errBody = $_.ErrorDetails.Message | ConvertFrom-Json
                         } catch { }
                     }
-                    $retryable = (
-                        $errBody.error_description -match
-                        'AADSTS7002(11|22|23)'
-                    )
-                    if ($retryable -and $i -lt $maxRetries) {
-                        $wait = 5 * $i
-                        Write-Host (
-                            "    FIC not propagated " +
-                            "(attempt $i/$maxRetries)" +
-                            ", retrying in ${wait}s..."
-                        ) -ForegroundColor Yellow
-                        Start-Sleep -Seconds $wait
-                        continue
+                    
+                    switch ($true) {
+                        # Retryable FIC propagation error with retries remaining
+                        {
+                            $errBody.error_description -match 'AADSTS7002(11|22|23)' -and 
+                            $i -lt $maxRetries
+                        } {
+                            $wait = 5 * $i
+                            Write-Host "    FIC not propagated (attempt $i/$maxRetries), retrying in ${wait}s..." -ForegroundColor Yellow
+                            Start-Sleep -Seconds $wait
+                            continue
+                        }
+                        # Error with structured error description
+                        { $errBody.error_description } {
+                            Write-Warning "Token exchange failed: $($errBody.error_description)"
+                            Write-Host "    Error: $($errBody.error)" -ForegroundColor Red
+                            Write-Host "    Correlation ID: $($errBody.correlation_id)" -ForegroundColor Gray
+                            break
+                        }
+                        # Fallback to exception message
+                        default {
+                            Write-Warning "Token exchange failed: $($_.Exception.Message)"
+                            break
+                        }
                     }
-                    if ($errBody.error_description) {
-                        Write-Warning (
-                            "Token exchange failed: " +
-                            "$($errBody.error_description)"
-                        )
-                        Write-Host (
-                            "    Error: " +
-                            "$($errBody.error)"
-                        ) -ForegroundColor Red
-                        Write-Host (
-                            "    Correlation ID: " +
-                            "$($errBody.correlation_id)"
-                        ) -ForegroundColor Gray
-                    }
-                    else {
-                        Write-Warning (
-                            "Token exchange failed: " +
-                            "$($_.Exception.Message)"
-                        )
-                    }
+                    
                     $stats.ErrorCount++
                     return
                 }
