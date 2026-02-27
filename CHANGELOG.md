@@ -4,6 +4,36 @@
 
 # CHANGELOG
 
+## v1.2.4 [2026-02-27] 🛡️ Reconnaissance: Caching Support
+
+_Added result caching to all Reconnaissance functions for improved repeated-scan performance_
+
+**`Find-PublicStorageContainer` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered containers per storage account name and type
+* Returns cached results on repeated calls without re-running DNS resolution
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered resources per resource name
+* Skips full DNS enumeration on cache hits for faster repeated lookups
+
+**`Find-SubDomain` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches results per domain, category, and search depth
+* Uses `continue` to skip DNS resolution for already-cached domains in batch runs
+
+**`Test-DomainRegistration` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches RDAP/DNS registration check results per domain and method
+* Avoids repeated RDAP lookups and rate-limiting on re-checks
+
+**Module Enhancements:**
+* Version bump to 1.2.4
+* All Reconnaissance functions now share a consistent caching pattern matching `Find-DnsRecords`
+
+---
+
 ## v1.2.3 [2026-02-16] 🔍 Reconnaissance: Private Link Classification
 
 _Differentiates public vs privatelink endpoints and captures CNAME-only hits_
