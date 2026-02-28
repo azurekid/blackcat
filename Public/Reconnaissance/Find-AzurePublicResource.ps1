@@ -14,7 +14,7 @@ function Find-AzurePublicResource {
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Object", "JSON", "CSV")]
+        [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
         [string]$OutputFormat,
 
@@ -36,7 +36,9 @@ function Find-AzurePublicResource {
     )
 
     begin {
-        $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $validDnsNames  = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $results        = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+        $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
@@ -53,7 +55,8 @@ function Find-AzurePublicResource {
                 $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'General'
                 if ($null -ne $cachedResult) {
                     Write-Verbose "Retrieved Azure resource results from cache for: $Name"
-                    return $cachedResult
+                    foreach ($item in $cachedResult) { $results.Add($item) }
+                    return
                 }
             }
             catch {
@@ -171,11 +174,6 @@ function Find-AzurePublicResource {
             $totalDns = $dnsNames.Count
             Write-Host "     Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
             Write-Host "   Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
-
-            $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
-
-            # Create a thread-safe collection to track found resources for immediate display
-            $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 
             $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 function Get-ResourceType {
@@ -380,7 +378,7 @@ function Find-AzurePublicResource {
                     "JSON" { return $results | ConvertTo-Json -Depth 3 }
                     "CSV" { return $results | ConvertTo-CSV }
                     "Object" { return $results }
-                    default  { return $results | Format-Table -AutoSize }
+                    "Table"  { return $results | Format-Table -AutoSize }
                 }
         }
         else {

@@ -78,7 +78,8 @@ function Find-PublicStorageContainer {
                         -Key $cacheKey -CacheType 'General'
                     if ($null -ne $cachedResult) {
                         Write-Verbose "Retrieved results from cache for: $StorageAccountName"
-                        return $cachedResult
+                        foreach ($item in $cachedResult) { [void]$result.Add($item) }
+                        return
                     }
                 }
                 catch {
