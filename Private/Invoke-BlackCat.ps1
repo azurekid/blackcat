@@ -20,6 +20,26 @@ function Invoke-BlackCat {
             $randomUserAgent = "BlackCat/$($manifest.ModuleVersion) PowerShell Client"
             Write-Verbose "Using default user agent: $randomUserAgent"
 
+        # Detect if Az context changed since last
+        # token acquisition and invalidate cached state
+        if ($azProfile.Contexts.Count -ne 0) {
+            $currentAccountId = $azProfile.DefaultContext.Account.Id
+            if (
+                $script:SessionVariables.lastAccountId -and
+                $currentAccountId -ne
+                    $script:SessionVariables.lastAccountId
+            ) {
+                Write-Verbose (
+                    "Az context changed, " +
+                    "clearing cached tokens"
+                )
+                $script:SessionVariables.AccessToken = $null
+                $script:SessionVariables.ExpiresOn   = $null
+                $script:graphHeader  = $null
+                $script:authHeader   = $null
+            }
+        }
+
         # Check if we're using Connect-GraphToken authentication (graphHeader already set)
         # Only return early if we have BOTH a graph header AND a valid session access token (Connect-GraphToken case)
         if ($ResourceTypeName -eq "MSGraph" -and $script:graphHeader -and $script:SessionVariables.AccessToken) {

@@ -4,7 +4,29 @@
 
 # CHANGELOG
 
-## v1.2.4 [2026-02-27] 🛡️ Reconnaissance: Caching Support
+## v1.2.6 [2026-03-14] Az Context Change Detection
+
+_Invoke-BlackCat now detects when the Az context changes and refreshes tokens automatically_
+
+**Bug Fixes:**
+* `Invoke-BlackCat` now tracks the active Az account identity and invalidates cached tokens when it changes
+* Running `Login-AzAccount`, `Connect-AzAccount`, or `Switch-AzContext` is now detected automatically
+* Stored `lastAccountId` in `Get-AccessToken` to enable cross-call context comparison
+
+---
+
+## v1.2.5 [2026-03-13] Session Reset on Service Principal Reconnect
+
+_Fixes stale session state when switching from Connect-GraphToken to Connect-ServicePrincipal_
+
+**Bug Fixes:**
+* Fixed `Connect-ServicePrincipal` not clearing prior `Connect-GraphToken` session state
+* After calling `Connect-GraphToken`, re-running `Connect-ServicePrincipal` now properly resets `$script:graphHeader`, `$script:authHeader`, and `$script:SessionVariables.AccessToken`
+* `Invoke-BlackCat` no longer short-circuits with stale Graph tokens after a service principal reconnect
+
+---
+
+## v1.2.4 [2026-02-27] Reconnaissance: Caching Support
 
 _Added result caching to all Reconnaissance functions for improved repeated-scan performance_
 

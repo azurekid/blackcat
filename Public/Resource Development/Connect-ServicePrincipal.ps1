@@ -61,7 +61,17 @@ function Connect-ServicePrincipal {
 
                 if ($context) {
                     Write-Verbose "Successfully connected to Azure"
-                    
+
+                    # Clear stale session state from previous
+                    # Connect-GraphToken sessions so
+                    # Invoke-BlackCat re-acquires tokens
+                    # from the new Az context
+                    $script:SessionVariables.AccessToken = $null
+                    $script:SessionVariables.accessToken = $null
+                    $script:SessionVariables.ExpiresOn   = $null
+                    $script:graphHeader  = $null
+                    $script:authHeader   = $null
+
                     $currentContext = Get-AzContext
                     
                     # Retrieve SP permissions with the connected AppId (simple pass-through)

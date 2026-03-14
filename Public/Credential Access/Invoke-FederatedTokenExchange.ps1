@@ -23,7 +23,7 @@ function Invoke-FederatedTokenExchange {
         [Parameter(Mandatory = $false)]
         [ValidateSet('Azure', 'MSGraph', 'KeyVault', 'Storage', 'SQLDatabase', 'OSSDatabase')]
         [Alias('resource', 'audience', 'aud')]
-        [string]$EndpointType = 'Azure',
+        [string]$EndpointType = 'MSGraph',
 
         [Parameter(Mandatory = $true)]
         [Alias('issuer')]
