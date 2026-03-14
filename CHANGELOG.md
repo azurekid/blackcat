@@ -4,6 +4,58 @@
 
 # CHANGELOG
 
+## v1.2.6 [2026-03-14] Az Context Change Detection
+
+_Invoke-BlackCat now detects when the Az context changes and refreshes tokens automatically_
+
+**Bug Fixes:**
+* `Invoke-BlackCat` now tracks the active Az account identity and invalidates cached tokens when it changes
+* Running `Login-AzAccount`, `Connect-AzAccount`, or `Switch-AzContext` is now detected automatically
+* Stored `lastAccountId` in `Get-AccessToken` to enable cross-call context comparison
+
+---
+
+## v1.2.5 [2026-03-13] Session Reset on Service Principal Reconnect
+
+_Fixes stale session state when switching from Connect-GraphToken to Connect-ServicePrincipal_
+
+**Bug Fixes:**
+* Fixed `Connect-ServicePrincipal` not clearing prior `Connect-GraphToken` session state
+* After calling `Connect-GraphToken`, re-running `Connect-ServicePrincipal` now properly resets `$script:graphHeader`, `$script:authHeader`, and `$script:SessionVariables.AccessToken`
+* `Invoke-BlackCat` no longer short-circuits with stale Graph tokens after a service principal reconnect
+
+---
+
+## v1.2.4 [2026-02-27] Reconnaissance: Caching Support
+
+_Added result caching to all Reconnaissance functions for improved repeated-scan performance_
+
+**`Find-PublicStorageContainer` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered containers per storage account name and type
+* Returns cached results on repeated calls without re-running DNS resolution
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered resources per resource name
+* Skips full DNS enumeration on cache hits for faster repeated lookups
+
+**`Find-SubDomain` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches results per domain, category, and search depth
+* Uses `continue` to skip DNS resolution for already-cached domains in batch runs
+
+**`Test-DomainRegistration` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches RDAP/DNS registration check results per domain and method
+* Avoids repeated RDAP lookups and rate-limiting on re-checks
+
+**Module Enhancements:**
+* Version bump to 1.2.4
+* All Reconnaissance functions now share a consistent caching pattern matching `Find-DnsRecords`
+
+---
+
 ## v1.2.3 [2026-02-16] 🔍 Reconnaissance: Private Link Classification
 
 _Differentiates public vs privatelink endpoints and captures CNAME-only hits_

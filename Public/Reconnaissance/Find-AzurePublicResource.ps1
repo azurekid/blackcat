@@ -14,17 +14,55 @@ function Find-AzurePublicResource {
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Object", "JSON", "CSV")]
+        [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat
+        [string]$OutputFormat,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("no-cache", "bypass-cache")]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("cache-expiration", "expiration")]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("max-cache")]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("compress")]
+        [switch]$CompressCache
     )
 
     begin {
-        $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $validDnsNames  = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $results        = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+        $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
         Write-Host " Analyzing Azure resources for: $Name" -ForegroundColor Green
+
+        # Generate cache key and check for cached results
+        $cacheParams = @{ Name = $Name }
+        $cacheKey = ConvertTo-CacheKey `
+            -BaseIdentifier "Find-AzurePublicResource" `
+            -Parameters $cacheParams
+
+        if (-not $SkipCache) {
+            try {
+                $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'General'
+                if ($null -ne $cachedResult) {
+                    Write-Verbose "Retrieved Azure resource results from cache for: $Name"
+                    foreach ($item in $cachedResult) { $results.Add($item) }
+                    return
+                }
+            }
+            catch {
+                Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh queries."
+            }
+        }
 
         try {
             if ($WordList) {
@@ -136,11 +174,6 @@ function Find-AzurePublicResource {
             $totalDns = $dnsNames.Count
             Write-Host "     Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
             Write-Host "   Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
-
-            $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
-
-            # Create a thread-safe collection to track found resources for immediate display
-            $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 
             $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 function Get-ResourceType {
@@ -301,6 +334,20 @@ function Find-AzurePublicResource {
                 }
             }
 
+            # Cache results if any were found
+            if (-not $SkipCache -and $results -and $results.Count -gt 0) {
+                try {
+                    Set-BlackCatCache -Key $cacheKey -Data $results `
+                        -ExpirationMinutes $CacheExpirationMinutes `
+                        -CacheType 'General' -MaxCacheSize $MaxCacheSize `
+                        -CompressData:$CompressCache
+                    Write-Verbose "Cached Azure resource results for: $Name (expires in $CacheExpirationMinutes minutes)"
+                }
+                catch {
+                    Write-Verbose "Failed to cache results: $($_.Exception.Message)"
+                }
+            }
+
             # Display found resources immediately after parallel processing
             if ($foundResources.Count -gt 0) {
                 foreach ($message in $foundResources) {
@@ -331,7 +378,7 @@ function Find-AzurePublicResource {
                     "JSON" { return $results | ConvertTo-Json -Depth 3 }
                     "CSV" { return $results | ConvertTo-CSV }
                     "Object" { return $results }
-                    default  { return $results | Format-Table -AutoSize }
+                    "Table"  { return $results | Format-Table -AutoSize }
                 }
         }
         else {
@@ -365,6 +412,21 @@ function Find-AzurePublicResource {
     - JSON: Returns results in JSON format
     - CSV: Returns results in CSV format
     Aliases: output, o
+
+.PARAMETER SkipCache
+    Bypasses the cache and forces a fresh DNS enumeration.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store results in cache before expiry.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (LRU eviction).
+    Default: 100
+
+.PARAMETER CompressCache
+    Enables compression of cached data to reduce memory usage.
 
 .EXAMPLE
     Find-AzurePublicResource -Name "contoso" -WordList "./wordlist.txt" -ThrottleLimit 100 -OutputFormat JSON

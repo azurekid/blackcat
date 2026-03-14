@@ -43,7 +43,23 @@ function Find-SubDomain {
 
         [Parameter(Mandatory = $false)]
         [Alias('table', 'list')]
-        [switch]$Detailed
+        [switch]$Detailed,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('no-cache', 'bypass-cache')]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('cache-expiration', 'expiration')]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('max-cache')]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('compress')]
+        [switch]$CompressCache
     )
 
     begin {
@@ -86,6 +102,31 @@ function Find-SubDomain {
             # Process each domain in the array
             foreach ($domain in $DomainName) {
                 Write-Verbose "$($MyInvocation.MyCommand.Name): Processing domain: $domain"
+
+                # Generate cache key and check for cached results
+                $cacheParams = @{
+                    Domain   = $domain
+                    Category = $Category
+                    Deep     = $DeepSearch.IsPresent
+                }
+                $cacheKey = ConvertTo-CacheKey -BaseIdentifier "Find-SubDomain" `
+                    -Parameters $cacheParams
+
+                if (-not $SkipCache) {
+                    try {
+                        $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'General'
+                        if ($null -ne $cachedResult) {
+                            Write-Verbose "Retrieved subdomain results from cache for: $domain"
+                            foreach ($entry in $cachedResult) {
+                                [void]$results.Add($entry)
+                            }
+                            continue
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Error retrieving from cache: $($_.Exception.Message)"
+                    }
+                }
 
                 $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
                 foreach ($sd in $subdomains) {
@@ -136,6 +177,23 @@ function Find-SubDomain {
                         Write-Verbose "$($MyInvocation.MyCommand.Name): DNS resolution failed for '$_' - $($_.Exception.Message)"
                     }
                 } -ThrottleLimit $ThrottleLimit
+
+                # Cache domain-specific results
+                if (-not $SkipCache) {
+                    try {
+                        $domainResults = @($results | Where-Object { $_.Domain -eq $domain })
+                        if ($domainResults.Count -gt 0) {
+                            Set-BlackCatCache -Key $cacheKey -Data $domainResults `
+                                -ExpirationMinutes $CacheExpirationMinutes `
+                                -CacheType 'General' -MaxCacheSize $MaxCacheSize `
+                                -CompressData:$CompressCache
+                            Write-Verbose "Cached subdomain results for: $domain (expires in $CacheExpirationMinutes minutes)"
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Failed to cache results for ${domain}: $($_.Exception.Message)"
+                    }
+                }
             }
         }
         catch {
@@ -194,6 +252,21 @@ Aliases: json, raw
 .PARAMETER Detailed
 Returns results in detailed table format.
 Aliases: table, list
+
+.PARAMETER SkipCache
+    Bypasses the cache and forces fresh DNS resolution per domain.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store subdomain results in cache.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (LRU eviction).
+    Default: 100
+
+.PARAMETER CompressCache
+    Enables compression of cached data to reduce memory usage.
 
 .EXAMPLE
     Find-SubDomain -DomainName example.com

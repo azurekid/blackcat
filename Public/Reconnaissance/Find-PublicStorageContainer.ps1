@@ -31,7 +31,23 @@ function Find-PublicStorageContainer {
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV")]
         [Alias("output", "o")]
-        [string]$OutputFormat
+        [string]$OutputFormat,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("no-cache", "bypass-cache")]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("cache-expiration", "expiration")]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("max-cache")]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("compress")]
+        [switch]$CompressCache
     )
 
     begin {
@@ -47,6 +63,30 @@ function Find-PublicStorageContainer {
 
     process {
         try {
+            # Generate cache key and check for cached results
+            $cacheParams = @{
+                StorageAccountName = $StorageAccountName
+                Type               = $Type
+            }
+            $cacheKey = ConvertTo-CacheKey `
+                -BaseIdentifier "Find-PublicStorageContainer" `
+                -Parameters $cacheParams
+
+            if (-not $SkipCache) {
+                try {
+                    $cachedResult = Get-BlackCatCache `
+                        -Key $cacheKey -CacheType 'General'
+                    if ($null -ne $cachedResult) {
+                        Write-Verbose "Retrieved results from cache for: $StorageAccountName"
+                        foreach ($item in $cachedResult) { [void]$result.Add($item) }
+                        return
+                    }
+                }
+                catch {
+                    Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh queries."
+                }
+            }
+
             if ($WordList) {
                 Write-Host "  Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
@@ -201,6 +241,20 @@ function Find-PublicStorageContainer {
             else {
                 Write-Host "    No valid storage accounts found" -ForegroundColor Red
             }
+
+            # Cache results if any were found
+            if (-not $SkipCache -and $result -and $result.Count -gt 0) {
+                try {
+                    Set-BlackCatCache -Key $cacheKey -Data $result `
+                        -ExpirationMinutes $CacheExpirationMinutes `
+                        -CacheType 'General' -MaxCacheSize $MaxCacheSize `
+                        -CompressData:$CompressCache
+                    Write-Verbose "Cached results for: $StorageAccountName (expires in $CacheExpirationMinutes minutes)"
+                }
+                catch {
+                    Write-Verbose "Failed to cache results: $($_.Exception.Message)"
+                }
+            }
         }
         catch {
             Write-Error -Message $_.Exception.Message -ErrorAction Continue
@@ -267,7 +321,20 @@ function Find-PublicStorageContainer {
     - CSV: Returns results in CSV format
     Aliases: output, o
 
-.OUTPUTS
+.PARAMETER SkipCache
+    Bypasses the cache and forces a fresh scan.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store results in cache before expiry.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (LRU eviction).
+    Default: 100
+
+.PARAMETER CompressCache
+    Enables compression of cached data to reduce memory usage.
     System.Collections.ArrayList
     Returns an array list of PSCustomObject items, each representing a discovered public storage container with properties such as StorageAccountName, Container, FileCount, IsEmpty, Uri, and optionally Metadata.
 
