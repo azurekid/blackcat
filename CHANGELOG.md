@@ -4,6 +4,100 @@
 
 # CHANGELOG
 
+## v1.2.12 [2026-03-14] Reconnaissance: Fast Mode for Azure Public Resource Search
+
+_Added a reduced-scope triage mode to `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `-FastMode` switch to search high-signal Azure endpoint suffixes only
+* Supports both public and `-PrivateLinkOnly` search modes
+* Cache keys now distinguish between standard and fast search modes
+* Added help examples for `-FastMode` and `-PrivateLinkOnly -FastMode`
+
+**Tradeoff:**
+* Faster initial reconnaissance with reduced endpoint coverage
+
+---
+
+## v1.2.11 [2026-03-14] Reconnaissance: Private Link Search Mode
+
+_Added a dedicated Private Link-only mode to `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `-PrivateLinkOnly` switch to enumerate only Azure Private Link DNS suffixes
+* Cache keys now distinguish between public and Private Link search modes
+* Updated help text and no-results messaging for both modes
+
+**Examples:**
+* `Find-AzurePublicResource -Name "contoso" -PrivateLinkOnly`
+
+---
+
+## v1.2.10 [2026-03-14] Reconnaissance Performance: Public-Only Azure Resource Search
+
+_Further reduced unnecessary work in `Find-AzurePublicResource` by aligning it with its documented scope_
+
+**`Find-AzurePublicResource` Improvements:**
+* Removed Private Link DNS suffixes from candidate generation
+* Function now focuses on public-facing Azure resources only, matching the README description
+* Added caching for empty result sets so repeated misses do not trigger the full DNS enumeration again
+
+**Impact:**
+* Lower candidate count per search
+* Less unnecessary DNS traffic for non-public endpoints
+* Re-running the same miss becomes near-instant until cache expiry
+
+---
+
+## v1.2.9 [2026-03-14] Reconnaissance Performance: Azure Public Resource Discovery
+
+_Reduced DNS enumeration overhead in `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Removed the extra per-candidate Cloudflare DoH CNAME lookup
+* Now uses a single local DNS resolution path and derives canonical host information from the result
+* Avoids re-adding the same base DNS candidate for every permutation
+* Removed unnecessary sorting of an already de-duplicated candidate set
+
+**Impact:**
+* Significantly fewer network calls during large permutation runs
+* Lower startup overhead before useful results begin to appear
+* Better performance for names with large session permutation sets
+
+---
+
+## v1.2.8 [2026-03-14] Auth State Refactor
+
+_Extracted shared authentication state reset logic into a private helper_
+
+**Refactor:**
+* Added `Private/Clear-BlackCatAuthState.ps1`
+* Replaced duplicated token/header reset code in `Invoke-BlackCat`
+* Replaced duplicated token/header reset code in `Connect-ServicePrincipal`
+* `Connect-ServicePrincipal` now also clears `lastAccountId` through helper
+
+**Module Manifest Updates:**
+* Added `Private\Clear-BlackCatAuthState.ps1` to `FileList`
+* Bumped module version to `1.2.8`
+
+---
+
+## v1.2.7 [2026-03-14] MITRE Folder Realignment for Auth Functions
+
+_Reclassified authentication functions to align with Initial Access behavior_
+
+**Function Reclassification:**
+* Moved `Connect-ServicePrincipal` from Resource Development to Initial Access
+* Moved `Connect-EntraApplication` from Resource Development to Initial Access
+* Updated MITRE ATT&CK tactic references in both functions from TA0042 to TA0001
+
+**Module Manifest Updates:**
+* Updated `FunctionsToExport` category grouping for both authentication functions
+* Updated `FileList` paths to new Initial Access folder locations
+* Bumped module version to `1.2.7`
+
+---
+
 ## v1.2.6 [2026-03-14] Az Context Change Detection
 
 _Invoke-BlackCat now detects when the Az context changes and refreshes tokens automatically_
