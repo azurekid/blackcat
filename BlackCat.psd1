@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.2.6'
+    ModuleVersion     = '1.2.12'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -83,6 +83,8 @@
 
         # Initial Access
         'Connect-GraphToken',
+        'Connect-EntraApplication',
+        'Connect-ServicePrincipal',
 
         # Persistence
         'Add-GroupObject',
@@ -104,8 +106,6 @@
 
         # Resource Development
         'Add-EntraApplication',
-        'Connect-EntraApplication',
-        'Connect-ServicePrincipal',
         'Copy-PrivilegedUser',
         'Restore-DeletedIdentity'
     )
@@ -129,6 +129,7 @@
         'Private\Get-AllPages.ps1',
         'Private\ConvertTo-Base64Url.ps1',
         'Private\ConvertFrom-AzAccessToken.ps1',
+        'Private\Clear-BlackCatAuthState.ps1',
         'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
@@ -207,13 +208,13 @@
 
         # Initial Access
         'Public\Initial Access\Connect-GraphToken.ps1',
+        'Public\Initial Access\Connect-ServicePrincipal.ps1',
+        'Public\Initial Access\Connect-EntraApplication.ps1',
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
         'Public\Resource Development\Copy-PrivilegedUser.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
-        'Public\Resource Development\Connect-ServicePrincipal.ps1',
-        'Public\Resource Development\Connect-EntraApplication.ps1',
 
         # Module files
         'BlackCat.psd1',

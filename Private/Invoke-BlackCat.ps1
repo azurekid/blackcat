@@ -33,10 +33,7 @@ function Invoke-BlackCat {
                     "Az context changed, " +
                     "clearing cached tokens"
                 )
-                $script:SessionVariables.AccessToken = $null
-                $script:SessionVariables.ExpiresOn   = $null
-                $script:graphHeader  = $null
-                $script:authHeader   = $null
+                Clear-BlackCatAuthState
             }
         }
 
