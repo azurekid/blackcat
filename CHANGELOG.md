@@ -4,6 +4,22 @@
 
 # CHANGELOG
 
+## v1.2.14 [2026-03-18] 🐛 Fix `Get-ApiConnectionToken` 400 Bad Request
+
+_Corrects the `listConnectionKeys` body format and adds fallback API version_
+
+**`Get-ApiConnectionToken` Bug Fixes:**
+* Fixed `validityTimeSpan` body value — was `"1"` (invalid TimeSpan),
+  now correctly formatted as `"1.00:00:00"` (d.hh:mm:ss), resolving
+  the 400 Bad Request returned by the ARM API
+* Added two-step fallback: if `2018-07-01-preview` returns an error,
+  retries automatically with stable API `2016-06-01` and empty body
+* Improved error handler to surface the actual Azure error message
+  from `$_.ErrorDetails.Message` (the JSON error body), not just the
+  HTTP status line — verbose output now shows the Azure error detail
+
+---
+
 ## v1.2.13 [2026-03-17] 🔑 API Connection Security — Discovery & Credential Access
 
 _New functions to enumerate, risk-score, and demonstrate abuse of Azure API Connections_
