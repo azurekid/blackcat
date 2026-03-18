@@ -4,6 +4,40 @@
 
 # CHANGELOG
 
+## v1.2.13 [2026-03-17] 🔑 API Connection Security — Discovery & Credential Access
+
+_New functions to enumerate, risk-score, and demonstrate abuse of Azure API Connections_
+
+**New Function: `Get-ApiConnection`** (Discovery)
+* Enumerates all `Microsoft.Web/connections` in scope via Azure Resource Graph
+* Correlates each connection to its referencing Logic App(s) (blast-radius mapping)
+* Determines authentication type: OAuth-User, OAuth-SP, ApiKey, BasicAuth, ManagedIdentity
+* Identifies orphaned connections — active trust grants with no referencing workflow
+* Produces a risk score (0–10) based on connector sensitivity, auth type, and orphan status
+* Supports `-OrphanedOnly` and `-MinRiskLevel` filters for targeted triage
+* Example: `Get-ApiConnection -MinRiskLevel High -OutputFormat JSON`
+
+**New Function: `Get-ApiConnectionToken`** (Credential Access)
+* Calls the ARM `listConnectionKeys` action on `Microsoft.Web/connections` to retrieve
+  a short-lived JWT and the connection runtime URL
+* Demonstrates that API Connections are independently callable — no Logic App required
+* Enumerates all accessible connections when no target is specified, surfacing RBAC exposure
+* Supports direct targeting by resource ID, or by resource group + connection name
+* Example: `Get-ApiConnectionToken -ResourceGroupName rg-int -Name office365-conn`
+* Attack chain: `Get-ApiConnection | Get-ApiConnectionToken` → drive connection from PowerShell
+
+**Module Enhancements:**
+* `Get-ApiConnection` and `Get-ApiConnectionToken` added to `FunctionsToExport`
+* Both files added to `FileList` in `BlackCat.psd1`
+
+**Tests:**
+* `Tests/Get-ApiConnection.Tests.ps1` — parameter validation, mocked ARM responses,
+  orphan detection, auth type classification, risk scoring, error handling
+* `Tests/Get-ApiConnectionToken.Tests.ps1` — token retrieval, pipeline input,
+  401/403 handling, call-count verification, empty-subscription handling
+
+---
+
 ## v1.2.12 [2026-03-14] Reconnaissance: Fast Mode for Azure Public Resource Search
 
 _Added a reduced-scope triage mode to `Find-AzurePublicResource`_

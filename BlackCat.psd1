@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.2.12'
+    ModuleVersion     = '1.2.13'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -26,6 +26,7 @@
 
     FunctionsToExport = @(
         # Credential Access
+        'Get-ApiConnectionToken',
         'Get-KeyVaultSecret',
         'Get-ManagedIdentityToken',
         'Get-StorageAccountKey',
@@ -44,6 +45,7 @@
         'Get-ManagedIdentity',
         'Get-PrivilegedApp',
         'Get-PrivilegedServicePrincipal',
+        'Get-ApiConnection',
         'Get-ResourcePermission',
         'Get-RoleAssignment',
         'Get-ServicePrincipalCredential',
@@ -133,6 +135,7 @@
         'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
+        'Public\Credential Access\Get-ApiConnectionToken.ps1',
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
         'Public\Credential Access\Get-ManagedIdentityToken.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
@@ -147,6 +150,7 @@
         'Public\Discovery\Get-PrivilegedServicePrincipal.ps1',
         'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
+        'Public\Discovery\Get-ApiConnection.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Discovery\Get-RoleAssignment.ps1',
         'Public\Discovery\Get-AdministrativeUnit.ps1',
