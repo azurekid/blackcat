@@ -118,23 +118,61 @@ function Get-ApiConnectionToken {
                     $connectionName  = $conn.name
 
                     # Step 2: POST listConnectionKeys to retrieve
-                    # a short-lived JWT for the connection runtime
+                    # a short-lived JWT for the connection runtime.
+                    #
+                    # validityTimeSpan must be a .NET TimeSpan string
+                    # (d.hh:mm:ss). "1" alone is not a valid TimeSpan
+                    # and causes a 400 Bad Request.
+                    #
+                    # Fallback strategy:
+                    #   1. preview API  (2018-07-01-preview) + TimeSpan
+                    #   2. stable API   (2016-06-01) + empty body
+                    $timespan = '{0}.00:00:00' -f $validityDays
+                    $body     = @{
+                        validityTimeSpan = $timespan
+                    } | ConvertTo-Json -Compress
+
+                    $keysResponse = $null
+
+                    # Attempt 1 — preview API with TimeSpan body
                     $keysUri = (
                         '{0}{1}/listConnectionKeys' +
                         '?api-version=2018-07-01-preview'
                     ) -f $sv.armUri, $connId
 
-                    $body = @{
-                        validityTimeSpan = $validityDays.ToString()
-                    } | ConvertTo-Json
+                    try {
+                        $keysResponse = Invoke-RestMethod `
+                            -Uri         $keysUri `
+                            -Headers     $auth `
+                            -Method      'POST' `
+                            -Body        $body `
+                            -ContentType 'application/json' `
+                            -UserAgent   $sv.userAgent
+                    }
+                    catch {
+                        $previewErr = if ($_.ErrorDetails.Message) {
+                            $_.ErrorDetails.Message
+                        } else { $_.Exception.Message }
 
-                    $keysResponse = Invoke-RestMethod `
-                        -Uri         $keysUri `
-                        -Headers     $auth `
-                        -Method      'POST' `
-                        -Body        $body `
-                        -ContentType 'application/json' `
-                        -UserAgent   $sv.userAgent
+                        Write-Verbose (
+                            "preview API failed ($previewErr)" +
+                            ' — retrying with stable API'
+                        )
+
+                        # Attempt 2 — stable API, empty body
+                        $keysUri2 = (
+                            '{0}{1}/listConnectionKeys' +
+                            '?api-version=2016-06-01'
+                        ) -f $sv.armUri, $connId
+
+                        $keysResponse = Invoke-RestMethod `
+                            -Uri         $keysUri2 `
+                            -Headers     $auth `
+                            -Method      'POST' `
+                            -Body        '{}' `
+                            -ContentType 'application/json' `
+                            -UserAgent   $sv.userAgent
+                    }
 
                     # Normalise response across API version variants
                     $token    = if ($keysResponse.value) {
@@ -187,23 +225,43 @@ function Get-ApiConnectionToken {
                 }
                 catch {
                     $errMsg = $_.Exception.Message
+                    # $_.ErrorDetails.Message contains the Azure
+                    # error JSON body (more informative than the
+                    # HTTP status line alone)
+                    $errDetail = if ($_.ErrorDetails.Message) {
+                        try {
+                            $azErr = $_.ErrorDetails.Message |
+                                ConvertFrom-Json -ErrorAction Stop
+                            $azErr.error.message ?? $azErr.message ??
+                                $_.ErrorDetails.Message
+                        }
+                        catch { $_.ErrorDetails.Message }
+                    }
+                    else { $null }
+
+                    $displayMsg = if ($errDetail) {
+                        "$errMsg — $errDetail"
+                    } else { $errMsg }
+
                     if ($errMsg -match '401|Unauthorized') {
                         Write-Host (
                             "  [-] $connId — " +
-                            'Unauthorized (insufficient RBAC)'
+                            "Unauthorized (insufficient RBAC): " +
+                            $displayMsg
                         ) -ForegroundColor Red
                         $stats.Unauthorized++
                     }
                     elseif ($errMsg -match '403|Forbidden') {
                         Write-Host (
                             "  [-] $connId — " +
-                            'Forbidden (action not allowed)'
+                            "Forbidden (action not allowed): " +
+                            $displayMsg
                         ) -ForegroundColor Red
                         $stats.Unauthorized++
                     }
                     else {
                         Write-Warning (
-                            "Error on $connId`: $errMsg"
+                            "Error on $connId`: $displayMsg"
                         )
                         $stats.Failed++
                     }
