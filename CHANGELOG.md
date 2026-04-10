@@ -4,6 +4,178 @@
 
 # CHANGELOG
 
+## v1.2.21 [2026-02-06] 🔌 Connector Proxy & OAuth Pipeline
+
+_Adds `Invoke-ConnectorProxy` and completes the three-function API connection pipeline_
+
+**New Function: `Invoke-ConnectorProxy`**
+* Proxies API calls through `Microsoft.Web/connections` resources in two modes:
+  * **Mode 1 — Direct**: uses a Bearer token from `Get-ApiConnectionToken` to call the connector runtime URL directly
+  * **Mode 2 — DynamicInvoke** (default): posts to the ARM `dynamicInvoke` endpoint with the current ARM session token — Azure transparently forwards the request as the consenting user
+* Mode 2 works for **all** connection types including OAuth-User (office365, teams, sharepoint) where the raw refresh token is held in Azure's internal vault and cannot be extracted
+* Accepts full pipeline input from `Get-ApiConnection` and `Get-ApiConnectionToken` (`ResourceId`, `Token`, `RuntimeUrl`, `DynamicInvokeUrl` all bind by property name)
+* Supports `-Body` and `-Queries` hashtables, all HTTP methods, and all standard output formats (Object/JSON/CSV/Table)
+* Example: `Get-ApiConnection | Where-Object ConnectorId -eq 'office365' | Invoke-ConnectorProxy -Path '/Mail/GetEmails'`
+* MITRE: TA0009 Collection / T1530 Data from Cloud Storage
+
+**`Get-ApiConnectionToken` Enhancements:**
+* OAuth-User connections no longer short-circuit — `listConnectionKeys` is attempted for every non-MI connection type
+* When `listConnectionKeys` throws for an OAuth-User connection (expected — Azure blocks it), the catch block now surfaces `DynamicInvokeUrl` in the result object so `Invoke-ConnectorProxy` can immediately act as that user
+* All result objects now include `DynamicInvokeUrl` regardless of whether the token call succeeded
+* `SkippedOAuth` counter and `[~]` console output unchanged
+
+**`Get-ApiConnection` Enhancements:**
+* Result objects now include `DynamicInvokeUrl` (auto-built from `ResourceId`) so `Invoke-ConnectorProxy` can be piped directly from `Get-ApiConnection` without going through `Get-ApiConnectionToken`
+
+**Module Manifest:**
+* Added `Invoke-ConnectorProxy` to `FunctionsToExport`
+* Added `Public\Credential Access\Invoke-ConnectorProxy.ps1` to `FileList`
+* Version bumped to `1.2.21`
+
+---
+
+## v1.2.20 [2026-02-06] 🗃️ BlobStorage Exfil Channel
+
+_Adds Azure Blob Storage as a no-SAS exfil target for `Invoke-LogicAppInjection`_
+
+**`Invoke-LogicAppInjection` Enhancements:**
+* **New parameter set `BlobStorage`**: mutually exclusive with existing `Webhook` set
+* **`-StorageAccountName`** (Mandatory, BlobStorage set): target storage account for PUT-blob exfil
+* **`-StorageContainerName`** (Optional, default `blackcat-exfil`): target container
+* Injected HTTP action uses `authentication: {type: ManagedServiceIdentity, audience: https://storage.azure.com/}` — no SAS token or shared key embedded in the workflow definition
+* Blob name is a Logic Apps expression: `@{concat('<label>-', workflow().name, '-', utcNow('yyyyMMddHHmmss'), '.json')}` — unique per execution
+* Attacker retrieves blobs anonymously if container publicAccess = Blob
+* Result object property renamed `ExfilTarget` (was `CallbackUrl`) + new `ExfilMode` (BlobStorage / Webhook)
+* Console output updated to show mode and target URL
+
+**Pre-requisites for BlobStorage mode:**
+* Storage account: `allowBlobPublicAccess = true`
+* Container with `publicAccess = Blob` (or Container)
+* Logic App managed identity has `Storage Blob Data Contributor` on the container
+
+---
+
+ [2026-03-18] 🐉 `Invoke-LogicAppInjection` — workflow definition injection
+
+_New function: inject HTTP exfil actions into Logic App workflows_
+
+**New Function: `Invoke-LogicAppInjection`** (`Public/Credential Access/`)
+
+* Injects one or more HTTP actions into a Logic App workflow definition
+  to exfiltrate credentials at runtime without extracting stored tokens
+
+* **`MIToken` mode** (default): injects `BlackCat_FetchIMDSToken` +
+  `BlackCat_ExfilToken`. Calls IMDS from within the LA runtime:
+  `http://169.254.169.254/metadata/identity/oauth2/token` — returns
+  an ARM Bearer token when the LA has a Managed Identity assigned
+
+* **`ConnectorData` mode**: injects `BlackCat_ConnectorRead` +
+  `BlackCat_ExfilData`. Executes a connector action (e.g. `GET /v2/Mail`)
+  as the OAuth-consented user; the LA runtime transparently uses the
+  stored refresh token. Connector API response is POSTed to callback
+
+* **`Both`**: all four actions injected as a sequential chain
+
+* Injected actions use `runAfter:{}` — run parallel to existing root
+  actions, preserving the Logic App's original behaviour
+
+* `-TriggerWorkflow`: fires the LA immediately via HTTP trigger callback
+  URL (via `listCallbackUrl`)
+
+* `-Restore`: PUTs the original definition back after the run (waits
+  8 seconds when combined with `-TriggerWorkflow`)
+
+* Supports `-WhatIf` / `-Confirm` via `SupportsShouldProcess`
+
+* MITRE: TA0006/T1528 (Steal Application Access Token),
+  T1565.001 (Stored Data Manipulation)
+
+---
+
+## v1.2.18 [2026-03-18] 🔑 `Get-ApiConnectionToken` credential surfacing
+
+_Surface stored credentials from parameterValues; clarify OAuth token vault limitation_
+
+**`Get-ApiConnectionToken` Enhancement:**
+* Extract `$props.parameterValues` for all connection types and expose
+  as `StoredCredentials` property on every result object
+* **API Key / Basic Auth connections**: credentials stored in
+  `parameterValues` are now printed in the console output (red) and
+  returned in `StoredCredentials`
+* **OAuth-User connections** (office365, teams, sharepointonline):
+  `parameterValues` is empty — Azure stores the OAuth refresh token in
+  its internal Logic Apps token vault, not in ARM. This is now
+  explicitly stated in the output instead of a generic DarkGray note
+* Injection path reminder added for OAuth-User connections: inject HTTP
+  action into the consuming Logic App workflow to capture the IMDS/
+  OAuth token at runtime
+* Updated `.EXAMPLE` to contrast OAuth-User (empty `StoredCredentials`,
+  use `DynamicInvokeUrl`) vs API Key/Basic Auth (credential in
+  `StoredCredentials`)
+
+---
+
+## v1.2.17 [2026-03-18] 🔑 `Get-ApiConnectionToken` OAuth-User handling
+
+_Graceful detection and reporting for OAuth-User delegated connections_
+
+**`Get-ApiConnectionToken` Fix:**
+* Detect OAuth-User connections (delegated) before calling `listConnectionKeys`
+* `listConnectionKeys` is blocked by Azure for user-consent OAuth connections
+  (e.g. `office365`, `sharepointonline`, `teams`) — now detected pre-emptively
+  instead of failing with a generic 400 warning
+* Surfaces `DynamicInvokeUrl` on the result object — the ARM `dynamicInvoke`
+  endpoint proxies API calls as the consented user without exposing the token
+* Adds `SkippedOAuth` counter shown in the summary output
+* Detection logic: `authenticatedUser.name` populated + no `parameterValueType`
+
+---
+
+## v1.2.16 [2026-03-18] 🔑 `Get-ApiConnectionToken` MI chain resolution
+
+_Deep analysis of Managed Identity API connections with attack-path guidance_
+
+**`Get-ApiConnectionToken` Enhancements:**
+* Added `-ResolveManagedIdentity` switch for MI-type connections
+* Walks the full chain: connection → consuming Logic Apps → identity type
+  → role assignments → recommended least-noisy token path
+* **UserAssigned MI** → recommends `Invoke-FederatedTokenExchange`
+  (pure API calls, no ACI/deployment script, stealthier, ~5s vs ~60s)
+* **SystemAssigned MI** → explains workflow injection path (inject HTTP
+  action into LA definition to exfiltrate IMDS token from runtime context)
+* Role assignments colour-coded: Owner/Contributor/Admin = Red, others = Yellow
+* `MIAnalysis` property added to result objects when `-ResolveManagedIdentity`
+  is used, containing per-Logic-App identity and role details
+
+**Why `Invoke-FederatedTokenExchange` over `Get-ManagedIdentityToken`:**
+* No Azure Container Instances or Deployment Script write required
+* No ACI quota consumption, no visible resource artifacts in the RG
+* Works entirely from local machine via pure REST API calls
+* ~5s vs ~60s for container provisioning
+* Requires `federatedIdentityCredentials/write` on the UAMI
+  (vs `deploymentScripts/write` + ACI registration)
+* Neither approach works for system-assigned MIs — token is only
+  available from within the Logic App runtime (workflow injection path)
+
+---
+
+## v1.2.15 [2026-03-18] 🐛 Fix `Get-ApiConnectionToken` Managed Identity + stable API body
+
+_Handles MI connections correctly and fixes the stable API fallback body_
+
+**`Get-ApiConnectionToken` Bug Fixes:**
+* **MI connection early-exit**: connections with `parameterValueType = 'Alternative'`
+  (Managed Identity) now skip `listConnectionKeys` entirely — these connections have
+  no static token; the Logic App's MI obtains runtime tokens dynamically. A result
+  object is still returned with `AuthorizedAs = 'ManagedIdentity'`, `Token = $null`,
+  and a `TokenNote` explaining the MI trust model.
+* **Stable API fallback body**: the `2016-06-01` fallback was incorrectly sending
+  `'{}'`; it also requires `validityTimeSpan`. Both API versions now receive the
+  correct `d.hh:mm:ss` formatted body.
+* **Added `SkippedMI` counter** to the summary output.
+
+---
+
 ## v1.2.14 [2026-03-18] 🐛 Fix `Get-ApiConnectionToken` 400 Bad Request
 
 _Corrects the `listConnectionKeys` body format and adds fallback API version_
