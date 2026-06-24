@@ -416,7 +416,7 @@ An array of Microsoft Graph permission scopes to request. These should match the
 Multiple scopes can be specified as an array: @("User.Read", "Directory.Read.All")
 
 .PARAMETER UseDeviceCode
-Switch parameter to use device code authentication flow instead of interactive browser authentication. This is useful for:
+Switch parameter to use device code authentication flow instead of interactive browser authentication. Use for:
 - Remote PowerShell sessions
 - SSH sessions without browser access
 - Azure Cloud Shell
@@ -433,7 +433,7 @@ Connects to Microsoft Graph using interactive browser authentication with the sp
 .EXAMPLE
 Connect-EntraApplication -ClientId "12345678-1234-1234-1234-123456789012" -TenantId "87654321-4321-4321-4321-210987654321" -Scopes @("User.Read") -UseDeviceCode
 
-Connects using device code flow, which is useful for remote sessions or environments without browser access.
+Connects using device code flow for remote sessions or environments without browser access.
 
 .EXAMPLE
 $connection = Connect-EntraApplication -ClientId $appId -TenantId $tenantId -Scopes @("User.Read", "Group.Read.All") -Force
@@ -470,7 +470,7 @@ Security Considerations:
 - User must have appropriate permissions for the requested operations
 - MFA and Conditional Access policies apply to the user
 - Access tokens are stored in $script:EntraAppContext for use by other functions
-- Tokens expire after the specified time and may need refresh
+- Tokens expire and may need refresh
 
 Return Object:
 - The function returns a connection object with AccessToken and RefreshToken

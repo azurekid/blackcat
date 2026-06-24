@@ -563,10 +563,9 @@ function Find-AzurePublicResource {
 
 
 .NOTES
-    - Requires PowerShell 7+ for parallel processing functionality
-    - Useful for reconnaissance and security assessments of Azure environments
-    - Only DNS names that successfully resolve are returned as results
-    - FastMode prioritizes speed over coverage by reducing endpoint suffixes
+    - Requires PowerShell 7+ for parallel processing
+    - Only DNS names that successfully resolve are returned
+    - FastMode reduces endpoint suffixes for speed
 
 .LINK
     MITRE ATT&CK Tactic: TA0043 - Reconnaissance

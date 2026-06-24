@@ -358,7 +358,7 @@ function Find-DnsRecords {
                                     
                                     # For CNAME queries, check if this is actually a CNAME record
                                     if ($RecordType -eq "CNAME" -and $Answer.type -eq 5) {
-                                        $null = $Results.Add([PSCustomObject]@{
+                                        [void]$Results.Add([PSCustomObject]@{
                                             Domain = $QueryDomain
                                             RecordType = $RecordType
                                             Data = $Answer.data
@@ -379,7 +379,7 @@ function Find-DnsRecords {
                                     }
                                     # For non-CNAME queries or exact type matches
                                     elseif ($Answer.type -eq $ExpectedType) {
-                                        $null = $Results.Add([PSCustomObject]@{
+                                        [void]$Results.Add([PSCustomObject]@{
                                             Domain = $QueryDomain
                                             RecordType = $RecordType
                                             Data = $Answer.data
@@ -428,7 +428,7 @@ function Find-DnsRecords {
                                             # Common other CDN patterns can be added here
                                             
                                             if ($IsLikelyProxied) {
-                                                $null = $Results.Add([PSCustomObject]@{
+                                                [void]$Results.Add([PSCustomObject]@{
                                                     Domain = $QueryDomain
                                                     RecordType = "CNAME (Flattened)"
                                                     Data = "$($ProxiedRecord.data) [$ProxyService Flattened/Proxied]"

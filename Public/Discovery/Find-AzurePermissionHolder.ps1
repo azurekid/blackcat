@@ -399,8 +399,7 @@ function Test-PermissionMatch {
         $patternBase = $matches[1]
         $patternAction = $matches[2].ToLower()
         
-        # Reset $matches to avoid conflicts
-        $null = $Target -match '^(.+)/([^/]+)$'
+        [void]($Target -match '^(.+)/([^/]+)$')
         $targetBase = $matches[1]
         $targetAction = $matches[2].ToLower()
         

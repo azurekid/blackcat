@@ -60,12 +60,11 @@ function Set-UserAgentRotation {
 
     <#
     .SYNOPSIS
-    Configure user agent rotation settings to reduce SIEM visibility.
+    Configure user agent rotation settings.
 
     .DESCRIPTION
-    This function allows you to configure how the BlackCat module rotates user agents
-    to avoid detection by security monitoring systems. You can set the time interval
-    between rotations, the maximum number of requests per user agent, or disable
+    Configures how the BlackCat module rotates user agents.
+    Set the time interval between rotations, the number of requests per user agent, or disable
     rotation entirely.
 
     .PARAMETER Interval

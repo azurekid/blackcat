@@ -181,7 +181,7 @@ function Get-PublicBlobContent {
         Lists or downloads files from a public Azure Blob Storage account.
 
     .DESCRIPTION
-        Lists or downloads files from a public Azure Blob Storage account including soft-deleted blobs. Enumerates blob containers and files without authentication. Useful for discovering and exfiltrating public blob data.
+        Lists or downloads files from a public Azure Blob Storage account including soft-deleted blobs, without authentication.
 
     .PARAMETER StorageAccountName
         The name of the Azure Storage Account (3-24 lowercase alphanumeric characters).

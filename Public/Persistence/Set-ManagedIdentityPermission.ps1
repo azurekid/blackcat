@@ -349,8 +349,7 @@ Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-12345
 This example assigns the app role with the specified app role ID to the service principal for the given resource.
 
 .NOTES
-- This function requires authentication to the Microsoft Graph API. Ensure that the authentication header is set correctly.
-- The function uses `Invoke-RestMethod` to make API calls and handles errors gracefully by logging messages.
+Requires an authenticated Microsoft Graph session with permissions to read service principals and manage app role assignments.
 
 .LINK
 MITRE ATT&CK Tactic: TA0003 - Persistence

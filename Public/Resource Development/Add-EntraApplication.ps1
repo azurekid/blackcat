@@ -89,15 +89,15 @@ function Add-EntraApplication {
 Creates an Entra ID Application and assigns Global Administrator role.
 
 .DESCRIPTION
-Automates creating an Entra ID Application and service principal with Global Administrator role assignment. Useful for establishing high-privilege backdoor applications with minimal manual steps. The created service principal gains maximum permissions in the tenant.
+Creates an Entra ID application and service principal, then assigns the Global Administrator directory role to the service principal. No sign-in audience, redirect URIs, or API permissions are configured — only the role assignment.
 
 .PARAMETER DisplayName
-Specifies the display name of the Entra ID Application. Defaults to 'MS-PIM' if not provided.
+Display name for the application. Defaults to 'MS-PIM'.
 
 .EXAMPLE
 Add-EntraApplication -DisplayName "MyCustomApp"
 
-Creates an Entra ID Application named "MyCustomApp" with its Service Principal and assigns the Global Administrator role.
+Creates an application and service principal named "MyCustomApp" with the Global Administrator role assigned.
 
 Example output:
 DisplayName                : MyCustomApp
@@ -116,22 +116,13 @@ This example creates an Entra ID Application named "MyApp" with a sign-in audien
 creates its Service Principal, and assigns the Global Administrator role to the Service Principal.
 
 .NOTES
-- This function requires an authenticated session with Microsoft Graph API.
-- Ensure that the necessary permissions are granted to the account executing this function.
+Requires an authenticated Microsoft Graph session with permissions to create applications and assign directory roles.
 
 .OUTPUTS
-A PSCustomObject containing user-friendly information about the created Entra ID Application, Service Principal, and role assignment with the following properties:
-- DisplayName: The display name of the application
-- ApplicationId: The application (client) ID
-- ApplicationObjectId: The object ID of the application
-- ApplicationCreatedDateTime: When the application was created
-- ServicePrincipalDisplayName: The display name of the service principal
-- ServicePrincipalObjectId: The object ID of the service principal
-- ServicePrincipalType: The type of service principal
-- ServicePrincipalEnabled: Whether the service principal is enabled
-- RoleAssignmentName: The name of the assigned role
-- RoleTemplateId: The role template ID
-- Status: Success/failure status of the operation
+PSCustomObject with properties:
+- DisplayName, ApplicationId, ApplicationObjectId, ApplicationCreatedDateTime
+- ServicePrincipalDisplayName, ServicePrincipalObjectId, ServicePrincipalType, ServicePrincipalEnabled
+- RoleAssignmentName, RoleTemplateId
 
 .LINK
 https://learn.microsoft.com/en-us/graph/overview
