@@ -1092,7 +1092,7 @@ _Improvements_
 
 ### Group Management Enhancements:
 
-* Renamed `Add-GroupOwner` to `Add-GroupObject` and extended functionality to allow adding both owners and members to Entra ID groups. Added a new `ObjectType` parameter to specify the role (`Owner` or `Member`).
+* Renamed `Add-GroupOwner` to `Add-EntraGroupMember` (aliased as `Add-GroupObject`) and extended functionality to allow adding both owners and members to Entra ID groups. Added a new `ObjectType` parameter to specify the role (`Owner` or `Member`).
 
 ### Logging Improvements:
 * Enhanced verbose logging in `Invoke-BlackCat` to include the selected user agent for better debugging.

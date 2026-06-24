@@ -329,7 +329,7 @@ function Copy-PrivilegedUser {
                             
                             if ($group -and $group.ObjectId) {
 
-                                Add-GroupObject -GroupObjectId $group.ObjectId -UserPrincipalName $newUser.UserPrincipalName -ObjectType "Member"
+                                Add-EntraGroupMember -GroupObjectId $group.ObjectId -UserPrincipalName $newUser.UserPrincipalName -ObjectType "Member"
                                 Write-Host "   Added to group: $groupName" -ForegroundColor Green
                             }
                             else {

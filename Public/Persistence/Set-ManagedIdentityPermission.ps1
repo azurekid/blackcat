@@ -2,6 +2,7 @@ using namespace System.Management.Automation
 
 function Set-ManagedIdentityPermission {
     [cmdletbinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ResourceId')]
+    [Alias('Set-ServicePrincipalPermission')]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'ResourceId')]
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'CommonResource')]        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(

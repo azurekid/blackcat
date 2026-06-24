@@ -91,7 +91,7 @@
         'Connect-ServicePrincipal',
 
         # Persistence
-        'Add-GroupObject',
+        'Add-EntraGroupMember',
         'Add-StorageAccountSasToken',
         'Set-AdministrativeUnit',
         'Set-AppRegistrationOwner',
@@ -198,7 +198,7 @@
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
-        'Public\Persistence\Add-GroupObject.ps1',
+        'Public\Persistence\Add-EntraGroupMember.ps1',
         'Public\Persistence\Set-AdministrativeUnit.ps1',
         'Public\Persistence\Set-AppRegistrationOwner.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',
