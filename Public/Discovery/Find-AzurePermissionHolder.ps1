@@ -282,11 +282,11 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
     $principalGroups = $roleAssignments | Group-Object { $_.properties.principalType }
 
     foreach ($group in $principalGroups) {
-        $principalType = $group.Name
+        $assignmentPrincipalType = $group.Name
         $principalIds = $group.Group.properties.principalId | Select-Object -Unique
         
         # Skip groups if not requested
-        if ($principalType -eq 'Group' -and -not $IncludeGroups) {
+        if ($assignmentPrincipalType -eq 'Group' -and -not $IncludeGroups) {
             continue
         }
     }
@@ -294,10 +294,10 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
     foreach ($assignment in $roleAssignments) {
         $roleDefId = ($assignment.properties.roleDefinitionId -split '/')[-1]
         $principalId = $assignment.properties.principalId
-        $principalType = $assignment.properties.principalType
+        $assignmentPrincipalType = $assignment.properties.principalType
         
         # Skip groups if not requested
-        if ($principalType -eq 'Group' -and -not $IncludeGroups) {
+        if ($assignmentPrincipalType -eq 'Group' -and -not $IncludeGroups) {
             continue
         }
         
@@ -307,7 +307,7 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
         
         $result = [PSCustomObject]@{
             PrincipalId = $principalId
-            PrincipalType = $principalType
+            PrincipalType = $assignmentPrincipalType
             RoleName = $roleInfo.RoleName
             RoleDefinitionId = $roleDefId
             Scope = $assignment.properties.scope
