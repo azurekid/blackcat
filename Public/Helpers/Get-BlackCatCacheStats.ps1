@@ -569,14 +569,15 @@ function Get-BlackCatCacheStats {
                 Write-Host "├─ Overall Hit Rate: $($summary.OverallHitRate)%" -ForegroundColor $(if ($summary.OverallHitRate -gt 80) { 'Green' } elseif ($summary.OverallHitRate -gt 60) { 'Yellow' } else { 'Red' })
                 Write-Host "├─ Total Memory Usage: $([math]::Round($summary.TotalSizeMB, 2)) MB" -ForegroundColor White
                 
-                # Add filter information if filters are applied
-                $activeFilters = @()
-                if ($FilterExpired) { $activeFilters += "Expired" }
-                if ($FilterValid) { $activeFilters += "Valid" }
-                if ($FilterCompressed) { $activeFilters += "Compressed" }
-                if ($FilterLarge) { $activeFilters += "Large (>1MB)" }
-                if ($MinSize -gt 0) { $activeFilters += "MinSize: ${MinSize}KB" }
-                if ($MaxAge -gt 0) { $activeFilters += "MaxAge: ${MaxAge}h" }
+                # Collect active filter labels
+                $activeFilters = & {
+                    if ($FilterExpired)     { "Expired" }
+                    if ($FilterValid)       { "Valid" }
+                    if ($FilterCompressed)  { "Compressed" }
+                    if ($FilterLarge)       { "Large (>1MB)" }
+                    if ($MinSize -gt 0)     { "MinSize: ${MinSize}KB" }
+                    if ($MaxAge -gt 0)      { "MaxAge: ${MaxAge}h" }
+                }
                 
                 if ($activeFilters.Count -gt 0) {
                     Write-Host "├─ Active Filters: $($activeFilters -join ', ')" -ForegroundColor Magenta

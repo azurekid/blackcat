@@ -237,9 +237,7 @@ function Get-AzResourceSecretList {
                             $readOnlyKeys = Invoke-RestMethod -Uri $readOnlyKeysUri -Headers $using:script:authHeader -Method Post
                             
                             # Combine all keys
-                            $allKeys = @()
-                            $allKeys += $keys
-                            $allKeys += $readOnlyKeys
+                            $allKeys = @($keys) + @($readOnlyKeys)
                             
                             $secretObject.Keys = $allKeys
                             if ($allKeys.Count -gt 0) {

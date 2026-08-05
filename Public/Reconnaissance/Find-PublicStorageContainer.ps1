@@ -294,7 +294,7 @@ function Find-PublicStorageContainer {
     Finds publicly accessible Azure Storage containers.
 
 .DESCRIPTION
-    Discovers public Azure Storage containers through account name enumeration and accessibility testing. Tests various storage account naming patterns and verifies public access. Useful for finding exposed data in storage services.
+    Discovers public Azure Storage containers through account name enumeration and accessibility testing.
 
 .PARAMETER StorageAccountName
     The base name of the Azure Storage account to check. Permutations will be generated based on this value.

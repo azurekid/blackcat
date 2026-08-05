@@ -52,7 +52,7 @@ function Set-AppRegistrationOwner {
         Sets an owner on an Azure App Registration.
 
     .DESCRIPTION
-Adds a user as an owner to an Azure App Registration. App owners have full control over the application including credential management and consent permissions. Useful for maintaining persistent administrator-level access.
+Adds a user as an owner to an Azure App Registration. App owners have full control over the application including credential management and consent permissions.
     .PARAMETER AppId
         The Application (client) ID of the App Registration.
 

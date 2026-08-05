@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.2.12'
+    ModuleVersion     = '1.2.21'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -26,10 +26,13 @@
 
     FunctionsToExport = @(
         # Credential Access
+        'Get-ApiConnectionToken',
         'Get-KeyVaultSecret',
         'Get-ManagedIdentityToken',
         'Get-StorageAccountKey',
         'Invoke-FederatedTokenExchange',
+        'Invoke-LogicAppInjection',
+        'Invoke-ConnectorProxy',
 
         # Discovery
         'Find-EntraPermissionHolder',
@@ -44,6 +47,7 @@
         'Get-ManagedIdentity',
         'Get-PrivilegedApp',
         'Get-PrivilegedServicePrincipal',
+        'Get-ApiConnection',
         'Get-ResourcePermission',
         'Get-RoleAssignment',
         'Get-ServicePrincipalCredential',
@@ -87,7 +91,7 @@
         'Connect-ServicePrincipal',
 
         # Persistence
-        'Add-GroupObject',
+        'Add-EntraGroupMember',
         'Add-StorageAccountSasToken',
         'Set-AdministrativeUnit',
         'Set-AppRegistrationOwner',
@@ -133,10 +137,13 @@
         'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
+        'Public\Credential Access\Get-ApiConnectionToken.ps1',
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
         'Public\Credential Access\Get-ManagedIdentityToken.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
         'Public\Credential Access\Invoke-FederatedTokenExchange.ps1',
+        'Public\Credential Access\Invoke-LogicAppInjection.ps1',
+        'Public\Credential Access\Invoke-ConnectorProxy.ps1',
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',
@@ -147,6 +154,7 @@
         'Public\Discovery\Get-PrivilegedServicePrincipal.ps1',
         'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
+        'Public\Discovery\Get-ApiConnection.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Discovery\Get-RoleAssignment.ps1',
         'Public\Discovery\Get-AdministrativeUnit.ps1',
@@ -190,7 +198,7 @@
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
-        'Public\Persistence\Add-GroupObject.ps1',
+        'Public\Persistence\Add-EntraGroupMember.ps1',
         'Public\Persistence\Set-AdministrativeUnit.ps1',
         'Public\Persistence\Set-AppRegistrationOwner.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',

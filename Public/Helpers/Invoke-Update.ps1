@@ -1,5 +1,6 @@
 function Invoke-Update {
     [cmdletbinding()]
+    [Alias('Update-BlackCat')]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [string]$Repository = 'https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/support-files/'

@@ -229,7 +229,7 @@ Persistence functions demonstrate how an attacker with sufficient privileges can
 
 | Function | Technique | Purpose |
 |----------|-----------|---------|
-| `Add-GroupObject` | T1098 | Add members or owners to Entra ID groups |
+| `Add-EntraGroupMember` | T1098 | Add members or owners to Entra ID groups |
 | `Add-StorageAccountSasToken` | T1098 | Generate SAS tokens for persistent storage access |
 | `Set-AdministrativeUnit` | T1098 | Manage administrative unit membership boundaries |
 | `Set-FederatedIdentity` | T1098.001 | Inject federated identity credentials on managed identities |

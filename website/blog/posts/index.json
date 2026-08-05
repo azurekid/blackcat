@@ -1,0 +1,13 @@
+[
+  {
+    "slug": "nextdns-homeassistant-app-blocking",
+    "title": "Smarter App Blocking: NextDNS Automation in Home Assistant",
+    "date": "2026-04-09",
+    "author": "AzureHacking Security",
+    "tags": ["Home Assistant", "NextDNS", "Parental Controls", "DNS", "Automation"],
+    "excerpt": "Block and unblock apps on a schedule using NextDNS and Home Assistant automations — with fixes for the two most common YAML pitfalls.",
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&auto=format&fit=crop",
+    "readTime": 8,
+    "status": "draft"
+  }
+]
