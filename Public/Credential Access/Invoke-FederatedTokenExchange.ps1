@@ -88,45 +88,30 @@ function Invoke-FederatedTokenExchange {
             $baseIssuerUrl = $IssuerUrl.TrimEnd('/')
             $resolvedUrl = $null
 
-            Write-Verbose "Resolving short URL redirection for: $baseIssuerUrl"
-            try {
-                # Force PowerShell not to follow the redirect automatically
-                # Without -Method, this defaults to a standard GET request
-                $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -ErrorAction Stop -SkipHttpErrorCheck
-                
-                # PowerShell 7+ Path: The 302 is returned as a successful object
-                if ($resp.Headers.Location) {
-                    $resolvedUrl = $resp.Headers.Location
-                }
+            Write-Verbose "Resolving short URL redirection natively for: $baseIssuerUrl"
+            
+            # -SkipHttpErrorCheck keeps PowerShell from treating the 302 as a terminating failure
+            # -MaximumRedirection 0 blocks it from moving past the initial redirect 
+            $resp = Invoke-WebRequest -Uri $baseIssuerUrl -Method Head -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction Stop
+            
+            # Inspect the target location from the headers map
+            if ($resp.Headers.Location) {
+                # PowerShell 7 exposes it as an absolute or relative string directly
+                $resolvedUrl = $resp.Headers.Location
+                Write-Verbose "Successfully resolved short URL redirect to: $resolvedUrl"
             }
-            catch [System.Net.WebException], [Microsoft.PowerShell.Commands.HttpResponseException] {
-                # Windows PowerShell 5.1 Path: The 302 throws an exception. 
-                # We intercept the exception and extract the target header from it.
-                $response = $_.Exception.Response
-                if ($response -and $response.Headers["Location"]) {
-                    $resolvedUrl = $response.Headers["Location"]
-                }
-            }
-            catch {
-                # Catch-all for other network failures (DNS, timeout, etc.)
-                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Network error resolving $baseIssuerUrl : $($_.Exception.Message)" -Severity 'Error'
-                return
-            }
-
-            # Fallback: If no redirect header was found, assume the original URL was the direct target
-            if (-not $resolvedUrl) {
+            else {
+                # Fallback if the shortener didn't return a Location string
                 $resolvedUrl = $baseIssuerUrl
-                Write-Verbose "No redirection detected. Proceeding with base URL."
-            } else {
-                Write-Verbose "Redirect intercepted successfully! Target base is: $resolvedUrl"
+                Write-Verbose "No redirection header was found. Sticking with original URL."
             }
 
-            # Build final file payload endpoint cleanly using the resolved destination
+            # Build the clean target asset file endpoint using the final domain route
             $keyUrl = '{0}/blackcat-oidc.pem' -f $resolvedUrl.TrimEnd('/')
-            Write-Verbose "Downloading private key file from: $keyUrl"
+            Write-Verbose "Downloading private key asset payload from: $keyUrl"
 
             try {
-                # This final request follows redirects natively to get the raw text payload
+                # This request follows redirects naturally to download the true text payload
                 $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
                 Write-Verbose "Private key downloaded successfully"
             }
