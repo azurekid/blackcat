@@ -31,7 +31,7 @@ function Get-ManagedIdentityToken {
             'https://vault.azure.net',
             'https://storage.azure.com',
             'https://database.windows.net',
-            'https://ossrdbms-aad.database.windows.net'
+            'https://ossrdbms-aad.database.windows.net',
             'https://monitor.azure.com'
         )]
         [Alias('audience', 'aud')]
