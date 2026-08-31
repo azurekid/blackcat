@@ -25,9 +25,9 @@ function Invoke-FederatedTokenExchange {
         [Alias('resource', 'audience', 'aud')]
         [string]$EndpointType = 'MSGraph',
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [Alias('issuer')]
-        [string]$IssuerUrl = 'https://bc.blob.core.windows.net/oidc',
+        [string]$IssuerUrl = 'https://blackcatoidc.blob.core.windows.net/oidc',
 
         [Parameter(Mandatory = $false)]
         [Alias('key', 'pem')]
