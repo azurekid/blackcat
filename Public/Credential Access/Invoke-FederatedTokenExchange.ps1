@@ -92,7 +92,7 @@ function Invoke-FederatedTokenExchange {
             
             # -SkipHttpErrorCheck keeps PowerShell from treating the 302 as a terminating failure
             # -MaximumRedirection 0 blocks it from moving past the initial redirect 
-            $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction Stop
+            $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
             
             # Inspect the target location from the headers map
             if ($resp.Headers.Location) {
