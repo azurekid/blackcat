@@ -74,6 +74,7 @@ function Invoke-FederatedTokenExchange {
             Storage     = 'https://storage.azure.com'
             SQLDatabase = 'https://database.windows.net'
             OSSDatabase = 'https://ossrdbms-aad.database.windows.net'
+            Monitor     = 'https://monitor.azure.com'
         }
         $resourceUrl = $endpoints[$EndpointType]
 
