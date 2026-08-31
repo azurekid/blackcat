@@ -27,7 +27,7 @@ function Invoke-FederatedTokenExchange {
 
         [Parameter(Mandatory = $true)]
         [Alias('issuer')]
-        [string]$IssuerUrl,
+        [string]$IssuerUrl = 'https://bc.blob.core.windows.net/oidc',
 
         [Parameter(Mandatory = $false)]
         [Alias('key', 'pem')]
