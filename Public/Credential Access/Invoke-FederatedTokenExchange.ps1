@@ -21,7 +21,7 @@ function Invoke-FederatedTokenExchange {
         [string]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Azure', 'MSGraph', 'KeyVault', 'Storage', 'SQLDatabase', 'OSSDatabase')]
+        [ValidateSet('Azure', 'MSGraph', 'KeyVault', 'Storage', 'SQLDatabase', 'OSSDatabase', 'Monitor')]
         [Alias('resource', 'audience', 'aud')]
         [string]$EndpointType = 'MSGraph',
 
