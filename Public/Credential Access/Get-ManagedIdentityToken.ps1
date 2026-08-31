@@ -26,15 +26,16 @@ function Get-ManagedIdentityToken {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet(
-            'https://management.azure.com/',
-            'https://graph.microsoft.com/',
-            'https://vault.azure.net/',
-            'https://storage.azure.com/',
-            'https://database.windows.net/',
-            'https://ossrdbms-aad.database.windows.net/'
+            'https://management.azure.com',
+            'https://graph.microsoft.com',
+            'https://vault.azure.net',
+            'https://storage.azure.com',
+            'https://database.windows.net',
+            'https://ossrdbms-aad.database.windows.net'
+            'https://monitor.azure.com'
         )]
         [Alias('audience', 'aud')]
-        [string]$Resource = 'https://management.azure.com/',
+        [string]$Resource = 'https://management.azure.com',
 
         [Parameter(Mandatory = $false)]
         [string]$Location = 'eastus',
