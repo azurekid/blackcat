@@ -108,6 +108,7 @@ function Invoke-FederatedTokenExchange {
                 Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
                 return
             }
+        }
         else {
             if (-not (Test-Path -Path $PrivateKeyPath)) {
                 Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Private key not found: $PrivateKeyPath" -Severity 'Error'
