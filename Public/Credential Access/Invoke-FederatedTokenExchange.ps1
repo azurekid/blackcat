@@ -85,27 +85,53 @@ function Invoke-FederatedTokenExchange {
 
         # Auto-download private key from issuer URL if not provided locally
         if (-not $PrivateKeyPath) {
-            $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl.TrimEnd('/')
-            Write-Verbose "Resolving and downloading private key from: $keyUrl"
-            try {
-                # 1. Resolve short URL if one is provided
-                $response = Invoke-WebRequest -Uri $keyUrl -Method Head -MaximumRedirection 0 -ErrorAction SilentlyContinue
-                
-                # If it's a redirect, grab the 'Location' header
-                if ($response.Headers.Location) {
-                    $keyUrl = $response.Headers.Location
-                    Write-Verbose "Redirect detected! Target URL resolved to: $keyUrl"
-                }
-                elseif ($response.StatusCode -ge 300 -and $response.StatusCode -lt 400) {
-                    # Backup check for specific environment/protocol differences
-                    $keyUrl = $_.Exception.Response.Headers.Location
-                }
+            $baseIssuerUrl = $IssuerUrl.TrimEnd('/')
+            $resolvedUrl = $null
 
+            Write-Verbose "Resolving short URL redirection for: $baseIssuerUrl"
+            try {
+                # Force PowerShell not to follow the redirect automatically
+                # Without -Method, this defaults to a standard GET request
+                $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -ErrorAction Stop
+                
+                # PowerShell 7+ Path: The 302 is returned as a successful object
+                if ($resp.Headers.Location) {
+                    $resolvedUrl = $resp.Headers.Location
+                }
+            }
+            catch [System.Net.WebException], [Microsoft.PowerShell.Commands.HttpResponseException] {
+                # Windows PowerShell 5.1 Path: The 302 throws an exception. 
+                # We intercept the exception and extract the target header from it.
+                $response = $_.Exception.Response
+                if ($response -and $response.Headers["Location"]) {
+                    $resolvedUrl = $response.Headers["Location"]
+                }
+            }
+            catch {
+                # Catch-all for other network failures (DNS, timeout, etc.)
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Network error resolving $baseIssuerUrl : $($_.Exception.Message)" -Severity 'Error'
+                return
+            }
+
+            # Fallback: If no redirect header was found, assume the original URL was the direct target
+            if (-not $resolvedUrl) {
+                $resolvedUrl = $baseIssuerUrl
+                Write-Verbose "No redirection detected. Proceeding with base URL."
+            } else {
+                Write-Verbose "Redirect intercepted successfully! Target base is: $resolvedUrl"
+            }
+
+            # Build final file payload endpoint cleanly using the resolved destination
+            $keyUrl = '{0}/blackcat-oidc.pem' -f $resolvedUrl.TrimEnd('/')
+            Write-Verbose "Downloading private key file from: $keyUrl"
+
+            try {
+                # This final request follows redirects natively to get the raw text payload
                 $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
                 Write-Verbose "Private key downloaded successfully"
             }
             catch {
-                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key content from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
                 return
             }
         }
