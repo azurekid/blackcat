@@ -86,16 +86,24 @@ function Invoke-FederatedTokenExchange {
         # Auto-download private key from issuer URL if not provided locally
         if (-not $PrivateKeyPath) {
             $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl.TrimEnd('/')
-            Write-Verbose "Downloading private key from: $keyUrl"
+            Write-Verbose "Resolving and downloading private key from: $keyUrl"
             try {
+                # 1. Resolve short URL if one is provided
+                $response = Invoke-WebRequest -Uri $keyUrl -Method Head -MaximumRedirection 0 -ErrorAction SilentlyContinue
+                
+                # If it's a redirect, grab the 'Location' header
+                if ($response.Headers.Location) {
+                    $keyUrl = $response.Headers.Location
+                    Write-Verbose "Redirect detected! Target URL resolved to: $keyUrl"
+                }
+                elseif ($response.StatusCode -ge 300 -and $response.StatusCode -lt 400) {
+                    # Backup check for specific environment/protocol differences
+                    $keyUrl = $_.Exception.Response.Headers.Location
+                }
+
                 $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
                 Write-Verbose "Private key downloaded successfully"
             }
-            catch {
-                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
-                return
-            }
-        }
         else {
             if (-not (Test-Path -Path $PrivateKeyPath)) {
                 Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Private key not found: $PrivateKeyPath" -Severity 'Error'
