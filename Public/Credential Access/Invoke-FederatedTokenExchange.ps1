@@ -92,7 +92,7 @@ function Invoke-FederatedTokenExchange {
             try {
                 # Force PowerShell not to follow the redirect automatically
                 # Without -Method, this defaults to a standard GET request
-                $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -ErrorAction Stop
+                $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -ErrorAction Stop -SkipHttpErrorCheck
                 
                 # PowerShell 7+ Path: The 302 is returned as a successful object
                 if ($resp.Headers.Location) {
