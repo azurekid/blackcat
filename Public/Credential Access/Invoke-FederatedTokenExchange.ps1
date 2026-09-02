@@ -83,31 +83,58 @@ function Invoke-FederatedTokenExchange {
             $CredentialName = 'bc-fic-{0}' -f $suffix
         }
 
-        # Auto-download private key from issuer URL if not provided locally
-        if (-not $PrivateKeyPath) {
-            $baseIssuerUrl = $IssuerUrl.TrimEnd('/')
-            $resolvedUrl = $null
+        # Resolve short URL redirection if present
+        $baseIssuerUrl = $IssuerUrl.TrimEnd('/')
+        $resolvedIssuerUrl = $baseIssuerUrl
 
-            Write-Verbose "Resolving short URL redirection natively for: $baseIssuerUrl"
-            
-            # -SkipHttpErrorCheck keeps PowerShell from treating the 302 as a terminating failure
-            # -MaximumRedirection 0 blocks it from moving past the initial redirect 
-            $resp = Invoke-WebRequest -Uri $baseIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
-            
-            # Inspect the target location from the headers map
-            if ($resp.Headers.Location) {
-                # PowerShell 7 exposes it as an absolute or relative string directly
-                $resolvedUrl = $resp.Headers.Location
-                Write-Verbose "Successfully resolved short URL redirect to: $resolvedUrl"
+        Write-Verbose "Resolving short URL redirection natively for: $baseIssuerUrl"
+        $maxHops = 5
+        $hop = 0
+        while ($hop -lt $maxHops) {
+            $hop++
+            try {
+                $resp = Invoke-WebRequest -Uri $resolvedIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+            }
+            catch {
+                $resp = $null
+            }
+
+            $location = $null
+            if ($resp -and $resp.Headers) {
+                if ($resp.Headers.Location) {
+                    $location = $resp.Headers.Location
+                }
+                elseif ($resp.Headers['Location']) {
+                    $location = $resp.Headers['Location']
+                }
+            }
+
+            if ($location) {
+                if ($location -is [System.Collections.IEnumerable] -and $location -isnot [string]) {
+                    $location = @($location)[0]
+                }
+                if ($location -is [System.Uri]) {
+                    $location = $location.AbsoluteUri
+                }
+                $locationStr = $location.ToString().TrimEnd('/')
+                if ($locationStr -notmatch '^https?://') {
+                    $baseUri = [Uri]$resolvedIssuerUrl
+                    $resolvedIssuerUrl = [Uri]::new($baseUri, $locationStr).AbsoluteUri.TrimEnd('/')
+                }
+                else {
+                    $resolvedIssuerUrl = $locationStr
+                }
+                Write-Verbose "Successfully resolved short URL redirect to: $resolvedIssuerUrl"
             }
             else {
-                # Fallback if the shortener didn't return a Location string
-                $resolvedUrl = $baseIssuerUrl
-                Write-Verbose "No redirection header was found. Sticking with original URL."
+                break
             }
+        }
+        $IssuerUrl = $resolvedIssuerUrl
 
-            # Build the clean target asset file endpoint using the final domain route
-            $keyUrl = '{0}/blackcat-oidc.pem' -f $resolvedUrl.TrimEnd('/')
+        # Auto-download private key from issuer URL if not provided locally
+        if (-not $PrivateKeyPath) {
+            $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl
             Write-Verbose "Downloading private key asset payload from: $keyUrl"
 
             try {
@@ -143,7 +170,7 @@ function Invoke-FederatedTokenExchange {
 
         if (-not $KeyId) {
             try {
-                $discUrl = '{0}/.well-known/openid-configuration' -f $IssuerUrl.TrimEnd('/')
+                $discUrl = '{0}/.well-known/openid-configuration' -f $IssuerUrl
                 $discoveryParams = @{ Uri = $discUrl; Method= 'GET' }
                 $disc = Invoke-RestMethod @discoveryParams
                 $jwksParams = @{ Uri = $disc.jwks_uri; Method = 'GET' }
@@ -156,8 +183,6 @@ function Invoke-FederatedTokenExchange {
                 return
             }
         }
-
-        $IssuerUrl = $IssuerUrl.TrimEnd('/')
     }
 
     process {
