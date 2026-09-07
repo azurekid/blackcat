@@ -227,6 +227,35 @@ Set-ManagedIdentityPermission -servicePrincipalName "uami-hr-automation" `
 
 ---
 
+## Resource Graph KQL Refactor
+
+`Invoke-AzBatch` now posts directly to the Azure Resource Graph REST endpoint
+instead of wrapping a single Resource Graph request inside ARM batch. The helper
+keeps its existing cache, pagination, output-format, `-ResourceType`, and `-Name`
+behavior, and adds raw KQL support through `-Query` / `-kql`.
+
+Discovery functions updated to build explicit KQL and pass it through
+`Invoke-AzBatch -Query`:
+
+- `Get-RoleAssignment` queries `authorizationresources` for active RBAC role
+  assignments and joins role definitions server-side where available.
+- `Get-ApiConnection` uses KQL for API Connection and Logic App inventory before
+  ARM enrichment calls.
+- `Get-ManagedIdentity` uses KQL for UAMI discovery and preserves the returned
+  `.properties.clientId` / `.properties.principalId` shape used by callers.
+- `Get-FederatedIdentityCredential` attempts Resource Graph child-resource
+  discovery for UAMI federated credentials, with ARM fallback for compatibility.
+- `Get-ManagedIdentityToken` resolves UAMIs by resource ID through KQL.
+- `Get-ResourcePermission` uses KQL for resource inventory before probing the
+  effective permissions endpoint per resource.
+- `Get-StorageContainerList` uses KQL for storage account discovery before
+  listing blob containers.
+
+The refactor reduces noisy client-side filtering and avoids Az.Resources
+argument-completer dependencies in the updated discovery helpers.
+
+---
+
 ## Module Version: 1.3.0
 
 ### New Functions (feature branch)
