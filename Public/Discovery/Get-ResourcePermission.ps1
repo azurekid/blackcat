@@ -5,7 +5,7 @@ function Get-ResourcePermission {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('subscription-id')]
-        [string]$SubscriptionId,
+        [string[]]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
@@ -44,7 +44,7 @@ function Get-ResourcePermission {
         Write-Host " Starting Azure Resource Permission Analysis..." -ForegroundColor Green
         
         if ($SubscriptionId) {
-            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $($SubscriptionId -join ', ')" -ForegroundColor Cyan
         }
         if ($ResourceGroupName) {
             Write-Host "   Filter: Resource Group = $ResourceGroupName" -ForegroundColor Cyan
@@ -65,29 +65,36 @@ function Get-ResourcePermission {
         try {
             Write-Verbose "Retrieving all resources for the current user context"
 
-            # Build a dynamic filter string based on provided parameters
-            $filterParts = @()
+            $queryParts = @(
+                'resources'
+            )
 
-            if ($SubscriptionId) {
-                $filterParts += "| where subscriptionId == '$SubscriptionId'"
-            }
             if ($ResourceGroupName) {
-                $filterParts += "| where resourceGroup == '$ResourceGroupName'"
+                $escapedResourceGroupName = $ResourceGroupName.Replace("'", "''")
+                $queryParts += "| where resourceGroup =~ '$escapedResourceGroupName'"
             }
             if ($ResourceType) {
-                $filterParts += "| where type == '$($ResourceType.ToLower())'"
+                $escapedResourceType = $ResourceType.ToLower().Replace("'", "''")
+                $queryParts += "| where type =~ '$escapedResourceType'"
             }
             if ($ResourceName) {
-                $filterParts += "| where name == '$ResourceName'"
+                $escapedResourceName = $ResourceName.Replace("'", "''")
+                $queryParts += "| where name =~ '$escapedResourceName'"
             }
 
-            if ($filterParts.Count -gt 0) {
-                $filterString = $filterParts -join ' '
-                $resources = Invoke-AzBatch -filter $filterString
-                Write-Verbose "Filter string: $filterString"
-            } else {
-                $resources = Invoke-AzBatch
+            $queryParts += '| project id, name, type, resourceGroup, subscriptionId'
+            $resourceQuery = $queryParts -join "`n"
+            Write-Verbose "Resource query: $resourceQuery"
+
+            $queryParams = @{
+                Query  = $resourceQuery
+                Silent = $true
             }
+            if ($SubscriptionId) {
+                $queryParams.SubscriptionId = $SubscriptionId
+            }
+
+            $resources = Invoke-AzBatch @queryParams
 
             if (-not $resources -or $resources.Count -eq 0) {
                 Write-Host " No resources found matching the specified criteria" -ForegroundColor Yellow

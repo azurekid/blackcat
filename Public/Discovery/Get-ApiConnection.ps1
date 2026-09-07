@@ -74,21 +74,24 @@ function Get-ApiConnection {
             Write-Host ' Enumerating API Connections...' `
                 -ForegroundColor Green
 
-            # -- 1. Collect API Connection resource IDs via ARG ----------
-            $filter = ''
+            $connectionQueryParts = @(
+                'resources'
+                "| where type =~ 'microsoft.web/connections'"
+                '| project id, name, resourceGroup, subscriptionId, location, type'
+            )
+
             if ($ResourceGroupName) {
-                $filter = `
-                    "| where resourceGroup == '$ResourceGroupName'"
+                $escapedResourceGroupName = $ResourceGroupName.Replace("'", "''")
+                $connectionQueryParts = @(
+                    'resources'
+                    "| where type =~ 'microsoft.web/connections'"
+                    "| where resourceGroup =~ '$escapedResourceGroupName'"
+                    '| project id, name, resourceGroup, subscriptionId, location, type'
+                )
             }
 
-            $connections = if ($filter) {
-                Invoke-AzBatch `
-                    -ResourceType 'Microsoft.Web/connections' `
-                    -filter $filter
-            }
-            else {
-                Invoke-AzBatch -ResourceType 'Microsoft.Web/connections'
-            }
+            $connectionQuery = $connectionQueryParts -join "`n"
+            $connections = Invoke-AzBatch -Query $connectionQuery
 
             if (-not $connections -or $connections.Count -eq 0) {
                 Write-Host '  No API Connections found in scope' `
@@ -104,8 +107,18 @@ function Get-ApiConnection {
             Write-Host '  Mapping Logic App connection references...' `
                 -ForegroundColor Cyan
 
+            $logicAppQueryParts = @(
+                'resources'
+                "| where type =~ 'microsoft.logic/workflows'"
+            )
+            if ($ResourceGroupName) {
+                $logicAppQueryParts += "| where resourceGroup =~ '$escapedResourceGroupName'"
+            }
+            $logicAppQueryParts += '| project id, name, resourceGroup, subscriptionId, location, type'
+            $logicAppQuery = $logicAppQueryParts -join "`n"
+
             $logicApps = Invoke-AzBatch `
-                -ResourceType 'Microsoft.Logic/workflows'
+                -Query $logicAppQuery
 
             # Thread-safe bag of (connectionId, logicAppName) pairs
             $refPairs = `

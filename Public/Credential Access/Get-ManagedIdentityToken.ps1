@@ -95,10 +95,16 @@ function Get-ManagedIdentityToken {
             elseif ($Id) {
                 $uamiName = ($Id -split '/')[-1]
                 Write-Host "  Resolving identity by resource ID: $uamiName" -ForegroundColor Cyan
+                $escapedId = $Id.Replace("'", "''")
+                $identityQuery = @(
+                    'resources'
+                    "| where type =~ 'microsoft.managedidentity/userassignedidentities'"
+                    "| where id =~ '$escapedId'"
+                    '| project id, name, type, location, resourceGroup, subscriptionId, properties'
+                ) -join "`n"
                 $identities = Invoke-AzBatch `
-                    -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities'
-                $match = $identities |
-                    Where-Object { $_.id -eq $Id }
+                    -Query $identityQuery
+                $match = $identities | Select-Object -First 1
                 if (-not $match) {
                     Write-Message `
                         -FunctionName $MyInvocation.MyCommand.Name `

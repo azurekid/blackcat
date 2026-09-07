@@ -22,7 +22,7 @@ function Get-RoleAssignment {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('subscription-id')]
-        [string]$SubscriptionId,
+        [string[]]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('exclude-custom')]
@@ -81,7 +81,7 @@ function Get-RoleAssignment {
             Write-Host "  🆔 Filter: Object ID = $ObjectId" -ForegroundColor Cyan
         }
         if ($SubscriptionId) {
-            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $($SubscriptionId -join ', ')" -ForegroundColor Cyan
         }
         if ($IsCustom) {
             Write-Host "   Filter: Custom Roles Only" -ForegroundColor Cyan
@@ -104,7 +104,7 @@ function Get-RoleAssignment {
             CurrentUser = $CurrentUser.ToString()
             PrincipalType = $PrincipalType
             ObjectId = $ObjectId
-            SubscriptionId = $SubscriptionId
+            SubscriptionId = if ($SubscriptionId) { $SubscriptionId -join ',' } else { $null }
             IsCustom = $IsCustom.ToString()
             ExcludeCustom = $ExcludeCustom.ToString()
             IncludeEligible = $IncludeEligible.ToString()
@@ -144,20 +144,19 @@ function Get-RoleAssignment {
         try {
             # Cache subscription retrieval separately for better performance
             $subscriptionCacheKey = ConvertTo-CacheKey -BaseIdentifier "Get-RoleAssignment-Subscriptions" -Parameters @{
-                SubscriptionId = $SubscriptionId
+                SubscriptionId = if ($SubscriptionId) { $SubscriptionId -join ',' } else { $null }
             }
             
             $subscriptionOperation = {
+                if ($SubscriptionId) {
+                    Write-Host " Using provided subscription scope..." -ForegroundColor Green
+                    return @($SubscriptionId)
+                }
+
                 Write-Host " Retrieving all subscriptions for the current user context..." -ForegroundColor Green
                 $baseUri = 'https://management.azure.com'
                 
-                if ($SubscriptionId) {
-                    # Request specific subscription
-                    $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
-                } else {
-                    # Request all subscriptions
-                    $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
-                }
+                $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
                 
                 $requestParam = @{
                     Headers = $script:authHeader
@@ -165,14 +164,7 @@ function Get-RoleAssignment {
                     Method  = 'GET'
                 }
 
-                if ($SubscriptionId) {
-                    # Single subscription response
-                    $subscriptionResponse = Invoke-RestMethod @requestParam
-                    $retrievedSubscriptions = @($subscriptionResponse.subscriptionId)
-                } else {
-                    # Multiple subscriptions response
-                    $retrievedSubscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
-                }
+                $retrievedSubscriptions = @((Invoke-RestMethod @requestParam).value.subscriptionId)
                 
                 Write-Host "   Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
                 return $retrievedSubscriptions

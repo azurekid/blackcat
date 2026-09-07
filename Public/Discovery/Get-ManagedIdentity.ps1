@@ -2,15 +2,11 @@ function Get-ManagedIdentity {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
-            "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "ResourceGroupName"
-        )]
         [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+[A-Za-z0-9]$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('identity-name', 'user-assigned-identity')]
         [string]$Name,
 
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('rg', 'resource-group')]
         [string[]]$ResourceGroupName,
 
@@ -20,8 +16,6 @@ function Get-ManagedIdentity {
     )
 
     begin {
-        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
-
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
@@ -31,11 +25,24 @@ function Get-ManagedIdentity {
 
             Write-Verbose "Get Managed Identity"
 
+            $queryParts = @(
+                'resources'
+                "| where type =~ 'microsoft.managedidentity/userassignedidentities'"
+            )
+
             if ($Name) {
-                $results = Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities' -Name $($Name)
-            } else {
-                $results = Invoke-AzBatch -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities'
+                $escapedName = $Name.Replace("'", "''")
+                $queryParts += "| where name =~ '$escapedName'"
             }
+
+            if ($ResourceGroupName) {
+                $resourceGroupNames = ($ResourceGroupName | ForEach-Object { "'$($_.Replace("'", "''"))'" }) -join ', '
+                $queryParts += "| where resourceGroup in~ ($resourceGroupNames)"
+            }
+
+            $queryParts += '| project id, name, type, location, resourceGroup, subscriptionId, properties'
+            $query = $queryParts -join "`n"
+            $results = Invoke-AzBatch -Query $query
 
             # Format output based on OutputFormat parameter
             switch ($OutputFormat) {

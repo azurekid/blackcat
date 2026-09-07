@@ -25,6 +25,11 @@ function Get-FederatedIdentityCredential {
             $results = @()
             $managedIdentities = @()
 
+            function ConvertTo-KqlStringLiteral {
+                param ([string]$Value)
+                return "'$($Value.Replace("'", "''"))'"
+            }
+
             # Determine which managed identities to query
             if ($ResourceId) {
                 Write-Host "Using provided Resource ID..." -ForegroundColor Cyan
@@ -53,7 +58,71 @@ function Get-FederatedIdentityCredential {
 
             $totalFics = 0
 
+            $ficQueryParts = @(
+                'resources'
+                "| where type =~ 'microsoft.managedidentity/userassignedidentities/federatedidentitycredentials'"
+                "| extend ParentResourceId = tostring(split(tolower(id), '/federatedidentitycredentials/')[0])"
+            )
+
+            if ($managedIdentities.Count -gt 0) {
+                $parentIds = ($managedIdentities | ForEach-Object { ConvertTo-KqlStringLiteral -Value $_.id.ToLower() }) -join ', '
+                $ficQueryParts += "| where ParentResourceId in~ ($parentIds)"
+            }
+
+            $ficQueryParts += @(
+                '| extend Subject = tostring(properties.subject), Issuer = tostring(properties.issuer), Audiences = properties.audiences'
+                '| project id, name, ParentResourceId, Subject, Issuer, Audiences, resourceGroup, subscriptionId'
+            )
+
+            $ficQuery = $ficQueryParts -join "`n"
+            $ficResources = Invoke-AzBatch -Query $ficQuery -Silent
+            if ($null -eq $ficResources) {
+                $ficResources = @()
+            }
+
+            if ($ficResources.Count -gt 0) {
+                $identityNameById = @{}
+                foreach ($uami in $managedIdentities) {
+                    $identityNameById[$uami.id.ToLower()] = $uami.name
+                }
+
+                foreach ($fic in $ficResources) {
+                    $parentId = $fic.ParentResourceId.ToLower()
+                    $identityName = $identityNameById[$parentId]
+                    if (-not $identityName) {
+                        $identityName = ($parentId -split '/')[-1]
+                    }
+
+                    $audiences = if ($fic.Audiences -is [array]) {
+                        $fic.Audiences -join ', '
+                    }
+                    elseif ($fic.Audiences) {
+                        [string]$fic.Audiences
+                    }
+                    else {
+                        ''
+                    }
+
+                    $results += [PSCustomObject]@{
+                        'Name'             = $identityName
+                        'Identity Name'    = $identityName
+                        'Credential Name'  = $fic.name
+                        'Subject'          = $fic.Subject
+                        'Issuer'           = $fic.Issuer
+                        'Audiences'        = $audiences
+                        'ResourceGroup'    = $fic.resourceGroup
+                        'ResourceId'       = $parentId
+                    }
+                }
+
+                $totalFics = $results.Count
+            }
+
             foreach ($uami in $managedIdentities) {
+                if ($ficResources.Count -gt 0) {
+                    continue
+                }
+
                 Write-Verbose "Querying federated credentials for: $($uami.name)"
                 
                 $ficUrl = "https://management.azure.com$($uami.id)/federatedIdentityCredentials?api-version=2023-01-31"
@@ -66,7 +135,8 @@ function Get-FederatedIdentityCredential {
                         
                         foreach ($fic in $fics.value) {
                             $enhancedFic = [PSCustomObject]@{
-                                'Name'    = $uami.name
+                                'Name'             = $uami.name
+                                'Identity Name'    = $uami.name
                                 'Credential Name'  = $fic.name
                                 'Subject'          = $fic.properties.subject
                                 'Issuer'           = $fic.properties.issuer
