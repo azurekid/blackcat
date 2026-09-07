@@ -79,31 +79,34 @@ function Invoke-AzBatch {
             $pageCount = 0
 
             if ([string]::IsNullOrWhiteSpace($Query)) {
-                $resourceQuery = 'resources'
+                $queryParts = @('resources')
 
                 if (![string]::IsNullOrEmpty($ResourceType)) {
                     $escapedResourceType = $ResourceType.ToLower().Replace("'", "''")
-                    $resourceQuery += " | where type == '$escapedResourceType'"
+                    $queryParts += "| where type =~ '$escapedResourceType'"
                 }
 
                 if (![string]::IsNullOrEmpty($Name)) {
                     $escapedName = $Name.Replace("'", "''")
-                    $resourceQuery += " | where name == '$escapedName'"
+                    $queryParts += "| where name =~ '$escapedName'"
                     Write-Verbose "Filtering resources by name: $Name"
                 }
 
                 if (![string]::IsNullOrEmpty($filter)) {
-                    $resourceQuery += " $filter"
-                    Write-Verbose "Filtering resources with: $resourceQuery"
+                    $queryParts += $filter.Trim()
                 }
+
+                $resourceQuery = $queryParts -join "`n"
+                Write-Verbose "Azure Resource Graph query: $resourceQuery"
             }
             else {
-                $resourceQuery = $Query
+                $resourceQuery = $Query.Trim()
 
                 if (![string]::IsNullOrEmpty($filter)) {
-                    $resourceQuery += " $filter"
-                    Write-Verbose "Filtering resources with: $resourceQuery"
+                    $resourceQuery = @($resourceQuery, $filter.Trim()) -join "`n"
                 }
+
+                Write-Verbose "Azure Resource Graph query: $resourceQuery"
             }
 
             do {
@@ -128,7 +131,7 @@ function Invoke-AzBatch {
 
                 $requestParam = @{
                     Headers     = $script:authHeader
-                    Uri         = $sessionVariables.batchUri
+                    Uri         = $sessionVariables.resourceGraphUri
                     Method      = 'POST'
                     ContentType = 'application/json'
                     Body        = $payload | ConvertTo-Json -Depth 10

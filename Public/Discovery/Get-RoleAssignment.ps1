@@ -287,22 +287,27 @@ function Get-RoleAssignment {
                     $customFilter = "| where isCustom == false"
                 }
 
-                $roleAssignmentQuery = @"
-authorizationresources
-| where type =~ 'microsoft.authorization/roleassignments'
-| extend principalType = tostring(properties.principalType), principalId = tostring(properties.principalId), scope = tostring(properties.scope), roleDefinitionId = tostring(properties.roleDefinitionId)
-$($queryFilters -join "`n")
-| extend roleId = tostring(split(roleDefinitionId, '/')[-1])
-| join kind=leftouter (
-    authorizationresources
-    | where type =~ 'microsoft.authorization/roledefinitions'
-    | extend roleDefinitionId = id, roleName = tostring(properties.roleName), roleType = tostring(properties.type)
-    | project roleDefinitionId, roleName, roleType
-) on roleDefinitionId
-| extend isCustom = roleType =~ 'CustomRole'
-$customFilter
-| project PrincipalType = principalType, PrincipalId = principalId, Scope = scope, RoleId = roleId, RoleName = roleName, IsCustom = isCustom
-"@
+                $roleAssignmentQueryParts = @(
+                    'authorizationresources'
+                    "| where type =~ 'microsoft.authorization/roleassignments'"
+                    '| extend principalType = tostring(properties.principalType), principalId = tostring(properties.principalId), scope = tostring(properties.scope), roleDefinitionId = tostring(properties.roleDefinitionId)'
+                )
+                $roleAssignmentQueryParts += $queryFilters
+                $roleAssignmentQueryParts += @(
+                    "| extend roleId = tostring(split(roleDefinitionId, '/')[-1])"
+                    '| join kind=leftouter ('
+                    '    authorizationresources'
+                    "    | where type =~ 'microsoft.authorization/roledefinitions'"
+                    '    | extend roleDefinitionId = id, roleName = tostring(properties.roleName), roleType = tostring(properties.type)'
+                    '    | project roleDefinitionId, roleName, roleType'
+                    ') on roleDefinitionId'
+                    "| extend isCustom = roleType =~ 'CustomRole'"
+                )
+                if ($customFilter) {
+                    $roleAssignmentQueryParts += $customFilter
+                }
+                $roleAssignmentQueryParts += '| project PrincipalType = principalType, PrincipalId = principalId, Scope = scope, RoleId = roleId, RoleName = roleName, IsCustom = isCustom'
+                $roleAssignmentQuery = $roleAssignmentQueryParts -join "`n"
 
                 $activeRoleAssignments = Invoke-AzBatch `
                     -Query $roleAssignmentQuery `
