@@ -2,14 +2,21 @@ function Invoke-AzBatch {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [ValidatePattern('^Microsoft\.[A-Za-z]+(/[A-Za-z]+)+$|^$')]
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceTypeCompleterAttribute()]
         [Alias('resource-type')]
         [string]$ResourceType,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-name', 'ResourceName')]
         [string]$Name,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('kql')]
+        [string]$Query,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
+        [Alias('subscription-id')]
+        [string[]]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [switch]$Silent,
@@ -45,6 +52,8 @@ function Invoke-AzBatch {
         $cacheParams = @{
             ResourceType = $ResourceType
             Name = $Name
+            Query = $Query
+            SubscriptionId = if ($SubscriptionId) { $SubscriptionId -join ',' } else { $null }
             Filter = $filter
             Silent = $Silent.IsPresent
         }
@@ -69,42 +78,51 @@ function Invoke-AzBatch {
             $skipToken = $null
             $pageCount = 0
 
+            if ([string]::IsNullOrWhiteSpace($Query)) {
+                $resourceQuery = 'resources'
+
+                if (![string]::IsNullOrEmpty($ResourceType)) {
+                    $escapedResourceType = $ResourceType.ToLower().Replace("'", "''")
+                    $resourceQuery += " | where type == '$escapedResourceType'"
+                }
+
+                if (![string]::IsNullOrEmpty($Name)) {
+                    $escapedName = $Name.Replace("'", "''")
+                    $resourceQuery += " | where name == '$escapedName'"
+                    Write-Verbose "Filtering resources by name: $Name"
+                }
+
+                if (![string]::IsNullOrEmpty($filter)) {
+                    $resourceQuery += " $filter"
+                    Write-Verbose "Filtering resources with: $resourceQuery"
+                }
+            }
+            else {
+                $resourceQuery = $Query
+
+                if (![string]::IsNullOrEmpty($filter)) {
+                    $resourceQuery += " $filter"
+                    Write-Verbose "Filtering resources with: $resourceQuery"
+                }
+            }
+
             do {
                 $pageCount++
                 Write-Verbose "Retrieving page $pageCount of resources"
 
                 $payload = @{
-                    requests = @(
-                        @{
-                            httpMethod = 'POST'
-                            url        = $($sessionVariables.resourceGraphUri)
-                            content    = @{
-                                query = "resources"
-                            }
-                        }
-                    )
-                }
-
-                if (![string]::IsNullOrEmpty($ResourceType)) {
-                    $payload.requests[0].content.query = "resources | where type == '$($ResourceType.ToLower())'"
-                }
-
-                if (![string]::IsNullOrEmpty($Name)) {
-                    $payload.requests[0].content.query += " | where name == '$($Name)'"
-                    Write-Output "Filtering resources by name: $Name"
-                }
-
-                if (![string]::IsNullOrEmpty($filter)) {
-                    $payload.requests[0].content.query += "$filter"
-                    Write-Output "Filtering resources with: $($payload.requests[0].content.query)"
-                }
-
-                # Add skipToken to the request if available
-                if ($skipToken) {
-                    if (!$payload.requests[0].content.options) {
-                        $payload.requests[0].content.options = @{}
+                    query = $resourceQuery
+                    options = @{
+                        resultFormat = 'objectArray'
                     }
-                    $payload.requests[0].content.options.'$skipToken' = $skipToken
+                }
+
+                if ($SubscriptionId) {
+                    $payload.subscriptions = @($SubscriptionId)
+                }
+
+                if ($skipToken) {
+                    $payload.options.'$skipToken' = $skipToken
                     Write-Verbose "Using skipToken for pagination: $skipToken"
                 }
 
@@ -119,15 +137,14 @@ function Invoke-AzBatch {
 
                 Write-Verbose "Making API request using User-Agent: $($sessionVariables.userAgent)"
                 $response = Invoke-RestMethod @requestParam
-                $pageData = $response.responses.content.data
 
-                if ($pageData) {
+                if ($null -ne $response.data) {
+                    $pageData = @($response.data)
                     $allResources += $pageData
                     Write-Verbose "Retrieved $($pageData.Count) resources on page $pageCount. Total count: $($allResources.Count)"
                 }
 
-                # Get skipToken for next page if it exists
-                $skipToken = $response.responses.content.'$skipToken'
+                $skipToken = $response.'$skipToken'
 
             } while ($skipToken)
 
@@ -163,10 +180,10 @@ function Invoke-AzBatch {
     }
     <#
     .SYNOPSIS
-        Invokes Azure Resource Graph queries using batch requests with caching support.
+        Invokes Azure Resource Graph KQL queries with caching support.
 
     .DESCRIPTION
-        Sends batch requests to Azure Resource Graph API with KQL filtering and automatic pagination. Supports resource type filtering, name searches, and advanced KQL queries with built-in caching for performance optimization. Essential for efficient querying of large Azure resource inventories.
+        Sends direct REST requests to the Azure Resource Graph API with KQL filtering and automatic pagination. Supports resource type filtering, name searches, raw KQL queries, optional subscription scoping, and built-in caching for performance optimization. Essential for efficient querying of large Azure resource inventories without requiring Az module dependencies.
 
     .PARAMETER ResourceType
         The Azure resource type to filter by (e.g., 'Microsoft.Storage/storageAccounts').
@@ -174,6 +191,12 @@ function Invoke-AzBatch {
 
     .PARAMETER Name
         The specific resource name to filter by. When specified, only resources with this exact name will be returned.
+
+    .PARAMETER Query
+        A raw Azure Resource Graph KQL query to execute. When omitted, the function starts with the resources table and applies ResourceType, Name, and filter values.
+
+    .PARAMETER SubscriptionId
+        Optional subscription IDs to scope the Azure Resource Graph query. When omitted, Resource Graph uses the caller's available scope.
 
     .PARAMETER Silent
         When specified, suppresses informational messages about no resources found.
@@ -219,6 +242,16 @@ function Invoke-AzBatch {
         Invoke-AzBatch -ResourceType "Microsoft.KeyVault/vaults" -SkipCache
 
         This example forces a fresh API call to retrieve key vaults, bypassing any cached results.
+
+    .EXAMPLE
+        Invoke-AzBatch -Query "resources | where type == 'microsoft.storage/storageaccounts' | project id, name, resourceGroup"
+
+        This example runs a raw Azure Resource Graph KQL query and projects only selected fields.
+
+    .EXAMPLE
+        Invoke-AzBatch -Query "authorizationresources | where type == 'microsoft.authorization/roleassignments'" -SubscriptionId "00000000-0000-0000-0000-000000000000"
+
+        This example queries role assignments in a specific subscription.
 
     .EXAMPLE
         Invoke-AzBatch -ResourceType "Microsoft.Storage/storageAccounts" -filter "| where location == 'eastus'"
