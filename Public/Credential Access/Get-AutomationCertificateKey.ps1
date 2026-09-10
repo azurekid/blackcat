@@ -156,16 +156,50 @@ foreach (`$cName in `$certNames) {
     try {
         `$cert = Get-AutomationCertificate -Name `$cName
         if (`$cert) {
-            # Try exporting directly with PFX password
             `$bytes = `$null
+
+            # Method 1: Direct PFX export
             try {
                 `$bytes = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
-            } catch {
-                # Fallback: re-import into ephemeral cert collection or use EphemeralKeySet
+            } catch { `$null = `$_.Exception.Message }
+
+            # Method 2: RSACng / ECDsaCng export via PKCS#8 or PFX envelope
+            if (-not `$bytes -and `$cert.HasPrivateKey) {
                 try {
-                    `$raw = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-                    `$newCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(`$cert)
-                    `$bytes = `$newCert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
+                    `$rsa = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey(`$cert)
+                    if (`$rsa) {
+                        `$certWithKey = `$cert.CopyWithPrivateKey(`$rsa)
+                        `$bytes = `$certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
+                    }
+                } catch { `$null = `$_.Exception.Message }
+            }
+
+            # Method 3: CspParameters / RSACryptoServiceProvider rebuild
+            if (-not `$bytes -and `$cert.HasPrivateKey) {
+                try {
+                    `$cspParams = [System.Security.Cryptography.CspParameters]::new(1)
+                    `$cspParams.Flags = [System.Security.Cryptography.CspProviderFlags]::UseExistingKey -bor [System.Security.Cryptography.CspProviderFlags]::UseMachineKeyStore
+                    `$rsaCsp = `$cert.PrivateKey
+                    if (`$rsaCsp -is [System.Security.Cryptography.RSACryptoServiceProvider]) {
+                        `$certWithKey = `$cert.CopyWithPrivateKey(`$rsaCsp)
+                        `$bytes = `$certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
+                    }
+                } catch { `$null = `$_.Exception.Message }
+            }
+
+            # Method 4: Fallback export public cert only if private key cannot be exported
+            if (-not `$bytes) {
+                try {
+                    `$bytes = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+                    `$base64 = [Convert]::ToBase64String(`$bytes)
+                    `$results += [PSCustomObject]@{
+                        CertificateName = `$cName
+                        Base64Data      = `$base64
+                        Success         = `$true
+                        HasPrivateKey   = `$false
+                        Note            = 'Exported public certificate (private key not exportable)'
+                    }
+                    continue
                 } catch {
                     throw `$_.Exception.Message
                 }
@@ -177,6 +211,7 @@ foreach (`$cName in `$certNames) {
                     CertificateName = `$cName
                     Base64Data      = `$base64
                     Success         = `$true
+                    HasPrivateKey   = `$true
                 }
             }
         }

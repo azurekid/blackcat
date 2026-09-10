@@ -34,6 +34,7 @@
         'Invoke-LogicAppInjection',
         'Invoke-ConnectorProxy',
         'Get-AutomationCertificateKey',
+        'Get-EntraCertificateToken',
 
         # Discovery
         'Find-EntraPermissionHolder',
@@ -146,6 +147,7 @@
         'Public\Credential Access\Invoke-LogicAppInjection.ps1',
         'Public\Credential Access\Invoke-ConnectorProxy.ps1',
         'Public\Credential Access\Get-AutomationCertificateKey.ps1',
+        'Public\Credential Access\Get-EntraCertificateToken.ps1',
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',
