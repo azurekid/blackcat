@@ -39,7 +39,7 @@ function Set-ManagedIdentityPermission {
             'AzureAD', 
             'Dynamics365', 
             'PowerBI', 
-            'AzureDataLake'
+            'AzureDataLake',
             'DefenderXDR'
         )]
         [string]$CommonResource,
