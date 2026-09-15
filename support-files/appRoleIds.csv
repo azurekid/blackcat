@@ -119,6 +119,7 @@ IdentityUserFlow.Read.All,Application,1b0c317f-dd31-4305-9932-259a8b6e8099
 IdentityUserFlow.ReadWrite.All,Application,65319a09-a2be-469d-8782-f6b07debf789
 InformationProtectionPolicy.Read.All,Application,19da66cb-0fb0-4390-b071-ebc76a349482
 Machine.Isolate,Application,479231ef-3b86-4933-ae6b-1fa84bba9e31
+Machine.Read.All,Application,ea8291d3-4b9a-44b5-bc3a-6cea3026dc79
 Mail.Read,Application,810c84a8-4a9e-49e6-bf7d-12d183f40d01
 Mail.ReadBasic,Application,6be147d2-ea4f-4b5a-a3fa-3eab6f3c140a
 Mail.ReadBasic.All,Application,693c5e45-0940-467d-9b8a-1022fb9d42ef
