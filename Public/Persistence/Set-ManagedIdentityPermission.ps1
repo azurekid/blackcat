@@ -40,6 +40,7 @@ function Set-ManagedIdentityPermission {
             'Dynamics365', 
             'PowerBI', 
             'AzureDataLake'
+            'DefenderXDR'
         )]
         [string]$CommonResource,
 
@@ -99,6 +100,7 @@ function Set-ManagedIdentityPermission {
             'Dynamics365'        = '00000007-0000-0000-c000-000000000000'
             'PowerBI'            = '00000009-0000-0000-c000-000000000000'
             'AzureDataLake'      = 'e9f49c6b-5ce5-44c8-925d-015017e9f7ad'
+            'DefenderXDR'        = 'fc780465-2017-40d4-a0c5-307022471b92'
         }
         
         # If using CommonResource, resolve the Resource ID
