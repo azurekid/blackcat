@@ -68,13 +68,12 @@ function Invoke-MsGraph {
                             Method        = 'POST'
                             ContentType   = 'application/json'
                             Body          = $payload | ConvertTo-Json -Depth 10
-                            UserAgent     = $($sessionVariables.userAgent)
                             ErrorVariable = 'Err'
                         }
 
                         # Execute the batch request
                         try {
-                            $response = Invoke-RestMethod @requestParam
+                            $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
 
                             # Process the responses and add to the results dictionary
                             foreach ($responseItem in $response.responses) {
@@ -188,7 +187,6 @@ function Invoke-MsGraph {
                             Headers       = $script:graphHeader
                             Uri           = $uri
                             Method        = 'GET'
-                            UserAgent     = $($sessionVariables.userAgent)
                             ErrorVariable = 'Err'
                         }
                     }
@@ -209,13 +207,12 @@ function Invoke-MsGraph {
                             Method        = 'POST'
                             ContentType   = 'application/json'
                             Body          = $payload | ConvertTo-Json -Depth 10
-                            UserAgent     = $($sessionVariables.userAgent)
                             ErrorVariable = 'Err'
                         }
                     }
 
                     try {
-                        $initialResponse = (Invoke-RestMethod @requestParam)
+                        $initialResponse = (Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam)
                     }
                     catch {
                         if ($Err) {

@@ -77,7 +77,7 @@ function Test-DomainRegistration {
             while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
                     Write-Verbose "Trying RDAP service: $rdapService"
-                    $response = Invoke-RestMethod -Uri $rdapService -ErrorAction Stop -TimeoutSec 10
+                    $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $rdapService -ErrorAction Stop -TimeoutSec 10
                     $success = $true
                     break  # Exit the retry loop if successful
                 }

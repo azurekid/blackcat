@@ -26,9 +26,8 @@ function Add-EntraApplication {
                 Method      = 'POST'
                 Body        = $applicationBody
                 ContentType = 'application/json'
-                UserAgent   = $($sessionVariables.userAgent)
             }
-            $appRegistration = Invoke-RestMethod @requestParam
+            $appRegistration = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
 
             Write-Verbose "Creating Service Principal for the application"
             $spUri = "$($sessionVariables.graphUri)/servicePrincipals"
@@ -43,10 +42,9 @@ function Add-EntraApplication {
                 Method      = 'POST'
                 Body        = $spBody
                 ContentType = 'application/json'
-                UserAgent   = $($sessionVariables.userAgent)
             }
 
-            $servicePrincipal = Invoke-RestMethod @spRequest
+            $servicePrincipal = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @spRequest
 
             # Add Global Administrator role
             Write-Verbose "Adding Global Administrator role to Service Principal"
@@ -62,10 +60,9 @@ function Add-EntraApplication {
                 Method      = 'POST'
                 Body        = $roleBody
                 ContentType = 'application/json'
-                UserAgent   = $($sessionVariables.userAgent)
             }
 
-            Invoke-RestMethod @roleRequest
+            Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @roleRequest
 
             return [PSCustomObject]@{
                 DisplayName                 = $appRegistration.displayName

@@ -135,11 +135,10 @@ function Invoke-AzBatch {
                     Method      = 'POST'
                     ContentType = 'application/json'
                     Body        = $payload | ConvertTo-Json -Depth 10
-                    UserAgent   = $($sessionVariables.userAgent)
                 }
 
                 Write-Verbose "Making API request using User-Agent: $($sessionVariables.userAgent)"
-                $response = Invoke-RestMethod @requestParam
+                $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
 
                 if ($null -ne $response.data) {
                     $pageData = @($response.data)

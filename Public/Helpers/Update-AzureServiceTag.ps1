@@ -57,10 +57,10 @@ function Update-AzureServiceTag {
             if ($PSCmdlet.ShouldProcess("Service Tags for $Region", "Update")) {
                 Write-Verbose "Getting latest IP Ranges"
 
-                $uri = ((Invoke-WebRequest -uri $uri).links | Where-Object outerHTML -like "*Azure IP Ranges*").href
+                $uri = ((Invoke-WebRequest -UserAgent (Get-CurrentUserAgent -IncrementCount) -uri $uri).links | Where-Object outerHTML -like "*Azure IP Ranges*").href
 
                 Write-Verbose "Downloading Service Tags from $uri"
-                $serviceTagData = Invoke-RestMethod -uri $uri
+                $serviceTagData = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -uri $uri
                 
                 # Extract the values array from the service tag data if it exists
                 $serviceTagValues = if ($serviceTagData.PSObject.Properties.Name -contains 'values') {

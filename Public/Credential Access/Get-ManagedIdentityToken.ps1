@@ -161,16 +161,14 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                 Method      = 'PUT'
                 Body        = $payload
                 ContentType = 'application/json'
-                UserAgent   = $script:SessionVariables.userAgent
             }
-            $null = Invoke-RestMethod @requestParam
+            $null = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
 
             # Poll for completion
             $statusParam = @{
                 Headers   = $script:authHeader
                 Uri       = $deployUri
                 Method    = 'GET'
-                UserAgent = $script:SessionVariables.userAgent
             }
 
             Write-Host "  Waiting for deployment completion..." -ForegroundColor Yellow
@@ -180,7 +178,7 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
             $pollStart = Get-Date
             for ($i = 1; $i -le $maxAttempts; $i++) {
                 Start-Sleep -Seconds $pollInterval
-                $status = Invoke-RestMethod @statusParam
+                $status = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @statusParam
                 $state = $status.properties.provisioningState
                 $elapsed = [int]((Get-Date) - $pollStart).TotalSeconds
 
@@ -224,7 +222,7 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                         -Uri $logsUri `
                         -Headers $script:authHeader `
                         -Method GET `
-                        -UserAgent $script:SessionVariables.userAgent `
+                        -UserAgent (Get-CurrentUserAgent -IncrementCount) `
                         -ErrorAction SilentlyContinue
                     if ($logs.value) {
                         Write-Host "    Container logs:" -ForegroundColor Cyan
@@ -292,9 +290,8 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                         Headers   = $script:authHeader
                         Uri       = $deployUri
                         Method    = 'DELETE'
-                        UserAgent = $script:SessionVariables.userAgent
                     }
-                    $null = Invoke-RestMethod @deleteParam
+                    $null = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @deleteParam
                     Write-Host "    Deployment script deleted" -ForegroundColor Green
                 }
                 catch {

@@ -30,6 +30,8 @@ function Get-ApiConnection {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
@@ -127,6 +129,9 @@ function Get-ApiConnection {
             if ($logicApps -and $logicApps.Count -gt 0) {
 
                 $logicApps | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $sv      = $using:script:SessionVariables
                     $auth    = $using:script:authHeader
                     $bag     = $using:refPairs
@@ -141,7 +146,7 @@ function Get-ApiConnection {
                             -Uri       $uri `
                             -Headers   $auth `
                             -Method    'GET' `
-                            -UserAgent $sv.userAgent `
+                            -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) `
                             -ErrorAction SilentlyContinue
 
                         $refs = $la.properties.parameters.`
@@ -194,6 +199,9 @@ function Get-ApiConnection {
             $connMap    = $connectionMap
 
             $connections | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $sv         = $using:script:SessionVariables
                 $auth       = $using:script:authHeader
                 $results    = $using:rawResults
@@ -210,7 +218,7 @@ function Get-ApiConnection {
                         -Uri       $uri `
                         -Headers   $auth `
                         -Method    'GET' `
-                        -UserAgent $sv.userAgent
+                        -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount)
 
                     $props       = $conn.properties
                     $connectorId = $props.api.name
