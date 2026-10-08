@@ -105,7 +105,7 @@ function Add-EntraGroupMember {
                 ErrorAction = 'SilentlyContinue'
             }
 
-            Invoke-RestMethod @requestParameters
+            Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParameters
 
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "$ObjectType with $ObjectId added to group with id $GroupObjectId." -Severity Information
         }

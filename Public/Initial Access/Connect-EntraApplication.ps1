@@ -72,7 +72,7 @@ function Connect-EntraApplication {
                     }
 
                     Write-Verbose "Requesting device code from: $deviceCodeEndpoint"
-                    $deviceCodeResponse = Invoke-RestMethod -Uri $deviceCodeEndpoint -Method Post -Body $deviceCodeBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
+                    $deviceCodeResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $deviceCodeEndpoint -Method Post -Body $deviceCodeBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
 
                     Write-Host " To sign in, use a web browser to open the page:" -ForegroundColor Yellow
                     Write-Host "   $($deviceCodeResponse.verification_uri)" -ForegroundColor Cyan
@@ -106,7 +106,7 @@ function Connect-EntraApplication {
                         Start-Sleep -Seconds $interval
 
                         try {
-                            $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
+                            $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
                         }
                         catch {
                             if ($_.Exception.Response.StatusCode -eq 400) {
@@ -209,7 +209,7 @@ function Connect-EntraApplication {
                         code_verifier = $codeVerifier
                     }
 
-                    $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded"
+                    $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded"
                 }
 
                 Write-Verbose "Token received successfully"

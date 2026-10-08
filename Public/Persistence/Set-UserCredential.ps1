@@ -58,7 +58,7 @@ function Set-UserCredential {
                         UseBasicParsing = $true
                     }
 
-                    Invoke-RestMethod @requestParameters
+                    Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParameters
                 } else {
                     Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "No password provided. Skipping password update." -Severity 'Warning'
                 }

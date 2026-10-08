@@ -32,7 +32,7 @@ function Invoke-Update {
                 $fileUri = "$Repository$file"
                 $destinationPath = "$helperPath/$file"
                 Write-Verbose "Downloading $file from $fileUri to $destinationPath"
-                Invoke-WebRequest -Uri $fileUri -OutFile $destinationPath -ErrorAction Stop
+                Invoke-WebRequest -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $fileUri -OutFile $destinationPath -ErrorAction Stop
                 Update-AzureServiceTag -Region 'Azure Public'
             }
 

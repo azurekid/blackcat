@@ -51,11 +51,12 @@ function Find-PublicStorageContainer {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         Write-Host "Analyzing Azure Storage for: $StorageAccountName ($Type)" -ForegroundColor Green
 
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $userAgent = ($sessionVariables.userAgents.agents | Get-Random).value
         $result = New-Object System.Collections.ArrayList
         
         $foundContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
@@ -136,24 +137,28 @@ function Find-PublicStorageContainer {
                 Write-Host "   Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
 
                 $validDnsNames | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $dns = $_
                     $permutations = $using:permutations
                     $result = $using:result
                     $includeEmpty = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
-                    $userAgent = $using:userAgent
                     $foundContainers = $using:foundContainers
 
                     $permutations | ForEach-Object -Parallel {
+                        $blackCatUserAgentState = $using:blackCatUserAgentState
+                        $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                        Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                         $dns = $using:dns
                         $result = $using:result
                         $includeEmpty = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
-                        $userAgent = $using:userAgent
                         $foundContainers = $using:foundContainers
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
-                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
                             $hasContent = $response.Content -match '<Blob>'
@@ -206,7 +211,7 @@ function Find-PublicStorageContainer {
 
                             if ($shouldProcess -and $IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
-                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
                                 $metadataText = ""

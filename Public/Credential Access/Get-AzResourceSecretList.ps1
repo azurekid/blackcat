@@ -12,6 +12,8 @@ function Get-AzResourceSecretList {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
@@ -92,6 +94,9 @@ function Get-AzResourceSecretList {
             Write-Host "  Analyzing resource secrets across $($allResources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
             $allResources | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $baseUri = $using:baseUri
                 $result = $using:result
                 $resourcesWithSecretsCount = $using:resourcesWithSecretsCount
@@ -132,14 +137,14 @@ function Get-AzResourceSecretList {
                         try {
                             # Get storage account keys
                             $keysUri = "$($baseUri)$($resource.id)/listKeys?api-version=2023-01-01"
-                            $keys = (Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post).keys
+                            $keys = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post).keys
                             $secretObject.Keys = $keys
                             $secretObject.SecretTypes += "Storage Keys"
                             
                             # Try to get Kerberos keys if available
                             try {
                                 $kerberosKeysUri = "$($baseUri)$($resource.id)/listKerberosKeys?api-version=2023-01-01"
-                                $kerberosKeys = Invoke-RestMethod -Uri $kerberosKeysUri -Headers $using:script:authHeader -Method Post
+                                $kerberosKeys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $kerberosKeysUri -Headers $using:script:authHeader -Method Post
                                 if ($kerberosKeys) {
                                     $secretObject.Keys += $kerberosKeys
                                     $secretObject.SecretTypes += "Kerberos Keys"
@@ -161,7 +166,7 @@ function Get-AzResourceSecretList {
                         try {
                             # Get application settings
                             $settingsUri = "$($baseUri)$($resource.id)/config/appsettings/list?api-version=2022-03-01"
-                            $appSettings = Invoke-RestMethod -Uri $settingsUri -Headers $using:script:authHeader -Method Post
+                            $appSettings = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $settingsUri -Headers $using:script:authHeader -Method Post
                             $secretObject.AppSettings = $appSettings.properties
                             if ($appSettings.properties.Count -gt 0) {
                                 $secretObject.SecretTypes += "App Settings"
@@ -169,7 +174,7 @@ function Get-AzResourceSecretList {
                             
                             # Get connection strings
                             $connectionUri = "$($baseUri)$($resource.id)/config/connectionstrings/list?api-version=2022-03-01"
-                            $connectionStrings = Invoke-RestMethod -Uri $connectionUri -Headers $using:script:authHeader -Method Post
+                            $connectionStrings = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $connectionUri -Headers $using:script:authHeader -Method Post
                             $secretObject.ConnectionStrings = $connectionStrings.properties
                             if ($connectionStrings.properties.Count -gt 0) {
                                 $secretObject.SecretTypes += "Connection Strings"
@@ -179,7 +184,7 @@ function Get-AzResourceSecretList {
                             if ($resource.kind -like "*functionapp*") {
                                 try {
                                     $functionKeysUri = "$($baseUri)$($resource.id)/host/default/listKeys?api-version=2022-03-01"
-                                    $functionKeys = Invoke-RestMethod -Uri $functionKeysUri -Headers $using:script:authHeader -Method Post
+                                    $functionKeys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $functionKeysUri -Headers $using:script:authHeader -Method Post
                                     $secretObject.FunctionKeys = $functionKeys
                                     if ($functionKeys) {
                                         $secretObject.SecretTypes += "Function Keys"
@@ -201,13 +206,13 @@ function Get-AzResourceSecretList {
                         try {
                             # Get authorization rules first
                             $authRulesUri = "$($baseUri)$($resource.id)/authorizationRules?api-version=2021-11-01"
-                            $authRules = (Invoke-RestMethod -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
+                            $authRules = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
                             
                             $allKeys = @()
                             foreach ($rule in $authRules) {
                                 try {
                                     $keysUri = "$($baseUri)$($rule.id)/listKeys?api-version=2021-11-01"
-                                    $keys = Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post
+                                    $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post
                                     $allKeys += $keys
                                 }
                                 catch {
@@ -230,11 +235,11 @@ function Get-AzResourceSecretList {
                         try {
                             # Get primary keys
                             $keysUri = "$($baseUri)$($resource.id)/listKeys?api-version=2023-04-15"
-                            $keys = Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post
                             
                             # Also get read-only keys
                             $readOnlyKeysUri = "$($baseUri)$($resource.id)/readonlykeys?api-version=2023-04-15"
-                            $readOnlyKeys = Invoke-RestMethod -Uri $readOnlyKeysUri -Headers $using:script:authHeader -Method Post
+                            $readOnlyKeys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $readOnlyKeysUri -Headers $using:script:authHeader -Method Post
                             
                             # Combine all keys
                             $allKeys = @($keys) + @($readOnlyKeys)
@@ -253,7 +258,7 @@ function Get-AzResourceSecretList {
                     'microsoft.containerregistry/registries' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listCredentials?api-version=2023-07-01"
-                            $creds = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $creds = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Credentials = $creds
                             if ($creds) {
                                 $secretObject.SecretTypes += "Container Registry Credentials"
@@ -268,7 +273,7 @@ function Get-AzResourceSecretList {
                     'microsoft.search/searchservices' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listAdminKeys?api-version=2021-04-01-preview"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.AdminKeys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "Search Admin Keys"
@@ -283,7 +288,7 @@ function Get-AzResourceSecretList {
                     'microsoft.dbforpostgresql/flexibleservers' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listAdminCredentials?api-version=2023-03-01-preview"
-                            $creds = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $creds = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Credentials = $creds
                             if ($creds) {
                                 $secretObject.SecretTypes += "PostgreSQL Credentials"
@@ -298,7 +303,7 @@ function Get-AzResourceSecretList {
                     'microsoft.dbformysql/flexibleservers' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listAdminCredentials?api-version=2023-06-01-preview"
-                            $creds = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $creds = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Credentials = $creds
                             if ($creds) {
                                 $secretObject.SecretTypes += "MySQL Credentials"
@@ -313,7 +318,7 @@ function Get-AzResourceSecretList {
                     'microsoft.cache/redis' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2023-08-01"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "Redis Keys"
@@ -329,11 +334,11 @@ function Get-AzResourceSecretList {
                         try {
                             # Get tenant access information
                             $tenantAccessUri = "$($baseUri)$($resource.id)/tenant/access?api-version=2022-08-01"
-                            $tenantAccess = Invoke-RestMethod -Uri $tenantAccessUri -Headers $using:script:authHeader -Method Get
+                            $tenantAccess = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $tenantAccessUri -Headers $using:script:authHeader -Method Get
                             
                             # Get tenant access secrets
                             $secretsUri = "$($baseUri)$($resource.id)/tenant/access/listSecrets?api-version=2022-08-01"
-                            $secrets = Invoke-RestMethod -Uri $secretsUri -Headers $using:script:authHeader -Method Post
+                            $secrets = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $secretsUri -Headers $using:script:authHeader -Method Post
                             
                             $secretObject.Secrets = $secrets
                             $secretObject.Credentials = $tenantAccess
@@ -350,7 +355,7 @@ function Get-AzResourceSecretList {
                     'microsoft.devices/iothubs' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2021-07-02"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys.value
                             if ($keys.value) {
                                 $secretObject.SecretTypes += "IoT Hub Keys"
@@ -366,13 +371,13 @@ function Get-AzResourceSecretList {
                         try {
                             # Get authorization rules first
                             $authRulesUri = "$($baseUri)$($resource.id)/authorizationRules?api-version=2021-11-01"
-                            $authRules = (Invoke-RestMethod -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
+                            $authRules = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
                             
                             $allKeys = @()
                             foreach ($rule in $authRules) {
                                 try {
                                     $keysUri = "$($baseUri)$($rule.id)/listKeys?api-version=2021-11-01"
-                                    $keys = Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post
+                                    $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post
                                     $allKeys += $keys
                                 }
                                 catch {
@@ -395,13 +400,13 @@ function Get-AzResourceSecretList {
                         try {
                             # Get authorization rules first
                             $authRulesUri = "$($baseUri)$($resource.id)/authorizationRules?api-version=2017-04-01"
-                            $authRules = (Invoke-RestMethod -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
+                            $authRules = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
                             
                             $allKeys = @()
                             foreach ($rule in $authRules) {
                                 try {
                                     $keysUri = "$($baseUri)$($rule.id)/listKeys?api-version=2017-04-01"
-                                    $keys = Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post
+                                    $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post
                                     $allKeys += $keys
                                 }
                                 catch {
@@ -424,13 +429,13 @@ function Get-AzResourceSecretList {
                         try {
                             # Get authorization rules first
                             $authRulesUri = "$($baseUri)$($resource.id)/authorizationRules?api-version=2021-11-01"
-                            $authRules = (Invoke-RestMethod -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
+                            $authRules = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $authRulesUri -Headers $using:script:authHeader -Method Get).value
                             
                             $allKeys = @()
                             foreach ($rule in $authRules) {
                                 try {
                                     $keysUri = "$($baseUri)$($rule.id)/listKeys?api-version=2021-11-01"
-                                    $keys = Invoke-RestMethod -Uri $keysUri -Headers $using:script:authHeader -Method Post
+                                    $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $keysUri -Headers $using:script:authHeader -Method Post
                                     $allKeys += $keys
                                 }
                                 catch {
@@ -452,7 +457,7 @@ function Get-AzResourceSecretList {
                     'microsoft.signalrservice/signalr' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2023-02-01"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "SignalR Keys"
@@ -467,7 +472,7 @@ function Get-AzResourceSecretList {
                     'microsoft.cognitiveservices/accounts' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2023-05-01"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "Cognitive Services Keys"
@@ -482,7 +487,7 @@ function Get-AzResourceSecretList {
                     'microsoft.maps/accounts' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2021-12-01-preview"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "Maps Keys"
@@ -497,7 +502,7 @@ function Get-AzResourceSecretList {
                     'microsoft.media/mediaservices' {
                         try {
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2020-05-01"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             if ($keys) {
                                 $secretObject.SecretTypes += "Media Services Keys"
@@ -513,13 +518,13 @@ function Get-AzResourceSecretList {
                         try {
                             # Get automation account keys
                             $uri = "$($baseUri)$($resource.id)/listKeys?api-version=2020-01-13-preview"
-                            $keys = Invoke-RestMethod -Uri $uri -Headers $using:script:authHeader -Method Post
+                            $keys = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $uri -Headers $using:script:authHeader -Method Post
                             $secretObject.Keys = $keys
                             
                             # Also try to get variables and credentials
                             try {
                                 $variablesUri = "$($baseUri)$($resource.id)/variables?api-version=2020-01-13-preview"
-                                $variables = (Invoke-RestMethod -Uri $variablesUri -Headers $using:script:authHeader -Method Get).value
+                                $variables = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri $variablesUri -Headers $using:script:authHeader -Method Get).value
                                 $secretObject.Secrets = $variables
                             }
                             catch {

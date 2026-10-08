@@ -118,7 +118,7 @@ function Get-FileShareContent {
                             $headers["x-ms-version"] = "2021-06-08"
                         }
 
-                        Invoke-WebRequest -Uri $fileUrl -OutFile $downloadPath -Headers $headers -UseBasicParsing
+                        Invoke-WebRequest -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $fileUrl -OutFile $downloadPath -Headers $headers -UseBasicParsing
                         Write-Host "  Downloaded: $($file.Path)" -ForegroundColor Green
                     }
                     catch {
@@ -159,7 +159,7 @@ function Get-FileShares {
     }
 
     try {
-        $rawResponse = Invoke-RestMethod -Uri $listUrl -Headers $headers -UseBasicParsing
+        $rawResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $listUrl -Headers $headers -UseBasicParsing
         
         # Handle BOM in response - Azure Storage returns UTF-8 BOM which breaks XML parsing
         if ($rawResponse -is [string]) {
@@ -235,7 +235,7 @@ function Get-DirectoryContents {
     }
 
     try {
-        $rawResponse = Invoke-RestMethod -Uri $listUrl -Headers $headers -UseBasicParsing
+        $rawResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $listUrl -Headers $headers -UseBasicParsing
         
         # Handle BOM in response - Azure Storage returns UTF-8 BOM which breaks XML parsing
         if ($rawResponse -is [string]) {
