@@ -4,6 +4,11 @@
 
 # CHANGELOG
 
+## 2026-10-08 — User-Agent rotation consistency
+
+* Resolve the User-Agent immediately before HTTP attempts and share rotation state across parallel batch requests.
+* Add test coverage for User-Agent rotation across request paths.
+
 ## v1.2.21 [2026-02-06] 🔌 Connector Proxy & OAuth Pipeline
 
 _Adds `Invoke-ConnectorProxy` and completes the three-function API connection pipeline_
