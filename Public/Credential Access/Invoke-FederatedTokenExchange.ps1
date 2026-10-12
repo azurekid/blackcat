@@ -93,7 +93,7 @@ function Invoke-FederatedTokenExchange {
         while ($hop -lt $maxHops) {
             $hop++
             try {
-                $resp = Invoke-WebRequest -Uri $resolvedIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+                $resp = Invoke-WebRequest -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $resolvedIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
             }
             catch {
                 $resp = $null
@@ -139,7 +139,7 @@ function Invoke-FederatedTokenExchange {
 
             try {
                 # This request follows redirects naturally to download the true text payload
-                $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
+                $pemContent = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $keyUrl -Method GET -ErrorAction Stop
                 Write-Verbose "Private key downloaded successfully"
             }
             catch {
@@ -172,9 +172,9 @@ function Invoke-FederatedTokenExchange {
             try {
                 $discUrl = '{0}/.well-known/openid-configuration' -f $IssuerUrl
                 $discoveryParams = @{ Uri = $discUrl; Method= 'GET' }
-                $disc = Invoke-RestMethod @discoveryParams
+                $disc = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @discoveryParams
                 $jwksParams = @{ Uri = $disc.jwks_uri; Method = 'GET' }
-                $jwks = Invoke-RestMethod @jwksParams
+                $jwks = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @jwksParams
                 $KeyId = $jwks.keys[0].kid
                 Write-Verbose "Auto-detected KeyId: $KeyId"
             }
@@ -214,10 +214,9 @@ function Invoke-FederatedTokenExchange {
                     Uri       = $uamiUri
                     Headers   = $script:authHeader
                     Method    = 'GET'
-                    UserAgent = $script:SessionVariables.userAgent
                 }
                 try {
-                    $detail = Invoke-RestMethod @uamiGetParams
+                    $detail = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @uamiGetParams
                     $clientId = $detail.properties.clientId
                 }
                 catch {
@@ -317,7 +316,7 @@ function Invoke-FederatedTokenExchange {
             $maxRetries = 3
             for ($i = 1; $i -le $maxRetries; $i++) {
                 try {
-                    $tokenResponse = Invoke-RestMethod @tokenParams
+                    $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @tokenParams
                     break
                 }
                 catch {

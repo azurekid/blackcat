@@ -111,7 +111,7 @@ function Invoke-ConnectorProxy {
                     $invokeParams['ContentType'] = 'application/json'
                 }
 
-                $response = Invoke-RestMethod @invokeParams
+                $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @invokeParams
 
                 # Unwrap OData envelope: connectors that return a
                 # list use the standard { value: [...] } wrapper.
@@ -206,7 +206,7 @@ function Invoke-ConnectorProxy {
                         $invokeBody | ConvertTo-Json -Depth 10 -Compress
                     ) `
                     -ContentType 'application/json' `
-                    -UserAgent   $sv.userAgent
+                    -UserAgent (Get-CurrentUserAgent -IncrementCount)
 
                 # Unwrap the ARM dynamicInvoke envelope:
                 #   $response.response.statusCode  — HTTP status

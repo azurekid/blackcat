@@ -88,10 +88,9 @@ function Set-FederatedIdentity {
                 Uri       = $ficListUri
                 Headers   = $script:authHeader
                 Method    = 'GET'
-                UserAgent = $script:SessionVariables.userAgent
             }
             try {
-                $result = Invoke-RestMethod @ficListParams
+                $result = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @ficListParams
                 return $result.value
             }
             catch {
@@ -107,10 +106,9 @@ function Set-FederatedIdentity {
                     Uri       = $ficUri
                     Headers   = $script:authHeader
                     Method    = 'DELETE'
-                    UserAgent = $script:SessionVariables.userAgent
                 }
                 try {
-                    Invoke-RestMethod @ficParams | Out-Null
+                    Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @ficParams | Out-Null
                     Write-Host "Removed FIC: $Name" -ForegroundColor Green
                     return $true
                 }
@@ -158,10 +156,9 @@ function Set-FederatedIdentity {
                     Method      = 'PUT'
                     ContentType = 'application/json'
                     Body        = $ficBody
-                    UserAgent   = $script:SessionVariables.userAgent
                 }
 
-                $result = Invoke-RestMethod @ficParams
+                $result = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @ficParams
                 Write-Host "Set FIC: $Name" -ForegroundColor Green
                 return $result
             }

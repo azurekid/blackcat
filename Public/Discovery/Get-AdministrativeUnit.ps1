@@ -13,6 +13,8 @@ function Get-AdministrativeUnit {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
     }
@@ -53,6 +55,9 @@ function Get-AdministrativeUnit {
 
             Write-Verbose "Processing administrative units"
             $units | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
 
                 Write-Verbose "Processing administrative unit: $($_.id)"
                 $currentItem = [PSCustomObject]@{
@@ -65,7 +70,7 @@ function Get-AdministrativeUnit {
 
                 if ($using:IncludeMembers) {
                     Write-Verbose "Including members for administrative unit: $($_.id)"
-                    $members = (Invoke-RestMethod -Uri "$($using:script:SessionVariables.graphUri)/administrativeUnits/$($_.id)/members" -Headers $using:script:graphHeader).value
+                    $members = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -Uri "$($using:script:SessionVariables.graphUri)/administrativeUnits/$($_.id)/members" -Headers $using:script:graphHeader).value
 
                     Write-Verbose "Found $($members.Count) members for administrative unit: $($_.id)"
                     $currentItem | Add-Member -MemberType NoteProperty -Name Members -Value $members.userPrincipalName

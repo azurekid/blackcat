@@ -25,6 +25,8 @@ function Get-StorageContainerList {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function: $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
@@ -73,6 +75,9 @@ function Get-StorageContainerList {
 
 
             $id | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $authHeader = $using:script:authHeader
                 $result     = $using:result
                 $totalItems = $using:totalItems
@@ -100,7 +105,7 @@ function Get-StorageContainerList {
                 }
 
                 Write-Verbose "Sending API request"
-                $apiResponse = (Invoke-RestMethod @requestParam).responses.content.value
+                $apiResponse = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam).responses.content.value
                 Write-Verbose "API request completed successfully"
 
                 if ($using:PublicAccess) {

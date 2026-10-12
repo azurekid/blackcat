@@ -30,6 +30,8 @@ function Disable-DiagnosticSetting {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ChangeProfile
 
@@ -117,10 +119,12 @@ function Disable-DiagnosticSetting {
         Write-Verbose "Found $($stats.TotalResources) resource target(s)"
 
         $resourceIds | ForEach-Object -Parallel {
+            $blackCatUserAgentState = $using:blackCatUserAgentState
+            $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+            Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
             $resourceId   = $_
             $authHeader   = $using:script:authHeader
             $sv           = $using:script:SessionVariables
-            $userAgent    = $sv.userAgent
             $base         = $sv.armUri
             $api          = '2021-05-01-preview'
             $doDisable    = $using:Disable
@@ -138,9 +142,8 @@ function Disable-DiagnosticSetting {
                     Headers   = $authHeader
                     Uri       = $listUrl
                     Method    = 'GET'
-                    UserAgent = $userAgent
                 }
-                $response = Invoke-RestMethod @listParam
+                $response = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @listParam
 
                 $settings = $response.value
                 if (-not $settings -or $settings.Count -eq 0) {
@@ -160,9 +163,8 @@ function Disable-DiagnosticSetting {
                             Headers   = $authHeader
                             Uri       = $deleteUrl
                             Method    = 'DELETE'
-                            UserAgent = $userAgent
                         }
-                        Invoke-RestMethod @deleteParam | Out-Null
+                        Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @deleteParam | Out-Null
                         Write-Host "  Removed '$settingName' from $friendlyName" -ForegroundColor Red
                     }
                     elseif ($doDisable) {
@@ -179,10 +181,9 @@ function Disable-DiagnosticSetting {
                                 Headers   = $authHeader
                                 Uri       = $catUrl
                                 Method    = 'GET'
-                                UserAgent = $userAgent
                             }
                             try {
-                                $catResponse = Invoke-RestMethod @catParam
+                                $catResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @catParam
                                 $metricCats = $catResponse.value | Where-Object {
                                     $_.properties.categoryType -eq 'Metrics'
                                 }
@@ -228,11 +229,10 @@ function Disable-DiagnosticSetting {
                                 Method      = 'PUT'
                                 Body        = $putBody
                                 ContentType = 'application/json'
-                                UserAgent   = $userAgent
                             }
 
                             try {
-                                Invoke-RestMethod @putParam | Out-Null
+                                Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @putParam | Out-Null
                                 Write-Host "  Disabled logs on '$settingName' for $friendlyName (metrics kept enabled)" -ForegroundColor Yellow
                             }
                             catch {
@@ -277,11 +277,10 @@ function Disable-DiagnosticSetting {
                                     Method      = 'PUT'
                                     Body        = $putBody
                                     ContentType = 'application/json'
-                                    UserAgent   = $userAgent
                                 }
 
                                 try {
-                                    Invoke-RestMethod @putParam | Out-Null
+                                    Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @putParam | Out-Null
                                     $sinkName = if ($sink) { ($sink -split '/')[-1] } else { 'none' }
                                     Write-Host "  Redirected '$settingName' on $friendlyName to $sinkName (no metrics available, was: $($removedDest -join ', '))" -ForegroundColor Yellow
                                 }
@@ -338,9 +337,8 @@ function Disable-DiagnosticSetting {
                             Headers   = $authHeader
                             Uri       = $lockUrl
                             Method    = 'GET'
-                            UserAgent = $userAgent
                         }
-                        $lockResponse = Invoke-RestMethod @lockParam
+                        $lockResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @lockParam
                         $locks = $lockResponse.value
 
                         if ($locks -and $locks.Count -gt 0) {

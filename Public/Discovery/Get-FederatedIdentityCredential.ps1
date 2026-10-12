@@ -128,7 +128,7 @@ function Get-FederatedIdentityCredential {
                 $ficUrl = "https://management.azure.com$($uami.id)/federatedIdentityCredentials?api-version=2023-01-31"
                 
                 try {
-                    $fics = Invoke-RestMethod -Uri $ficUrl -Headers $script:authHeader -Method GET
+                    $fics = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $ficUrl -Headers $script:authHeader -Method GET
                     
                     if ($fics.value -and $fics.value.Count -gt 0) {
                         $totalFics += $fics.value.Count

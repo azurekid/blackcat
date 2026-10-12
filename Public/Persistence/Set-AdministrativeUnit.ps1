@@ -71,7 +71,7 @@ function Set-AdministrativeUnit {
                     Body    = ($updateBody | ConvertTo-Json -Depth 5)
                     ContentType = 'application/json'
                 }
-                Invoke-RestMethod @requestParams
+                Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParams
             } else {
                 Write-Verbose "No update parameters provided. Skipping update."
             }
@@ -92,7 +92,7 @@ function Set-AdministrativeUnit {
                         ErrorAction = 'Stop'
                     }
                     try {
-                        Invoke-RestMethod @addMemberParams
+                        Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @addMemberParams
                     } catch {
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Failed to add user $userId $($_.Exception.Message)" -Severity 'Error'
                     }

@@ -38,6 +38,8 @@ function Get-ResourcePermission {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
@@ -111,6 +113,9 @@ function Get-ResourcePermission {
 
             Write-Host "   Analyzing resource permissions across $($resources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
             $resources | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $resourceId          = $_.id
                 $permissionType      = $using:PermissionType
                 $resourcePermissions = $using:resourcePermissions
@@ -129,7 +134,7 @@ function Get-ResourcePermission {
                 }
 
                 try {
-                    $permissions = (Invoke-RestMethod @permRequestParam).value
+                    $permissions = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @permRequestParam).value
 
                     if (-not $permissions -or $permissions.Count -eq 0) {
                         Write-Verbose "No permissions found for resource: $resourceId"

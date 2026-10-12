@@ -41,6 +41,7 @@ function Set-UserAgentRotation {
         # If custom user agent is null or empty, reset the current user agent so it will be regenerated
         if ([string]::IsNullOrEmpty($CustomUserAgent)) {
             $script:SessionVariables.CurrentUserAgent = $null
+            $script:SessionVariables.UserAgent = $null
             # We'll force a new agent selection on next Get-CurrentUserAgent call
             Write-Output "Custom user agent cleared"
         } else {
@@ -63,7 +64,8 @@ function Set-UserAgentRotation {
     Configure user agent rotation settings.
 
     .DESCRIPTION
-    Configures how the BlackCat module rotates user agents.
+    Configures the shared user agent used by all BlackCat HTTP requests, including
+    anonymous requests, token exchanges, retries, pagination and parallel requests.
     Set the time interval between rotations, the number of requests per user agent, or disable
     rotation entirely.
 
@@ -79,7 +81,8 @@ function Set-UserAgentRotation {
     a single user agent indefinitely.
 
     .PARAMETER CustomUserAgent
-    Set a specific custom user agent string to be used instead of random rotation.
+    Set the initial user agent string. Rotation remains enabled unless -Disable is
+    also specified. Use -Disable -CustomUserAgent to keep a fixed custom agent.
 
     .EXAMPLE
     # Set user agent to rotate every 2 hours
@@ -98,8 +101,8 @@ function Set-UserAgentRotation {
     Set-UserAgentRotation -Disable
 
     .EXAMPLE
-    # Set a custom user agent
-    Set-UserAgentRotation -CustomUserAgent "Mozilla/5.0 BlackCat Security Tool"
+    # Set a fixed custom user agent for all module HTTP requests
+    Set-UserAgentRotation -Disable -CustomUserAgent "Mozilla/5.0 BlackCat Security Tool"
 
     .NOTES
     Rotating user agents helps avoid detection by SIEM solutions that might

@@ -89,11 +89,10 @@ function Set-ServicePrincipalCredential {
                             Method  = 'POST'
                             Body    = $body
                             ContentType = 'application/json'
-                            UserAgent = $sessionVariables.userAgent
                         }
 
                         Write-Verbose "Adding password credential to $entityType"
-                        $response = Invoke-RestMethod @requestParam
+                        $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                         
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Password credential added successfully with KeyId: $($response.keyId)" -Severity 'Information'
                         return $response
@@ -132,11 +131,10 @@ function Set-ServicePrincipalCredential {
                             Method  = 'POST'
                             Body    = $body
                             ContentType = 'application/json'
-                            UserAgent = $sessionVariables.userAgent
                         }
 
                         Write-Verbose "Adding certificate credential to $entityType"
-                        $response = Invoke-RestMethod @requestParam
+                        $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                         
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Certificate credential added successfully with KeyId: $($response.keyId)" -Severity 'Information'
                         return $response
@@ -157,11 +155,10 @@ function Set-ServicePrincipalCredential {
                             Method  = 'POST'
                             Body    = $body
                             ContentType = 'application/json'
-                            UserAgent = $sessionVariables.userAgent
                         }
 
                         Write-Verbose "Removing password credential from $entityType"
-                        Invoke-RestMethod @requestParam
+                        Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                         
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Password credential with KeyId '$KeyId' removed successfully" -Severity 'Information'
                     }
@@ -182,11 +179,10 @@ function Set-ServicePrincipalCredential {
                             Method  = 'POST'
                             Body    = $body
                             ContentType = 'application/json'
-                            UserAgent = $sessionVariables.userAgent
                         }
 
                         Write-Verbose "Removing certificate credential from $entityType"
-                        Invoke-RestMethod @requestParam
+                        Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                         
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Certificate credential with KeyId '$KeyId' removed successfully" -Severity 'Information'
                     }

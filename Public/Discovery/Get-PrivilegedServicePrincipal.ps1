@@ -140,7 +140,7 @@ function Get-PrivilegedServicePrincipal {
                         requests = $batchRequests
                     } | ConvertTo-Json -Depth 10
                     
-                    $batchResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/`$batch" -Method POST -Headers $script:graphHeader -ContentType "application/json" -Body $batchPayload -UserAgent $sessionVariables.userAgent
+                    $batchResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/`$batch" -Method POST -Headers $script:graphHeader -ContentType "application/json" -Body $batchPayload -UserAgent (Get-CurrentUserAgent -IncrementCount)
                     
                     foreach ($response in $batchResponse.responses) {
                         if ($response.status -eq 200 -and $response.body) {

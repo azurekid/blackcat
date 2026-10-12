@@ -34,6 +34,8 @@ function Get-StorageAccountKey {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
 
         Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
@@ -88,6 +90,9 @@ function Get-StorageAccountKey {
             $generalErrorBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
 
             $id | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 try {
                     $KerbKey = $using:KerbKey
                     $currentResourceId = $_
@@ -102,10 +107,9 @@ function Get-StorageAccountKey {
                         Headers = $using:script:authHeader
                         Uri     = $uri
                         Method  = 'POST'
-                        UserAgent = $using:sessionVariables.userAgent
                     }
 
-                    $apiResponse = Invoke-RestMethod @requestParam
+                    $apiResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
 
                     $currentItem = [PSCustomObject]@{
                         "StorageAccountName" = $storageAccountName

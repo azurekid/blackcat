@@ -74,9 +74,11 @@ $script:SessionVariables = [ordered]@{
     privilegedRoles           = if (Test-Path $helperPath\privileged-roles.json) { Get-Content -Path $helperPath\privileged-roles.json | ConvertFrom-Json };
 
     # User agent rotation tracking
+    CustomUserAgent           = $null;
     CurrentUserAgent          = $null;
     UserAgentLastChanged      = $null;
     UserAgentRequestCount     = 0;
+    UserAgentRotationEnabled  = $true;
     UserAgentRotationInterval = [TimeSpan]::FromMinutes(30);
     MaxRequestsPerAgent       = 50;
     default                   = 'N2gzQmw0Y2tDNDdXNDVIM3IzNG5kMTVOMDdQbDRubjFuZzcwTDM0djM==';
@@ -91,7 +93,7 @@ $version = $manifest.ModuleVersion
 # Check for updates
 try {
     $latestVersionUrl = "https://raw.githubusercontent.com/azurekid/blackcat/refs/heads/main/BlackCat.psd1"
-    $latestManifestContent = Invoke-RestMethod -Uri $latestVersionUrl -UseBasicParsing
+    $latestManifestContent = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $latestVersionUrl -UseBasicParsing
     $latestVersionLine = $latestManifestContent -split "`n" | Where-Object { $_ -match 'ModuleVersion' }
     $latestVersion = ($latestVersionLine -split '=' | Select-Object -Last 1).Trim().Trim("'")
 
