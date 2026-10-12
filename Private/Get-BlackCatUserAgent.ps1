@@ -5,7 +5,9 @@ function Get-BlackCatUserAgent {
         [Parameter(Mandatory)]
         [System.Collections.IDictionary]$State,
 
-        [switch]$IncrementCount
+        [switch]$IncrementCount,
+
+        [switch]$ForceSelection
     )
 
     # Parallel runspaces share this dictionary; selection and counting must be atomic.
@@ -19,16 +21,30 @@ function Get-BlackCatUserAgent {
         }
 
         $now = Get-Date
-        $rotate = $State.UserAgentRotationEnabled -and (
-            [string]::IsNullOrEmpty($State.CurrentUserAgent) -or
-            ($State.UserAgentLastChanged -and
-                ($now - $State.UserAgentLastChanged) -ge ($State.UserAgentRotationInterval ?? [TimeSpan]::FromMinutes(30))) -or
-            (($State.MaxRequestsPerAgent ?? 50) -gt 0 -and
-                $State.UserAgentRequestCount -ge ($State.MaxRequestsPerAgent ?? 50))
+        if (-not $ForceSelection -and -not $State.UserAgentRotationEnabled) {
+            if (-not [string]::IsNullOrWhiteSpace($State.CustomUserAgent)) {
+                $State.CurrentUserAgent = $State.CustomUserAgent
+            }
+            elseif ([string]::IsNullOrWhiteSpace($State.CurrentUserAgent) -and
+                -not [string]::IsNullOrWhiteSpace($State.UserAgent)) {
+                $State.CurrentUserAgent = $State.UserAgent
+                $State.UserAgentLastChanged = $now
+            }
+        }
+
+        $rotate = $ForceSelection -or [string]::IsNullOrWhiteSpace($State.CurrentUserAgent) -or (
+            $State.UserAgentRotationEnabled -and (
+                ($State.UserAgentLastChanged -and
+                    ($now - $State.UserAgentLastChanged) -ge ($State.UserAgentRotationInterval ?? [TimeSpan]::FromMinutes(30))) -or
+                (($State.MaxRequestsPerAgent ?? 50) -gt 0 -and
+                    $State.UserAgentRequestCount -ge ($State.MaxRequestsPerAgent ?? 50))
+            )
         )
 
         if ($rotate) {
-            $agents = @($State.userAgents.agents | Where-Object { -not [string]::IsNullOrEmpty($_.value) })
+            $agents = @($State.userAgents.agents | Where-Object {
+                $_.value -is [string] -and -not [string]::IsNullOrWhiteSpace($_.value)
+            })
             $State.CurrentUserAgent = if ($agents.Count) {
                 ($agents | Get-Random).value
             } else {
@@ -36,18 +52,6 @@ function Get-BlackCatUserAgent {
             }
             $State.UserAgentLastChanged = $now
             $State.UserAgentRequestCount = 0
-        }
-        elseif (-not $State.UserAgentRotationEnabled -and -not [string]::IsNullOrEmpty($State.CustomUserAgent)) {
-            $State.CurrentUserAgent = $State.CustomUserAgent
-        }
-
-        if ([string]::IsNullOrEmpty($State.CurrentUserAgent)) {
-            $State.CurrentUserAgent = if (-not [string]::IsNullOrEmpty($State.UserAgent)) {
-                $State.UserAgent
-            } else {
-                'Mozilla/5.0 (BlackCat Security Tool)'
-            }
-            $State.UserAgentLastChanged = $now
         }
         $State.UserAgent = $State.CurrentUserAgent
         if ($IncrementCount) {
