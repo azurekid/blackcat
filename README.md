@@ -351,17 +351,33 @@ The updater uses [Mozilla stable metadata](https://product-details.mozilla.org/1
 [Chrome VersionHistory](https://developer.chrome.com/docs/web-platform/versionhistory/reference)
 for currently serving Windows/macOS/Linux stable releases, and
 [Microsoft Edge stable metadata](https://edgeupdates.microsoft.com/api/products?view=enterprise).
+If Mozilla's endpoint is unavailable, it uses Mozilla's official production
+repository. If VersionHistory is unavailable, it uses recent
+[Chrome for Testing Stable metadata](https://github.com/GoogleChromeLabs/chrome-for-testing/blob/main/data/last-known-good-versions-with-downloads.json)
+only for platforms with published downloads; this fallback verifies a released
+Stable build, not its consumer rollout fraction.
+[Brave stable releases](https://github.com/brave/brave-browser/releases/latest)
+are matched to tagged Brave Core metadata for their own embedded Chromium version.
 It rejects missing or malformed metadata before writing either file, logs source
 URLs and versions, and respects [Chromium user-agent reduction](https://www.chromium.org/updates/ua-reduction/).
-Safari, ChromeOS, Opera, Vivaldi and Brave are retained with warnings until their
+Edge also uses [Microsoft's reduced desktop UA format](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/user-agent-guidance#user-agent-strings).
+Safari, ChromeOS, Opera and Vivaldi are retained with warnings until their
 stable releases and embedded engines can be independently verified.
 
-**Verification limitation (2026-10-12):** vendor endpoints could not be resolved
-in the implementation environment. The checked-in lists therefore retain the
-legacy private-list browser versions, with corrected UA formats; they are **not**
-claimed to be current stable releases. Unverified newer values previously present
-in the support-file copy were removed. Run the updater in a network-enabled
-environment to verify and refresh the supported browsers.
+**Verified metadata (2026-10-12):**
+
+| Browser | Official metadata | Rendered UA version |
+|---------|-------------------|---------------------|
+| Firefox | [157.0.1, released 2026-10-09](https://github.com/mozilla-releng/product-details/blob/0c2803fd75a57f8262b20f8e30c83fbd993f496a/public/1.0/firefox_versions.json) | `157.0` |
+| Chrome | [Chrome for Testing Stable 155.0.8059.39](https://github.com/GoogleChromeLabs/chrome-for-testing/blob/df9c8fc89b8a9c9eacf1b5a747b3f0bf366fe21d/data/last-known-good-versions-with-downloads.json), timestamp 2026-10-11; Windows x64, macOS x64 and Linux x64 downloads verified | `155.0.0.0` |
+| Brave | [1.97.56, Chromium 155.0.8059.40](https://github.com/brave/brave-core/blob/b01cdf43be4b4d5559bf7e58229e666e24454f50/package.json) | `155.0.0.0`, no `Brave/` suffix |
+
+**Remaining verification limitation:** direct vendor endpoints could not be
+resolved in the implementation environment. Edge, Safari, ChromeOS, Opera and
+Vivaldi retain legacy private-list versions with corrected formats; they are
+**not** claimed to be current stable releases. Unverified values previously
+present in the support-file copy were removed. Run the updater in a
+network-enabled environment to verify and refresh Edge as well.
 
 `Invoke-StealthOperation` supports four delay patterns: `Random`, `Progressive`, `BusinessHours`, and `Exponential`. The BusinessHours mode is country-aware — it understands siesta patterns in Spain and Italy, long-work cultures in Japan and Korea, and standard 9-to-5 schedules across 13 country profiles. UserAgent rotation generates realistic browser signatures with platform-aware headers, preventing SOC analysts from correlating assessment traffic by user-agent string.
 

@@ -49,7 +49,7 @@ jobs:
           commit-message: Refresh verified stable browser user agents
           title: Refresh verified stable browser user agents
           body: |
-            Refresh Chrome, Firefox and Windows Edge from official stable release metadata.
+            Refresh Chrome, Firefox, Brave and Windows Edge from official stable release metadata.
             Both userAgents.json copies are synchronized. Other browser types are retained
             until a verified vendor metadata provider is available; see workflow logs.
           add-paths: |
