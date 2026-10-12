@@ -9,6 +9,7 @@ BeforeAll {
     . "$PSScriptRoot/../Public/Helpers/Get-CurrentUserAgent.ps1"
     . "$PSScriptRoot/../Public/Helpers/Get-UserAgentStatus.ps1"
     . "$PSScriptRoot/../Public/Helpers/Set-UserAgentRotation.ps1"
+    . "$PSScriptRoot/../Public/Helpers/Set-UserAgent.ps1"
     . "$PSScriptRoot/../Public/Helpers/Invoke-MSGraph.ps1"
     . "$PSScriptRoot/../Public/Initial Access/Connect-EntraApplication.ps1"
     . "$PSScriptRoot/../Public/Reconnaissance/Test-DomainRegistration.ps1"
@@ -38,6 +39,7 @@ Describe 'Shared user agent rotation' {
     It 'preserves disabled rotation before initialization and after clearing a custom agent' {
         Set-UserAgentRotation -Disable | Out-Null
         $agent = Get-CurrentUserAgent -IncrementCount
+        $agent | Should -Be 'Rotated-Agent'
         $script:SessionVariables.UserAgentRotationEnabled | Should -BeFalse
         $script:SessionVariables.UserAgentLastChanged = (Get-Date).AddDays(-400)
         Set-UserAgentRotation -Disable -CustomUserAgent '' | Out-Null
@@ -51,6 +53,67 @@ Describe 'Shared user agent rotation' {
         1..3 | ForEach-Object { Get-CurrentUserAgent -IncrementCount | Should -Be 'Configured-Agent' }
         $script:SessionVariables.UserAgent | Should -Be 'Configured-Agent'
         $script:SessionVariables.UserAgentRequestCount | Should -Be 3
+    }
+
+    It 'draws on every explicit selection, even when the same value is returned' {
+        Mock Get-Random { @{ value = 'Rotated-Agent' } }
+        $script:SessionVariables.UserAgentRequestCount = 49
+        $script:SessionVariables.UserAgentLastChanged = (Get-Date).AddDays(-1)
+        1..3 | ForEach-Object { Set-UserAgent | Should -Be 'Rotated-Agent' }
+        Should -Invoke Get-Random -Times 3 -Exactly
+        $script:SessionVariables.UserAgent | Should -Be 'Rotated-Agent'
+        $script:SessionVariables.UserAgentRequestCount | Should -Be 0
+        $script:SessionVariables.UserAgentLastChanged | Should -BeGreaterThan (Get-Date).AddMinutes(-1)
+        Get-CurrentUserAgent | Should -Be 'Rotated-Agent'
+        Should -Invoke Get-Random -Times 3 -Exactly
+    }
+
+    It 'does not overwrite explicit rotation or custom configuration when selecting' {
+        Set-UserAgentRotation -Disable -CustomUserAgent 'Fixed' -Interval ([TimeSpan]::FromHours(2)) -MaxRequests 7 | Out-Null
+        Set-UserAgent | Should -Be 'Rotated-Agent'
+        $script:SessionVariables.UserAgent | Should -Be 'Rotated-Agent'
+        $script:SessionVariables.UserAgentRotationEnabled | Should -BeFalse
+        $script:SessionVariables.CustomUserAgent | Should -Be 'Fixed'
+        $script:SessionVariables.UserAgentRotationInterval | Should -Be ([TimeSpan]::FromHours(2))
+        $script:SessionVariables.MaxRequestsPerAgent | Should -Be 7
+        Get-CurrentUserAgent | Should -Be 'Fixed'
+    }
+
+    It 'ignores null, whitespace, nonstring and malformed entries' {
+        $script:SessionVariables.userAgents = @{ agents = @(
+            $null, @{ value = $null }, @{ value = '   ' }, @{ value = 42 },
+            @{ other = 'invalid' }, @{ value = 'Valid-Agent' }
+        ) }
+        1..5 | ForEach-Object { Set-UserAgent | Should -Be 'Valid-Agent' }
+    }
+
+    It 'uses the same safe fallback for explicit selection with unusable lists' {
+        foreach ($list in @($null, 'malformed', @{ agents = @() }, @{ agents = @(@{ value = "`t" }) })) {
+            $script:SessionVariables.userAgents = $list
+            Set-UserAgent | Should -Be 'Mozilla/5.0 (BlackCat Security Tool)'
+            $script:SessionVariables.UserAgent | Should -Be $script:SessionVariables.CurrentUserAgent
+            $script:SessionVariables.UserAgentRequestCount | Should -Be 0
+        }
+    }
+
+    It 'preserves a previous legacy agent when initializing disabled rotation' {
+        $script:SessionVariables.UserAgentRotationEnabled = $false
+        $script:SessionVariables.UserAgent = 'Previous-Agent'
+        Get-CurrentUserAgent | Should -Be 'Previous-Agent'
+    }
+
+    It 'supports forced selection atomically across real parallel workers' {
+        $state = $script:SessionVariables
+        $provider = ${function:Get-BlackCatUserAgent}.ToString()
+        $agents = 1..40 | ForEach-Object -Parallel {
+            Set-Item Function:Get-BlackCatUserAgent ([scriptblock]::Create($using:provider))
+            Get-BlackCatUserAgent -State $using:state -ForceSelection
+        } -ThrottleLimit 8
+        $agents | Should -HaveCount 40
+        @($agents | Select-Object -Unique) | Should -Be @('Rotated-Agent')
+        $state.UserAgent | Should -Be $state.CurrentUserAgent
+        $state.UserAgentRequestCount | Should -Be 0
+        $state.UserAgentLastChanged | Should -BeGreaterThan (Get-Date).AddMinutes(-1)
     }
 
     It 'clears both agent fields without restoring a stale disabled custom agent' {

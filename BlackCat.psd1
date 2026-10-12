@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.3.2'
+    ModuleVersion     = '1.3.3'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -79,6 +79,7 @@
         'Read-SASToken',
         'Select-AzureContext',
         'Set-UserAgentRotation',
+        'Set-UserAgent',
         'Show-BlackCatCommands',
         'Update-AzureServiceTag',
         'Write-CacheTypeStats',
@@ -193,6 +194,7 @@
         'Public\Helpers\Optimize-BlackCatCacheMemory.ps1',
         'Public\Helpers\Write-CacheTypeStats.ps1',
         'Public\Helpers\Set-UserAgentRotation.ps1',
+        'Public\Helpers\Set-UserAgent.ps1',
         'Public\Helpers\Get-CurrentUserAgent.ps1',
         'Public\Helpers\Get-UserAgentStatus.ps1',
 
