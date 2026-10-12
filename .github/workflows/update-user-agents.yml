@@ -1,0 +1,59 @@
+name: Refresh stable browser user agents
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-user-agents
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+      - name: Verify vendor metadata and refresh both lists
+        shell: pwsh
+        run: ./scripts/Update-UserAgents.ps1
+      - name: Update release metadata when the lists change
+        shell: pwsh
+        run: |
+          $changed = git diff --name-only -- Private/Reference/userAgents.json support-files/userAgents.json
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect refreshed lists.' }
+          if ($changed) {
+            $manifestPath = Join-Path $PWD 'BlackCat.psd1'
+            $manifest = Get-Content $manifestPath -Raw
+            $old = (Import-PowerShellDataFile $manifestPath).ModuleVersion
+            $version = [version]$old
+            $new = "$($version.Major).$($version.Minor).$($version.Build + 1)"
+            [IO.File]::WriteAllText($manifestPath, $manifest.Replace("ModuleVersion     = '$old'", "ModuleVersion     = '$new'"))
+            $changelogPath = Join-Path $PWD 'CHANGELOG.md'
+            $changelog = Get-Content $changelogPath -Raw
+            $entry = "## v$new [$([datetime]::UtcNow.ToString('yyyy-MM-dd'))] — Stable browser user-agent refresh`n`n* Refresh supported browser signatures from official stable metadata and synchronize both JSON lists.`n"
+            [IO.File]::WriteAllText($changelogPath, $changelog.Replace("# CHANGELOG", "# CHANGELOG`n`n$entry"))
+          }
+      - name: Propose synchronized user-agent updates
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          branch: automation/refresh-user-agents
+          base: main
+          commit-message: Refresh verified stable browser user agents
+          title: Refresh verified stable browser user agents
+          body: |
+            Refresh Chrome, Firefox and Windows Edge from official stable release metadata.
+            Both userAgents.json copies are synchronized. Other browser types are retained
+            until a verified vendor metadata provider is available; see workflow logs.
+          add-paths: |
+            Private/Reference/userAgents.json
+            support-files/userAgents.json
+            BlackCat.psd1
+            CHANGELOG.md
