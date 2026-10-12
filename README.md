@@ -307,6 +307,7 @@ Helper functions provide the plumbing that powers every tactic-specific function
 |----------|---------|
 | `Invoke-StealthOperation` | Schedule API calls with configurable stealth timing patterns |
 | `Set-UserAgentRotation` | Configure user-agent rotation settings and intervals |
+| `Set-UserAgent` | Immediately draw a random user-agent from the configured list |
 | `Get-CurrentUserAgent` | Show the currently active user-agent string |
 | `Get-UserAgentStatus` | Display user-agent rotation status and configuration |
 
@@ -320,12 +321,47 @@ Helper functions provide the plumbing that powers every tactic-specific function
   -Country "UK" | ForEach-Object { Find-SubDomain -Domain $_ }
 
 # Enable user-agent rotation to prevent request correlation
-Set-UserAgentRotation -Enable
+Set-UserAgentRotation
+
+# Make a fresh random draw now (the previous value may be selected again)
+Set-UserAgent
 
 # Check the current user-agent and rotation status
 Get-CurrentUserAgent
 Get-UserAgentStatus
 ```
+
+`Set-UserAgent` atomically updates the current and legacy agent fields, timestamp,
+and resets the request count. It ignores null, whitespace and nonstring entries;
+an unusable list uses `Mozilla/5.0 (BlackCat Security Tool)`. It does not change
+rotation settings or a configured custom agent. A disabled fixed custom agent is
+restored by the next `Get-CurrentUserAgent` call. Otherwise the getter caches the
+selected agent until rotation is due, including initialization with rotation disabled.
+
+### Refreshing browser user agents
+
+Run `./scripts/Update-UserAgents.ps1` with PowerShell 7 to refresh both
+`Private/Reference/userAgents.json` and `support-files/userAgents.json` (downloaded
+by `Invoke-Update`). The weekly **Refresh stable browser user agents** GitHub
+Action also supports manual dispatch and proposes changes through a pull request.
+Enable **Allow GitHub Actions to create and approve pull requests** in repository
+settings for this workflow. No module-wide HTTP defaults are changed.
+
+The updater uses [Mozilla stable metadata](https://product-details.mozilla.org/1.0/firefox_versions.json),
+[Chrome VersionHistory](https://developer.chrome.com/docs/web-platform/versionhistory/reference)
+for currently serving Windows/macOS/Linux stable releases, and
+[Microsoft Edge stable metadata](https://edgeupdates.microsoft.com/api/products?view=enterprise).
+It rejects missing or malformed metadata before writing either file, logs source
+URLs and versions, and respects [Chromium user-agent reduction](https://www.chromium.org/updates/ua-reduction/).
+Safari, ChromeOS, Opera, Vivaldi and Brave are retained with warnings until their
+stable releases and embedded engines can be independently verified.
+
+**Verification limitation (2026-10-12):** vendor endpoints could not be resolved
+in the implementation environment. The checked-in lists therefore retain the
+legacy private-list browser versions, with corrected UA formats; they are **not**
+claimed to be current stable releases. Unverified newer values previously present
+in the support-file copy were removed. Run the updater in a network-enabled
+environment to verify and refresh the supported browsers.
 
 `Invoke-StealthOperation` supports four delay patterns: `Random`, `Progressive`, `BusinessHours`, and `Exponential`. The BusinessHours mode is country-aware — it understands siesta patterns in Spain and Italy, long-work cultures in Japan and Korea, and standard 9-to-5 schedules across 13 country profiles. UserAgent rotation generates realistic browser signatures with platform-aware headers, preventing SOC analysts from correlating assessment traffic by user-agent string.
 

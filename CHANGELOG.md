@@ -4,6 +4,13 @@
 
 # CHANGELOG
 
+## v1.3.3 [2026-10-12] — Explicit random user-agent selection
+
+* Add atomic `Set-UserAgent` random selection and initialize disabled rotation from valid list entries.
+* Synchronize both user-agent lists and correct browser UA formats without inventing release versions.
+* Add official stable metadata refresh tooling and a weekly/manual pull-request workflow.
+* Current-release verification remains blocked by vendor endpoint DNS failures; legacy versions are retained pending a successful refresh.
+
 ## 2026-10-08 — User-Agent rotation consistency
 
 * Resolve the User-Agent immediately before HTTP attempts and share rotation state across parallel batch requests.
