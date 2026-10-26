@@ -4,6 +4,11 @@
 
 # CHANGELOG
 
+## v1.3.4 [2026-10-26] — Stable browser user-agent refresh
+
+* Refresh supported browser signatures from official stable metadata and synchronize both JSON lists.
+
+
 ## v1.3.3 [2026-10-12] — Explicit random user-agent selection
 
 * Add atomic `Set-UserAgent` random selection and initialize disabled rotation from valid list entries.
