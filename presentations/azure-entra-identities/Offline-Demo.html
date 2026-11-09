@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline identity trust-path demo</title>
+<style>
+:root{--bg:#0c1424;--panel:#152238;--fg:#f1f5fc;--muted:#b2c1d7;--accent:#50dcc4;--amber:#ffd17a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:Arial,sans-serif}
+a{color:var(--accent)}button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--accent);
+padding:.55rem .85rem;border-radius:4px;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid var(--amber)}
+.controls{position:fixed;z-index:10;right:1rem;bottom:1rem;display:flex;gap:.45rem}
+.slide{width:100%;min-height:100vh;padding:4vh 5.4vw 6vh;display:none;flex-direction:column}
+.slide.active{display:flex}.tag{color:var(--accent);font-size:clamp(10px,1.25vw,18px);font-weight:bold;letter-spacing:.13em}
+h1{font-size:clamp(28px,3.6vw,58px);line-height:1.12;margin:4vh 0;max-width:95%;letter-spacing:-.035em}
+.items{display:grid;gap:2.6vh;flex:1;align-content:start}
+.item{display:grid;grid-template-columns:4.5vw 1fr;gap:2vw}.num{color:var(--accent);font-size:2vw;font-weight:bold}
+.label{color:var(--accent);font-size:clamp(14px,1.7vw,26px);font-weight:bold;margin:0 0 .6vh}
+.body{font-size:clamp(17px,2.15vw,34px);line-height:1.25;margin:0;max-width:95%}
+.takeaway{border-top:2px solid var(--accent);padding-top:2vh;margin-top:3vh;color:var(--amber);
+font-size:clamp(16px,1.8vw,28px);font-weight:bold}
+footer{margin-top:2vh;display:flex;gap:1rem;align-items:center;color:var(--muted);font-size:11px}
+footer .page{margin-left:auto}footer a{text-decoration:none;color:var(--muted)}
+pre{padding:2vh 2vw;background:var(--panel);color:var(--accent);font-size:clamp(12px,1.4vw,22px);
+line-height:1.3;overflow:auto;white-space:pre-wrap;margin:0}
+.portfolio .items,.sources .items{gap:1.4vh}.portfolio .item{grid-template-columns:26% 1fr;gap:2vw}
+.portfolio .label,.portfolio .body,.sources .body{font-size:clamp(12px,1.35vw,21px)}
+.flow .items{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.2vw}
+.flow .item{display:block;background:var(--panel);padding:2vh 1.5vw;min-height:32vh}
+.flow .num{display:block;margin-bottom:2vh}.flow .label{font-size:clamp(15px,1.5vw,24px)}
+.flow .body{font-size:clamp(16px,1.65vw,26px);margin-top:2vh;line-height:1.35}
+.notes{display:none;background:var(--panel);padding:1rem;font-size:17px;line-height:1.5;
+white-space:pre-wrap;border:1px solid var(--accent);margin-top:1rem}
+body.show-notes .notes{display:block}body.show-notes .slide{min-height:100vh}
+.notes-title{font-weight:bold;color:var(--accent)}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(max-width:650px){.slide{padding:5vh 5vw 12vh}h1{font-size:30px}.item{grid-template-columns:24px 1fr}
+.num{font-size:19px}.body{font-size:20px}.portfolio .item{grid-template-columns:1fr;gap:0}.controls{bottom:.5rem}
+footer{flex-wrap:wrap;gap:.5rem}.portfolio .label,.portfolio .body{font-size:14px}}
+@media print{@page{size:landscape;margin:0}.controls{display:none}.slide{display:flex!important;
+height:100vh;min-height:0;break-after:page;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.notes{display:none!important}h1{font-size:32pt}.body{font-size:20pt}.label{font-size:15pt}
+.portfolio .label,.portfolio .body,.sources .body{font-size:12pt}pre{font-size:12pt}}
+
+body{padding:2rem;max-width:1300px;margin:auto}h1{margin:1rem 0;font-size:42px}
+.notice{color:var(--amber)}.gates{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:2rem 0}
+.gate{text-align:left;padding:1.2rem;min-height:180px;border-color:#ff8e95}.gate.blocked{border-color:var(--accent)}
+.gate strong{display:block;font-size:20px;line-height:1.3}.state{display:block;margin-top:1rem;color:#ff8e95}
+.blocked .state{color:var(--accent)}#detail{padding:1.4rem;background:var(--panel);min-height:180px;
+line-height:1.6;font-size:20px}table{border-collapse:collapse;width:100%;margin-top:1rem;font-size:16px}
+td,th{padding:.6rem;border-bottom:1px solid var(--muted);text-align:left}caption{text-align:left;font-weight:bold;margin-bottom:1rem}
+.toggle{margin-top:1rem}#summary{font-size:24px;color:var(--amber)}@media(max-width:750px){.gates{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="tag">AZUREHACKING / SYNTHETIC MODEL</div>
+<h1>Watch a trust path disappear</h1>
+<p class="notice">OFFLINE TRAINING ONLY: no real identities, credentials, cloud calls, or exploitation.</p>
+<button class="toggle" id="toggle" aria-pressed="false">Show after controls</button>
+<div class="gates" id="gates" aria-label="Four authorization gates"></div>
+<p id="summary" aria-live="polite"></p><div id="detail" aria-live="polite">Select a gate to inspect its prerequisite.</div>
+<table><caption>Synthetic evidence: illustrative events, not genuine tenant logs</caption>
+<thead><tr><th>Time</th><th>Illustrative event</th><th>Evidence source</th></tr></thead><tbody>
+<tr><td>09:00</td><td>Approved lab workflow starts</td><td>GitHub workflow and environment evidence</td></tr>
+<tr><td>09:02</td><td>A caller opens a private terminal session</td><td>Terminal access audit; custom telemetry required</td></tr>
+<tr><td>09:04</td><td>Job has OIDC request capability</td><td>Sanitized workflow/runtime evidence, not secret output</td></tr>
+<tr><td>09:06</td><td>Matching assertion is accepted by Entra</td><td>Applicable workload sign-in evidence</td></tr>
+<tr><td>09:08</td><td>Read-only resource operation succeeds</td><td>Corresponding control/data-plane logs</td></tr>
+<tr><td>09:10</td><td>Job is terminated and terminal is unreachable</td><td>Workflow completion and private reachability check</td></tr>
+</tbody></table><p class="notice">A complete real path must verify every gate. A diagram is not proof.</p>
+<script>const gates=[["Browser caller -> job shell", "The caller can reach a WebSocket terminal which starts Bash inside the running Actions job. No active endpoint is asserted.", "Require authenticated private terminal access and restrict reachability.", true], ["Job shell -> GitHub assertion", "The job has id-token: write and the actual terminal process inherits usable OIDC request capability. A presence check alone is not proof.", "Remove OIDC permission from diagnostic jobs that do not need it.", true], ["GitHub assertion -> Entra identity", "Issuer, subject and audience match a configured app or user-assigned identity trust. A production-environment subject does not automatically match an unscoped shell job.", "Constrain accepted trust and protect the matching workflow/environment.", true], ["Entra identity -> resource action", "The selected identity has effective permission at the requested resource scope. GitHub OIDC permission alone grants no Azure authority.", "Keep the lab identity read-only and verify effective scope.", false]];
+let after=false,selected=null;const root=document.querySelector('#gates');
+function detail(){if(selected===null)return;const g=gates[selected];const div=document.querySelector('#detail');
+div.replaceChildren();const title=document.createElement('strong');title.textContent=g[0];div.append(title);
+const p=document.createElement('p');p.textContent='Prerequisite: '+g[1];div.append(p);
+const control=document.createElement('p');control.textContent='Control: '+g[2];div.append(control);}
+function render(){root.replaceChildren();gates.forEach((g,i)=>{const b=document.createElement('button');b.className='gate'+(after&&g[3]?' blocked':'');
+const t=document.createElement('strong');t.textContent=(i+1)+'. '+g[0];b.append(t);
+const s=document.createElement('span');s.className='state';s.textContent=after&&g[3]?'BLOCKED BY CONTROL':'REQUIRES VERIFICATION';
+b.append(s);b.onclick=()=>{selected=i;detail();};root.append(b);});
+document.querySelector('#summary').textContent=after?'After: three independent routes to authority are blocked.':'Before: all four gates must be proved, not assumed.';detail();}
+document.querySelector('#toggle').onclick=()=>{after=!after;const b=document.querySelector('#toggle');
+b.setAttribute('aria-pressed',String(after));b.textContent=after?'Show before controls':'Show after controls';render();};render();
+</script></body></html>
