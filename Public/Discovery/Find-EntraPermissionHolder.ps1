@@ -387,7 +387,7 @@ Identifies Entra ID roles containing a specified permission and returns all assi
 
     .PARAMETER ResolveGroups
         When specified, resolves group memberships to include users who have the permission via group membership.
-        This shows the complete permission inheritance chain and is useful for thorough security audits.
+        This shows the complete permission inheritance chain.
 
     .PARAMETER IncludeAUScope
         Include assignments scoped to Administrative Units, not just directory-wide assignments.
@@ -709,7 +709,7 @@ Identifies Entra ID roles containing a specified permission and returns all assi
         # Format and return output based on requested format
         switch ($OutputFormat) {
             "Table" {
-                # Create a more compact, user-friendly view for table display
+                # Create a compact view for table display
                 $userFocusedOutput = $permissionHolders | ForEach-Object {
                     [PSCustomObject]@{
                         "PrincipalName"     = $_.PrincipalName

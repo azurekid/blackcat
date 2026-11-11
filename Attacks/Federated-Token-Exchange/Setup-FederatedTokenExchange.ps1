@@ -369,7 +369,6 @@ catch {
     Write-Host "  Wait 30s, then: Invoke-RestMethod '$issuerUrl/jwks'" -ForegroundColor Yellow
 }
 
-# ── Usage instructions ───────────────────────────────────────────
 $div = '─' * 70
 Write-Host "`n$div" -ForegroundColor Gray
 Write-Host 'Usage Example:' -ForegroundColor Cyan

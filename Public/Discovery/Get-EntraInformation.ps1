@@ -138,15 +138,13 @@ function Get-EntraInformation {
                     }
 
                 } else {
-                    # Get group memberships and filter out null/empty display names
+                    # Get group memberships
                     $groups = Invoke-MsGraph -relativeUrl "users/$($item.id)/memberOf"
-                    $groupDisplayNames = @()
-                    foreach ($g in $groups) { if ($g.displayName) { $groupDisplayNames += $g.displayName } }
+                    $groupDisplayNames = $groups | Where-Object displayName | ForEach-Object { $_.displayName }
 
-                    # Get directory roles and filter out null/empty display names
+                    # Get directory roles
                     $roles = Invoke-MsGraph -relativeUrl "users/$($item.id)/transitiveMemberOf/microsoft.graph.directoryRole"
-                    $roleDisplayNames = @()
-                    foreach ($r in $roles) { if ($r.displayName) { $roleDisplayNames += $r.displayName } }
+                    $roleDisplayNames = $roles | Where-Object displayName | ForEach-Object { $_.displayName }
 
                     $currentItem = [PSCustomObject]@{
                         DisplayName       = $item.displayName
@@ -184,7 +182,7 @@ function Get-EntraInformation {
 Retrieves information about Azure AD users or groups using Microsoft Graph API.
 
 .DESCRIPTION
-Retrieves detailed information about Azure AD users or groups using Microsoft Graph API. This function queries for user attributes, role memberships, group memberships, device associations, and other directory properties. Useful for user/group enumeration and collecting intelligence on Entra ID principals.
+Retrieves detailed information about Entra ID users or groups using Microsoft Graph API. Queries user attributes, role memberships, group memberships, device associations, and other directory properties.
 
 .PARAMETER ObjectId
 Specifies the ObjectId of the user or group to retrieve information for. This parameter is mandatory when using the 'ObjectId' parameter set.

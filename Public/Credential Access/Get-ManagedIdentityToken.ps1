@@ -26,15 +26,16 @@ function Get-ManagedIdentityToken {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet(
-            'https://management.azure.com/',
-            'https://graph.microsoft.com/',
-            'https://vault.azure.net/',
-            'https://storage.azure.com/',
-            'https://database.windows.net/',
-            'https://ossrdbms-aad.database.windows.net/'
+            'https://management.azure.com',
+            'https://graph.microsoft.com',
+            'https://vault.azure.net',
+            'https://storage.azure.com',
+            'https://database.windows.net',
+            'https://ossrdbms-aad.database.windows.net',
+            'https://monitor.azure.com'
         )]
         [Alias('audience', 'aud')]
-        [string]$Resource = 'https://management.azure.com/',
+        [string]$Resource = 'https://management.azure.com',
 
         [Parameter(Mandatory = $false)]
         [string]$Location = 'eastus',
@@ -94,10 +95,16 @@ function Get-ManagedIdentityToken {
             elseif ($Id) {
                 $uamiName = ($Id -split '/')[-1]
                 Write-Host "  Resolving identity by resource ID: $uamiName" -ForegroundColor Cyan
+                $escapedId = $Id.Replace("'", "''")
+                $identityQuery = @(
+                    'resources'
+                    "| where type =~ 'microsoft.managedidentity/userassignedidentities'"
+                    "| where id =~ '$escapedId'"
+                    '| project id, name, type, location, resourceGroup, subscriptionId, properties'
+                ) -join "`n"
                 $identities = Invoke-AzBatch `
-                    -ResourceType 'Microsoft.ManagedIdentity/userAssignedIdentities'
-                $match = $identities |
-                    Where-Object { $_.id -eq $Id }
+                    -Query $identityQuery
+                $match = $identities | Select-Object -First 1
                 if (-not $match) {
                     Write-Message `
                         -FunctionName $MyInvocation.MyCommand.Name `
@@ -154,16 +161,14 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                 Method      = 'PUT'
                 Body        = $payload
                 ContentType = 'application/json'
-                UserAgent   = $script:SessionVariables.userAgent
             }
-            $null = Invoke-RestMethod @requestParam
+            $null = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
 
             # Poll for completion
             $statusParam = @{
                 Headers   = $script:authHeader
                 Uri       = $deployUri
                 Method    = 'GET'
-                UserAgent = $script:SessionVariables.userAgent
             }
 
             Write-Host "  Waiting for deployment completion..." -ForegroundColor Yellow
@@ -173,7 +178,7 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
             $pollStart = Get-Date
             for ($i = 1; $i -le $maxAttempts; $i++) {
                 Start-Sleep -Seconds $pollInterval
-                $status = Invoke-RestMethod @statusParam
+                $status = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @statusParam
                 $state = $status.properties.provisioningState
                 $elapsed = [int]((Get-Date) - $pollStart).TotalSeconds
 
@@ -217,7 +222,7 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                         -Uri $logsUri `
                         -Headers $script:authHeader `
                         -Method GET `
-                        -UserAgent $script:SessionVariables.userAgent `
+                        -UserAgent (Get-CurrentUserAgent -IncrementCount) `
                         -ErrorAction SilentlyContinue
                     if ($logs.value) {
                         Write-Host "    Container logs:" -ForegroundColor Cyan
@@ -285,9 +290,8 @@ echo `$response | jq '{accessToken: .access_token, expiresOn: .expires_on, resou
                         Headers   = $script:authHeader
                         Uri       = $deployUri
                         Method    = 'DELETE'
-                        UserAgent = $script:SessionVariables.userAgent
                     }
-                    $null = Invoke-RestMethod @deleteParam
+                    $null = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @deleteParam
                     Write-Host "    Deployment script deleted" -ForegroundColor Green
                 }
                 catch {

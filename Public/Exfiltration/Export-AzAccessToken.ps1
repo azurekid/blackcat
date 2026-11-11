@@ -145,7 +145,7 @@ function Export-AzAccessToken {
                     }
                 }
 
-                $response = Invoke-RestMethod @requestParam
+                $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                 $secretUrl = "https://us.onetimesecret.com/secret/$($response.secret_key)"
                 Write-Host "Tokens published successfully!" -ForegroundColor Green
                 Write-Host "Secure URL: $secretUrl" -ForegroundColor Cyan

@@ -72,7 +72,7 @@ function Connect-EntraApplication {
                     }
 
                     Write-Verbose "Requesting device code from: $deviceCodeEndpoint"
-                    $deviceCodeResponse = Invoke-RestMethod -Uri $deviceCodeEndpoint -Method Post -Body $deviceCodeBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
+                    $deviceCodeResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $deviceCodeEndpoint -Method Post -Body $deviceCodeBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
 
                     Write-Host " To sign in, use a web browser to open the page:" -ForegroundColor Yellow
                     Write-Host "   $($deviceCodeResponse.verification_uri)" -ForegroundColor Cyan
@@ -106,7 +106,7 @@ function Connect-EntraApplication {
                         Start-Sleep -Seconds $interval
 
                         try {
-                            $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
+                            $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
                         }
                         catch {
                             if ($_.Exception.Response.StatusCode -eq 400) {
@@ -209,7 +209,7 @@ function Connect-EntraApplication {
                         code_verifier = $codeVerifier
                     }
 
-                    $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded"
+                    $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $tokenEndpoint -Method Post -Body $tokenBody -ContentType "application/x-www-form-urlencoded"
                 }
 
                 Write-Verbose "Token received successfully"
@@ -416,7 +416,7 @@ An array of Microsoft Graph permission scopes to request. These should match the
 Multiple scopes can be specified as an array: @("User.Read", "Directory.Read.All")
 
 .PARAMETER UseDeviceCode
-Switch parameter to use device code authentication flow instead of interactive browser authentication. This is useful for:
+Switch parameter to use device code authentication flow instead of interactive browser authentication. Use for:
 - Remote PowerShell sessions
 - SSH sessions without browser access
 - Azure Cloud Shell
@@ -433,7 +433,7 @@ Connects to Microsoft Graph using interactive browser authentication with the sp
 .EXAMPLE
 Connect-EntraApplication -ClientId "12345678-1234-1234-1234-123456789012" -TenantId "87654321-4321-4321-4321-210987654321" -Scopes @("User.Read") -UseDeviceCode
 
-Connects using device code flow, which is useful for remote sessions or environments without browser access.
+Connects using device code flow for remote sessions or environments without browser access.
 
 .EXAMPLE
 $connection = Connect-EntraApplication -ClientId $appId -TenantId $tenantId -Scopes @("User.Read", "Group.Read.All") -Force
@@ -470,7 +470,7 @@ Security Considerations:
 - User must have appropriate permissions for the requested operations
 - MFA and Conditional Access policies apply to the user
 - Access tokens are stored in $script:EntraAppContext for use by other functions
-- Tokens expire after the specified time and may need refresh
+- Tokens expire and may need refresh
 
 Return Object:
 - The function returns a connection object with AccessToken and RefreshToken
@@ -484,8 +484,8 @@ https://learn.microsoft.com/en-us/graph/auth-v2-user
 https://learn.microsoft.com/en-us/graph/permissions-reference
 
 .LINK
-MITRE ATT&CK Tactic: TA0042 - Resource Development
-https://attack.mitre.org/tactics/TA0042/
+MITRE ATT&CK Tactic: TA0001 - Initial Access
+https://attack.mitre.org/tactics/TA0001/
 
 .LINK
 MITRE ATT&CK Technique: T1078.004 - Valid Accounts: Cloud Accounts

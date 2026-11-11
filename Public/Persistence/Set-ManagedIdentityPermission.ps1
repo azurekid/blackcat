@@ -2,6 +2,7 @@ using namespace System.Management.Automation
 
 function Set-ManagedIdentityPermission {
     [cmdletbinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ResourceId')]
+    [Alias('Set-ServicePrincipalPermission')]
     param (
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'ResourceId')]
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'CommonResource')]        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
@@ -38,7 +39,8 @@ function Set-ManagedIdentityPermission {
             'AzureAD', 
             'Dynamics365', 
             'PowerBI', 
-            'AzureDataLake'
+            'AzureDataLake',
+            'DefenderXDR'
         )]
         [string]$CommonResource,
 
@@ -98,6 +100,7 @@ function Set-ManagedIdentityPermission {
             'Dynamics365'        = '00000007-0000-0000-c000-000000000000'
             'PowerBI'            = '00000009-0000-0000-c000-000000000000'
             'AzureDataLake'      = 'e9f49c6b-5ce5-44c8-925d-015017e9f7ad'
+            'DefenderXDR'        = 'fc780465-2017-40d4-a0c5-307022471b92'
         }
         
         # If using CommonResource, resolve the Resource ID
@@ -167,10 +170,9 @@ function Set-ManagedIdentityPermission {
                             Uri         = $uri
                             Method      = 'GET'
                             ContentType = 'application/json'
-                            UserAgent   = $($sessionVariables.userAgent)
                         }
                         
-                        $existingAssignments = Invoke-RestMethod @getParam
+                        $existingAssignments = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @getParam
                         
                         # Find the assignment that matches the appRoleId
                         $assignmentToRemove = $existingAssignments.value | Where-Object { $_.appRoleId -eq $appRoleId }
@@ -187,11 +189,10 @@ function Set-ManagedIdentityPermission {
                             Uri         = $deleteUri
                             Method      = 'DELETE'
                             ContentType = 'application/json'
-                            UserAgent   = $($sessionVariables.userAgent)
                         }
                         
                         Write-Verbose "Removing App Role '$appRoleName' from Service Principal"
-                        Invoke-RestMethod @deleteParam
+                        Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @deleteParam
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "Successfully removed app role '$appRoleName' from service principal" -Severity 'Information'
                     }
                     catch {
@@ -205,7 +206,6 @@ function Set-ManagedIdentityPermission {
                         Uri         = $uri
                         Method      = 'POST'
                         ContentType = 'application/json'
-                        UserAgent   = $($sessionVariables.userAgent)
                         Body        = @{
                             principalId = $servicePrincipalId
                             resourceId  = $resourceId
@@ -215,7 +215,7 @@ function Set-ManagedIdentityPermission {
 
                     try {
                         Write-Verbose "Assigning App Role to Service Principal"
-                        Invoke-RestMethod @requestParam
+                        Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam
                     }
                     catch {
                         Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message ($_.ErrorDetails.Message | ConvertFrom-Json).Error.Message -Severity 'Information'
@@ -348,8 +348,7 @@ Set-ManagedIdentityPermission -servicePrincipalId "12345678-1234-1234-1234-12345
 This example assigns the app role with the specified app role ID to the service principal for the given resource.
 
 .NOTES
-- This function requires authentication to the Microsoft Graph API. Ensure that the authentication header is set correctly.
-- The function uses `Invoke-RestMethod` to make API calls and handles errors gracefully by logging messages.
+Requires an authenticated Microsoft Graph session with permissions to read service principals and manage app role assignments.
 
 .LINK
 MITRE ATT&CK Tactic: TA0003 - Persistence

@@ -22,7 +22,7 @@ function Get-RoleAssignment {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('subscription-id')]
-        [string]$SubscriptionId,
+        [string[]]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Alias('exclude-custom')]
@@ -59,6 +59,8 @@ function Get-RoleAssignment {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         
         # Only use MSGraph authentication if CurrentUser is specified
@@ -81,7 +83,7 @@ function Get-RoleAssignment {
             Write-Host "  🆔 Filter: Object ID = $ObjectId" -ForegroundColor Cyan
         }
         if ($SubscriptionId) {
-            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $($SubscriptionId -join ', ')" -ForegroundColor Cyan
         }
         if ($IsCustom) {
             Write-Host "   Filter: Custom Roles Only" -ForegroundColor Cyan
@@ -95,7 +97,6 @@ function Get-RoleAssignment {
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
-        $randomUserAgent = $script:SessionVariables.userAgent
     }
 
     process {
@@ -104,7 +105,7 @@ function Get-RoleAssignment {
             CurrentUser = $CurrentUser.ToString()
             PrincipalType = $PrincipalType
             ObjectId = $ObjectId
-            SubscriptionId = $SubscriptionId
+            SubscriptionId = if ($SubscriptionId) { $SubscriptionId -join ',' } else { $null }
             IsCustom = $IsCustom.ToString()
             ExcludeCustom = $ExcludeCustom.ToString()
             IncludeEligible = $IncludeEligible.ToString()
@@ -144,20 +145,19 @@ function Get-RoleAssignment {
         try {
             # Cache subscription retrieval separately for better performance
             $subscriptionCacheKey = ConvertTo-CacheKey -BaseIdentifier "Get-RoleAssignment-Subscriptions" -Parameters @{
-                SubscriptionId = $SubscriptionId
+                SubscriptionId = if ($SubscriptionId) { $SubscriptionId -join ',' } else { $null }
             }
             
             $subscriptionOperation = {
+                if ($SubscriptionId) {
+                    Write-Host " Using provided subscription scope..." -ForegroundColor Green
+                    return @($SubscriptionId)
+                }
+
                 Write-Host " Retrieving all subscriptions for the current user context..." -ForegroundColor Green
                 $baseUri = 'https://management.azure.com'
                 
-                if ($SubscriptionId) {
-                    # Request specific subscription
-                    $subscriptionsUri = "$($baseUri)/subscriptions/$SubscriptionId?api-version=2020-01-01"
-                } else {
-                    # Request all subscriptions
-                    $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
-                }
+                $subscriptionsUri = "$($baseUri)/subscriptions?api-version=2020-01-01"
                 
                 $requestParam = @{
                     Headers = $script:authHeader
@@ -165,14 +165,7 @@ function Get-RoleAssignment {
                     Method  = 'GET'
                 }
 
-                if ($SubscriptionId) {
-                    # Single subscription response
-                    $subscriptionResponse = Invoke-RestMethod @requestParam
-                    $retrievedSubscriptions = @($subscriptionResponse.subscriptionId)
-                } else {
-                    # Multiple subscriptions response
-                    $retrievedSubscriptions = (Invoke-RestMethod @requestParam).value.subscriptionId
-                }
+                $retrievedSubscriptions = @((Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam).value.subscriptionId)
                 
                 Write-Host "   Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
                 return $retrievedSubscriptions
@@ -191,7 +184,6 @@ function Get-RoleAssignment {
             param($CurrentUserFlag, $ObjectIdParam, $SubscriptionsParam, $PrincipalTypeParam, $IsCustomParam, $ExcludeCustomParam, $IncludeEligibleParam, $ThrottleLimitParam)
             
             $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
-            $randomUserAgent = $script:SessionVariables.userAgent
             $baseUri = 'https://management.azure.com'
 
             try {
@@ -255,113 +247,112 @@ function Get-RoleAssignment {
                     }
                 }
 
-                Write-Host "   Analyzing role assignments across $($SubscriptionsParam.Count) subscriptions with $ThrottleLimitParam concurrent threads..." -ForegroundColor Cyan
-                $SubscriptionsParam | ForEach-Object -Parallel {
-                try {
-                    $baseUri             = $using:baseUri
-                    $authHeader          = $using:script:authHeader
-                    $userAgent           = $using:randomUserAgent
-                    $roleAssignmentsList = $using:roleAssignmentsList
-                    $ObjectId            = $using:ObjectId
-                    $Groups              = $using:Groups
-                    $azureRoles          = $using:script:SessionVariables.AzureRoles
-                    $PrincipalType       = $using:PrincipalType
-                    $IsCustom            = $using:IsCustom
-                    $ExcludeCustom       = $using:ExcludeCustom
-                    $subscriptionId      = $_
+                Write-Host "   Querying active role assignments across $($SubscriptionsParam.Count) subscriptions with Azure Resource Graph..." -ForegroundColor Cyan
 
-                    Write-Verbose " Processing subscription: $subscriptionId"
-                    $roleAssignmentsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
-
-                    $principalIds = @()
-                    if ($ObjectId) {
-                        $principalIds += $ObjectId
-                    }
-                    if ($Groups.length -gt 0) {
-                        $principalIds += $Groups
-                    }
-
-                    $roleAssignmentsResponse = @()
-                    $roleAssignmentsRequestParam = @{
-                        Headers   = $authHeader
-                        Method    = 'GET'
-                        Uri       = $roleAssignmentsUri
-                        UserAgent = $userAgent
-                    }
-
-                    if ($principalIds) {
-                        foreach ($principalId in $principalIds) {
-                            $roleAssignmentsRequestParam.Uri = "$roleAssignmentsUri&`$filter=principalId eq '$principalId'"
-                            $roleAssignmentsResponse += (Invoke-RestMethod @roleAssignmentsRequestParam).value
-                        }
-                    } else {
-                        $roleAssignmentsResponse += @(Invoke-RestMethod @roleAssignmentsRequestParam).value
-                    }
-
-                    if ($PrincipalType) {
-                        $roleAssignmentsResponse = $roleAssignmentsResponse | Where-Object { $_.properties.principalType -eq $PrincipalType }
-                    }
-
-                    foreach ($roleAssignment in $roleAssignmentsResponse) {
-                        if ($roleAssignment.properties.principalType) {
-                            $roleAssignmentObject = [PSCustomObject]@{
-                                PrincipalType = $roleAssignment.properties.principalType
-                                PrincipalId   = $roleAssignment.properties.principalId
-                                Scope         = $roleAssignment.properties.scope
-                                RoleId        = $roleAssignment.properties.roleDefinitionId -split '/' | Select-Object -Last 1
-                                IsCustom      = $false
-                                IsEligible    = $false
-                            }
-
-                            $roleId = ($roleAssignment.properties.roleDefinitionId -split '/')[-1]
-                            $roleName = ($azureRoles | Where-Object { $_.id -match $roleId } ).Name
-
-                            if (-not($roleName)) {
-                                $roleDefinitionsUri = "$($baseUri)/subscriptions/$subscriptionId/providers/Microsoft.Authorization/roleDefinitions/$($roleId)?`$filter=type eq 'CustomRole'&api-version=2022-05-01-preview"
-                                $roleDefinitionsRequestParam = @{
-                                    Headers = $authHeader
-                                    Uri     = $roleDefinitionsUri
-                                    Method  = 'GET'
-                                    UserAgent = $userAgent
-                                }
-
-                                if (-not $ExcludeCustom) {
-                                    Write-Verbose " Retrieving custom role definition for subscription: $subscriptionId"
-                                    $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
-                                }
-
-                                $roleAssignmentObject.IsCustom = $true
-                            }
-
-                            if ($roleName) {
-                                $memberObject = @{
-                                    MemberType = 'NoteProperty'
-                                    Name       = 'RoleName'
-                                    Value      = $roleName
-                                }
-                                $roleAssignmentObject | Add-Member @memberObject
-
-                                if (-not $IsCustom -or $roleAssignmentObject.IsCustom) {
-                                    $roleAssignmentsList.Add($roleAssignmentObject)
-                                    Write-Verbose " Found: $($roleAssignmentObject.PrincipalType) -> $roleName (Subscription: $subscriptionId)"
-                                }
-                            }
-                        }
-                    }
+                function ConvertTo-KqlStringLiteral {
+                    param ([string]$Value)
+                    return "'$($Value.Replace("'", "''"))'"
                 }
-                catch {
-                    Write-Information " Error processing subscription '$subscriptionId': $($_.Exception.Message)" -InformationAction Continue
-                }                } -ThrottleLimit $ThrottleLimitParam
+
+                $principalIds = @()
+                if ($ObjectId) {
+                    $principalIds += $ObjectId
+                }
+                if ($Groups.length -gt 0) {
+                    $principalIds += $Groups
+                }
+
+                $queryFilters = @()
+                if ($principalIds.Count -gt 0) {
+                    $principalIdList = ($principalIds | ForEach-Object { ConvertTo-KqlStringLiteral -Value $_ }) -join ', '
+                    $queryFilters += "| where principalId in~ ($principalIdList)"
+                }
+                if ($PrincipalTypeParam) {
+                    $queryFilters += "| where principalType =~ $(ConvertTo-KqlStringLiteral -Value $PrincipalTypeParam)"
+                }
+
+                $customFilter = ''
+                if ($IsCustomParam) {
+                    $customFilter = "| where isCustom == true"
+                }
+                elseif ($ExcludeCustomParam) {
+                    $customFilter = "| where isCustom == false"
+                }
+
+                $roleAssignmentQueryParts = @(
+                    'authorizationresources'
+                    "| where type =~ 'microsoft.authorization/roleassignments'"
+                    '| extend principalType = tostring(properties.principalType), principalId = tostring(properties.principalId), scope = tostring(properties.scope), roleDefinitionId = tostring(properties.roleDefinitionId)'
+                )
+                $roleAssignmentQueryParts += $queryFilters
+                $roleAssignmentQueryParts += @(
+                    "| extend roleId = tostring(split(roleDefinitionId, '/')[-1])"
+                    '| join kind=leftouter ('
+                    '    authorizationresources'
+                    "    | where type =~ 'microsoft.authorization/roledefinitions'"
+                    '    | extend roleDefinitionId = id, roleName = tostring(properties.roleName), roleType = tostring(properties.type)'
+                    '    | project roleDefinitionId, roleName, roleType'
+                    ') on roleDefinitionId'
+                    "| extend isCustom = roleType =~ 'CustomRole'"
+                )
+                if ($customFilter) {
+                    $roleAssignmentQueryParts += $customFilter
+                }
+                $roleAssignmentQueryParts += '| project PrincipalType = principalType, PrincipalId = principalId, Scope = scope, RoleId = roleId, RoleName = roleName, IsCustom = isCustom'
+                $roleAssignmentQuery = $roleAssignmentQueryParts -join "`n"
+
+                $activeRoleAssignments = Invoke-AzBatch `
+                    -Query $roleAssignmentQuery `
+                    -SubscriptionId $SubscriptionsParam `
+                    -SkipCache:$SkipCache `
+                    -CacheExpirationMinutes $CacheExpirationMinutes `
+                    -MaxCacheSize $MaxCacheSize `
+                    -CompressCache:$CompressCache `
+                    -Silent
+
+                foreach ($roleAssignment in @($activeRoleAssignments)) {
+                    if (-not $roleAssignment.PrincipalType) {
+                        continue
+                    }
+
+                    $roleName = $roleAssignment.RoleName
+                    if (-not $roleName) {
+                        $roleName = ($script:SessionVariables.AzureRoles | Where-Object { $_.id -match $roleAssignment.RoleId } ).Name
+                    }
+
+                    if (-not $roleName) {
+                        if ($ExcludeCustomParam) {
+                            continue
+                        }
+
+                        $roleName = 'Unknown Role'
+                    }
+
+                    $roleAssignmentObject = [PSCustomObject]@{
+                        PrincipalType = $roleAssignment.PrincipalType
+                        PrincipalId   = $roleAssignment.PrincipalId
+                        Scope         = $roleAssignment.Scope
+                        RoleId        = $roleAssignment.RoleId
+                        IsCustom      = [bool]$roleAssignment.IsCustom
+                        IsEligible    = $false
+                        RoleName      = $roleName
+                    }
+
+                    $roleAssignmentsList.Add($roleAssignmentObject)
+                    Write-Verbose " Found: $($roleAssignmentObject.PrincipalType) -> $roleName"
+                }
 
             # Process PIM eligible role assignments if requested
             if ($IncludeEligibleParam) {
                 Write-Host "   Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
                 
                 $SubscriptionsParam | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     try {
                         $baseUri             = $using:baseUri
                         $authHeader          = $using:script:authHeader
-                        $userAgent           = $using:randomUserAgent
                         $roleAssignmentsList = $using:roleAssignmentsList
                         $ObjectId            = $using:ObjectId
                         $Groups              = $using:Groups
@@ -388,7 +379,6 @@ function Get-RoleAssignment {
                             Headers   = $authHeader
                             Method    = 'GET'
                             Uri       = $pimUri
-                            UserAgent = $userAgent
                         }
 
                         $pimResponse = @()
@@ -396,7 +386,7 @@ function Get-RoleAssignment {
                             foreach ($principalId in $principalIds) {
                                 $pimRequestParam.Uri = "$pimUri&`$filter=principalId eq '$principalId'"
                                 try {
-                                    $pimResponse += (Invoke-RestMethod @pimRequestParam).value
+                                    $pimResponse += (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @pimRequestParam).value
                                 }
                                 catch {
                                     Write-Verbose " No PIM eligible assignments found for principal $principalId in subscription $subscriptionId"
@@ -404,7 +394,7 @@ function Get-RoleAssignment {
                             }
                         } else {
                             try {
-                                $pimResponse += @(Invoke-RestMethod @pimRequestParam).value
+                                $pimResponse += @(Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @pimRequestParam).value
                             }
                             catch {
                                 Write-Verbose " No PIM eligible assignments found in subscription $subscriptionId or insufficient permissions"
@@ -438,13 +428,12 @@ function Get-RoleAssignment {
                                         Headers = $authHeader
                                         Uri     = $roleDefinitionsUri
                                         Method  = 'GET'
-                                        UserAgent = $userAgent
                                     }
 
                                     if (-not $ExcludeCustom) {
                                         Write-Verbose " Retrieving custom role definition for PIM assignment in subscription: $subscriptionId"
                                         try {
-                                            $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                            $roleName = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @roleDefinitionsRequestParam).properties.roleName
                                         }
                                         catch {
                                             $roleName = "Unknown Role"

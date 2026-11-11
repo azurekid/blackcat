@@ -61,7 +61,11 @@ function Connect-ServicePrincipal {
 
                 if ($context) {
                     Write-Verbose "Successfully connected to Azure"
-                    
+
+                    # Ensure token/header state is rebuilt from
+                    # the new Az context on next command.
+                    Clear-BlackCatAuthState -ClearLastAccountId
+
                     $currentContext = Get-AzContext
                     
                     # Retrieve SP permissions with the connected AppId (simple pass-through)
@@ -185,8 +189,8 @@ https://learn.microsoft.com/en-us/powershell/azure/authenticate-azureps-service-
 https://learn.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals
 
 .LINK
-MITRE ATT&CK Tactic: TA0042 - Resource Development
-https://attack.mitre.org/tactics/TA0042/
+MITRE ATT&CK Tactic: TA0001 - Initial Access
+https://attack.mitre.org/tactics/TA0001/
 
 .LINK
 MITRE ATT&CK Technique: T1078.004 - Valid Accounts: Cloud Accounts

@@ -51,14 +51,13 @@ function Restore-DeletedIdentity {
             $restoreParam = @{
                 Headers     = $script:graphHeader
                 Uri         = "$($SessionVariables.graphUri)/$directoryPath/$($deletedObject.id)/restore"
-                UserAgent   = $($sessionVariables.userAgent)
                 Method      = 'POST'
                 Body    = '{}'
                 'ContentType'  = 'application/json'
             }
 
             Write-Verbose "Sending restore request for $Type"
-            $restoredObject = Invoke-RestMethod @restoreParam
+            $restoredObject = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @restoreParam
 
         }
 
@@ -79,13 +78,12 @@ function Restore-DeletedIdentity {
                         Headers     = $script:graphHeader
                         Uri     = $restoreUri
                         Method  = 'POST'
-                        UserAgent   = $($sessionVariables.userAgent)
                         Body    = '{}'
                         'ContentType' = 'application/json'
                     }
 
                     Write-Verbose "Sending restore request for service principal"
-                    $null = Invoke-RestMethod @restoreParam
+                    $null = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @restoreParam
                     Write-Verbose "Service principal restore completed"
                 }
             }
@@ -101,7 +99,7 @@ function Restore-DeletedIdentity {
     Retrieves and optionally restores deleted identities from Microsoft Graph.
 
 .DESCRIPTION
-    Searches for and restores deleted identities from Microsoft Graph within the retention window (typically 30 days). Enables recovery of deleted users, groups, or applications. Useful for account recovery and gaining persistence through previously deleted identities.
+    Searches for and restores deleted identities from Microsoft Graph within the retention window (typically 30 days). Supports users, groups, applications, and administrative units.
 
 .PARAMETER ObjectId
     The unique identifier (ObjectId) of the deleted identity to find or restore.

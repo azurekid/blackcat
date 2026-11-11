@@ -13,6 +13,7 @@ function Get-AccessToken {
 
         $script:SessionVariables.subscriptionId = $azProfile.DefaultContext.Subscription.Id
         $script:SessionVariables.tenantId = $azProfile.DefaultContext.Tenant.Id
+        $script:SessionVariables.lastAccountId = $azProfile.DefaultContext.Account.Id
 
         $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::new($azProfile)
 

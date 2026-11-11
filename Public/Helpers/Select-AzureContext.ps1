@@ -56,7 +56,7 @@ function Select-AzureContext {
                     $userName = $_.Account.Id.Split('@')[0]
                     $subscriptionName = $_.Subscription.Name -replace '^\s+', ''
                     
-                    # More robust current context comparison
+                    # Compare current context across Account, Subscription, and Tenant
                     $isCurrent = ($currentContext -and 
                                   $_.Account.Id -eq $currentContext.Account.Id -and 
                                   $_.Subscription.Id -eq $currentContext.Subscription.Id -and

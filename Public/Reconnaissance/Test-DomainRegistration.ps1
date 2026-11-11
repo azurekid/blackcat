@@ -77,7 +77,7 @@ function Test-DomainRegistration {
             while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
                     Write-Verbose "Trying RDAP service: $rdapService"
-                    $response = Invoke-RestMethod -Uri $rdapService -ErrorAction Stop -TimeoutSec 10
+                    $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $rdapService -ErrorAction Stop -TimeoutSec 10
                     $success = $true
                     break  # Exit the retry loop if successful
                 }
@@ -150,7 +150,7 @@ function Test-DomainRegistration {
                     }
                 }
                 
-                # Create user-friendly output object
+                # Build output object
                 return [PSCustomObject]@{
                     Status      = "Registered"
                     Domain      = $Domain
@@ -241,11 +241,11 @@ function Test-DomainRegistration {
     .EXAMPLE
         Test-DomainRegistration -Domain "potential-subdomain.azurewebsites.net" -Method dns
 
-        Checks if the subdomain resolves in DNS (useful for subdomain takeover checks).
+        Checks if the subdomain resolves in DNS.
 
     .NOTES
         Author: Rogier Dijkman
-        This function is useful for identifying dangling DNS records and subdomain takeover opportunities.
+        Identifies dangling DNS records and subdomain takeover opportunities.
 
     .LINK
         MITRE ATT&CK Tactic: TA0043 - Reconnaissance

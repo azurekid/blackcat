@@ -4,6 +4,429 @@
 
 # CHANGELOG
 
+## v1.3.3 [2026-10-12] — Explicit random user-agent selection
+
+* Add atomic `Set-UserAgent` random selection and initialize disabled rotation from valid list entries.
+* Synchronize both user-agent lists and correct browser UA formats without inventing release versions.
+* Add official stable metadata refresh tooling and a weekly/manual pull-request workflow.
+* Verify Firefox and Brave through official GitHub metadata and Chrome through published Chrome for Testing Stable builds; remaining browsers retain legacy versions pending verification.
+
+## 2026-10-08 — User-Agent rotation consistency
+
+* Resolve the User-Agent immediately before HTTP attempts and share rotation state across parallel batch requests.
+* Add test coverage for User-Agent rotation across request paths.
+
+## v1.2.21 [2026-02-06] 🔌 Connector Proxy & OAuth Pipeline
+
+_Adds `Invoke-ConnectorProxy` and completes the three-function API connection pipeline_
+
+**New Function: `Invoke-ConnectorProxy`**
+* Proxies API calls through `Microsoft.Web/connections` resources in two modes:
+  * **Mode 1 — Direct**: uses a Bearer token from `Get-ApiConnectionToken` to call the connector runtime URL directly
+  * **Mode 2 — DynamicInvoke** (default): posts to the ARM `dynamicInvoke` endpoint with the current ARM session token — Azure transparently forwards the request as the consenting user
+* Mode 2 works for **all** connection types including OAuth-User (office365, teams, sharepoint) where the raw refresh token is held in Azure's internal vault and cannot be extracted
+* Accepts full pipeline input from `Get-ApiConnection` and `Get-ApiConnectionToken` (`ResourceId`, `Token`, `RuntimeUrl`, `DynamicInvokeUrl` all bind by property name)
+* Supports `-Body` and `-Queries` hashtables, all HTTP methods, and all standard output formats (Object/JSON/CSV/Table)
+* Example: `Get-ApiConnection | Where-Object ConnectorId -eq 'office365' | Invoke-ConnectorProxy -Path '/Mail/GetEmails'`
+* MITRE: TA0009 Collection / T1530 Data from Cloud Storage
+
+**`Get-ApiConnectionToken` Enhancements:**
+* OAuth-User connections no longer short-circuit — `listConnectionKeys` is attempted for every non-MI connection type
+* When `listConnectionKeys` throws for an OAuth-User connection (expected — Azure blocks it), the catch block now surfaces `DynamicInvokeUrl` in the result object so `Invoke-ConnectorProxy` can immediately act as that user
+* All result objects now include `DynamicInvokeUrl` regardless of whether the token call succeeded
+* `SkippedOAuth` counter and `[~]` console output unchanged
+
+**`Get-ApiConnection` Enhancements:**
+* Result objects now include `DynamicInvokeUrl` (auto-built from `ResourceId`) so `Invoke-ConnectorProxy` can be piped directly from `Get-ApiConnection` without going through `Get-ApiConnectionToken`
+
+**Module Manifest:**
+* Added `Invoke-ConnectorProxy` to `FunctionsToExport`
+* Added `Public\Credential Access\Invoke-ConnectorProxy.ps1` to `FileList`
+* Version bumped to `1.2.21`
+
+---
+
+## v1.2.20 [2026-02-06] 🗃️ BlobStorage Exfil Channel
+
+_Adds Azure Blob Storage as a no-SAS exfil target for `Invoke-LogicAppInjection`_
+
+**`Invoke-LogicAppInjection` Enhancements:**
+* **New parameter set `BlobStorage`**: mutually exclusive with existing `Webhook` set
+* **`-StorageAccountName`** (Mandatory, BlobStorage set): target storage account for PUT-blob exfil
+* **`-StorageContainerName`** (Optional, default `blackcat-exfil`): target container
+* Injected HTTP action uses `authentication: {type: ManagedServiceIdentity, audience: https://storage.azure.com/}` — no SAS token or shared key embedded in the workflow definition
+* Blob name is a Logic Apps expression: `@{concat('<label>-', workflow().name, '-', utcNow('yyyyMMddHHmmss'), '.json')}` — unique per execution
+* Attacker retrieves blobs anonymously if container publicAccess = Blob
+* Result object property renamed `ExfilTarget` (was `CallbackUrl`) + new `ExfilMode` (BlobStorage / Webhook)
+* Console output updated to show mode and target URL
+
+**Pre-requisites for BlobStorage mode:**
+* Storage account: `allowBlobPublicAccess = true`
+* Container with `publicAccess = Blob` (or Container)
+* Logic App managed identity has `Storage Blob Data Contributor` on the container
+
+---
+
+ [2026-03-18] 🐉 `Invoke-LogicAppInjection` — workflow definition injection
+
+_New function: inject HTTP exfil actions into Logic App workflows_
+
+**New Function: `Invoke-LogicAppInjection`** (`Public/Credential Access/`)
+
+* Injects one or more HTTP actions into a Logic App workflow definition
+  to exfiltrate credentials at runtime without extracting stored tokens
+
+* **`MIToken` mode** (default): injects `BlackCat_FetchIMDSToken` +
+  `BlackCat_ExfilToken`. Calls IMDS from within the LA runtime:
+  `http://169.254.169.254/metadata/identity/oauth2/token` — returns
+  an ARM Bearer token when the LA has a Managed Identity assigned
+
+* **`ConnectorData` mode**: injects `BlackCat_ConnectorRead` +
+  `BlackCat_ExfilData`. Executes a connector action (e.g. `GET /v2/Mail`)
+  as the OAuth-consented user; the LA runtime transparently uses the
+  stored refresh token. Connector API response is POSTed to callback
+
+* **`Both`**: all four actions injected as a sequential chain
+
+* Injected actions use `runAfter:{}` — run parallel to existing root
+  actions, preserving the Logic App's original behaviour
+
+* `-TriggerWorkflow`: fires the LA immediately via HTTP trigger callback
+  URL (via `listCallbackUrl`)
+
+* `-Restore`: PUTs the original definition back after the run (waits
+  8 seconds when combined with `-TriggerWorkflow`)
+
+* Supports `-WhatIf` / `-Confirm` via `SupportsShouldProcess`
+
+* MITRE: TA0006/T1528 (Steal Application Access Token),
+  T1565.001 (Stored Data Manipulation)
+
+---
+
+## v1.2.18 [2026-03-18] 🔑 `Get-ApiConnectionToken` credential surfacing
+
+_Surface stored credentials from parameterValues; clarify OAuth token vault limitation_
+
+**`Get-ApiConnectionToken` Enhancement:**
+* Extract `$props.parameterValues` for all connection types and expose
+  as `StoredCredentials` property on every result object
+* **API Key / Basic Auth connections**: credentials stored in
+  `parameterValues` are now printed in the console output (red) and
+  returned in `StoredCredentials`
+* **OAuth-User connections** (office365, teams, sharepointonline):
+  `parameterValues` is empty — Azure stores the OAuth refresh token in
+  its internal Logic Apps token vault, not in ARM. This is now
+  explicitly stated in the output instead of a generic DarkGray note
+* Injection path reminder added for OAuth-User connections: inject HTTP
+  action into the consuming Logic App workflow to capture the IMDS/
+  OAuth token at runtime
+* Updated `.EXAMPLE` to contrast OAuth-User (empty `StoredCredentials`,
+  use `DynamicInvokeUrl`) vs API Key/Basic Auth (credential in
+  `StoredCredentials`)
+
+---
+
+## v1.2.17 [2026-03-18] 🔑 `Get-ApiConnectionToken` OAuth-User handling
+
+_Graceful detection and reporting for OAuth-User delegated connections_
+
+**`Get-ApiConnectionToken` Fix:**
+* Detect OAuth-User connections (delegated) before calling `listConnectionKeys`
+* `listConnectionKeys` is blocked by Azure for user-consent OAuth connections
+  (e.g. `office365`, `sharepointonline`, `teams`) — now detected pre-emptively
+  instead of failing with a generic 400 warning
+* Surfaces `DynamicInvokeUrl` on the result object — the ARM `dynamicInvoke`
+  endpoint proxies API calls as the consented user without exposing the token
+* Adds `SkippedOAuth` counter shown in the summary output
+* Detection logic: `authenticatedUser.name` populated + no `parameterValueType`
+
+---
+
+## v1.2.16 [2026-03-18] 🔑 `Get-ApiConnectionToken` MI chain resolution
+
+_Deep analysis of Managed Identity API connections with attack-path guidance_
+
+**`Get-ApiConnectionToken` Enhancements:**
+* Added `-ResolveManagedIdentity` switch for MI-type connections
+* Walks the full chain: connection → consuming Logic Apps → identity type
+  → role assignments → recommended least-noisy token path
+* **UserAssigned MI** → recommends `Invoke-FederatedTokenExchange`
+  (pure API calls, no ACI/deployment script, stealthier, ~5s vs ~60s)
+* **SystemAssigned MI** → explains workflow injection path (inject HTTP
+  action into LA definition to exfiltrate IMDS token from runtime context)
+* Role assignments colour-coded: Owner/Contributor/Admin = Red, others = Yellow
+* `MIAnalysis` property added to result objects when `-ResolveManagedIdentity`
+  is used, containing per-Logic-App identity and role details
+
+**Why `Invoke-FederatedTokenExchange` over `Get-ManagedIdentityToken`:**
+* No Azure Container Instances or Deployment Script write required
+* No ACI quota consumption, no visible resource artifacts in the RG
+* Works entirely from local machine via pure REST API calls
+* ~5s vs ~60s for container provisioning
+* Requires `federatedIdentityCredentials/write` on the UAMI
+  (vs `deploymentScripts/write` + ACI registration)
+* Neither approach works for system-assigned MIs — token is only
+  available from within the Logic App runtime (workflow injection path)
+
+---
+
+## v1.2.15 [2026-03-18] 🐛 Fix `Get-ApiConnectionToken` Managed Identity + stable API body
+
+_Handles MI connections correctly and fixes the stable API fallback body_
+
+**`Get-ApiConnectionToken` Bug Fixes:**
+* **MI connection early-exit**: connections with `parameterValueType = 'Alternative'`
+  (Managed Identity) now skip `listConnectionKeys` entirely — these connections have
+  no static token; the Logic App's MI obtains runtime tokens dynamically. A result
+  object is still returned with `AuthorizedAs = 'ManagedIdentity'`, `Token = $null`,
+  and a `TokenNote` explaining the MI trust model.
+* **Stable API fallback body**: the `2016-06-01` fallback was incorrectly sending
+  `'{}'`; it also requires `validityTimeSpan`. Both API versions now receive the
+  correct `d.hh:mm:ss` formatted body.
+* **Added `SkippedMI` counter** to the summary output.
+
+---
+
+## v1.2.14 [2026-03-18] 🐛 Fix `Get-ApiConnectionToken` 400 Bad Request
+
+_Corrects the `listConnectionKeys` body format and adds fallback API version_
+
+**`Get-ApiConnectionToken` Bug Fixes:**
+* Fixed `validityTimeSpan` body value — was `"1"` (invalid TimeSpan),
+  now correctly formatted as `"1.00:00:00"` (d.hh:mm:ss), resolving
+  the 400 Bad Request returned by the ARM API
+* Added two-step fallback: if `2018-07-01-preview` returns an error,
+  retries automatically with stable API `2016-06-01` and empty body
+* Improved error handler to surface the actual Azure error message
+  from `$_.ErrorDetails.Message` (the JSON error body), not just the
+  HTTP status line — verbose output now shows the Azure error detail
+
+---
+
+## v1.2.13 [2026-03-17] 🔑 API Connection Security — Discovery & Credential Access
+
+_New functions to enumerate, risk-score, and demonstrate abuse of Azure API Connections_
+
+**New Function: `Get-ApiConnection`** (Discovery)
+* Enumerates all `Microsoft.Web/connections` in scope via Azure Resource Graph
+* Correlates each connection to its referencing Logic App(s) (blast-radius mapping)
+* Determines authentication type: OAuth-User, OAuth-SP, ApiKey, BasicAuth, ManagedIdentity
+* Identifies orphaned connections — active trust grants with no referencing workflow
+* Produces a risk score (0–10) based on connector sensitivity, auth type, and orphan status
+* Supports `-OrphanedOnly` and `-MinRiskLevel` filters for targeted triage
+* Example: `Get-ApiConnection -MinRiskLevel High -OutputFormat JSON`
+
+**New Function: `Get-ApiConnectionToken`** (Credential Access)
+* Calls the ARM `listConnectionKeys` action on `Microsoft.Web/connections` to retrieve
+  a short-lived JWT and the connection runtime URL
+* Demonstrates that API Connections are independently callable — no Logic App required
+* Enumerates all accessible connections when no target is specified, surfacing RBAC exposure
+* Supports direct targeting by resource ID, or by resource group + connection name
+* Example: `Get-ApiConnectionToken -ResourceGroupName rg-int -Name office365-conn`
+* Attack chain: `Get-ApiConnection | Get-ApiConnectionToken` → drive connection from PowerShell
+
+**Module Enhancements:**
+* `Get-ApiConnection` and `Get-ApiConnectionToken` added to `FunctionsToExport`
+* Both files added to `FileList` in `BlackCat.psd1`
+
+**Tests:**
+* `Tests/Get-ApiConnection.Tests.ps1` — parameter validation, mocked ARM responses,
+  orphan detection, auth type classification, risk scoring, error handling
+* `Tests/Get-ApiConnectionToken.Tests.ps1` — token retrieval, pipeline input,
+  401/403 handling, call-count verification, empty-subscription handling
+
+---
+
+## v1.2.12 [2026-03-14] Reconnaissance: Fast Mode for Azure Public Resource Search
+
+_Added a reduced-scope triage mode to `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `-FastMode` switch to search high-signal Azure endpoint suffixes only
+* Supports both public and `-PrivateLinkOnly` search modes
+* Cache keys now distinguish between standard and fast search modes
+* Added help examples for `-FastMode` and `-PrivateLinkOnly -FastMode`
+
+**Tradeoff:**
+* Faster initial reconnaissance with reduced endpoint coverage
+
+---
+
+## v1.2.11 [2026-03-14] Reconnaissance: Private Link Search Mode
+
+_Added a dedicated Private Link-only mode to `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `-PrivateLinkOnly` switch to enumerate only Azure Private Link DNS suffixes
+* Cache keys now distinguish between public and Private Link search modes
+* Updated help text and no-results messaging for both modes
+
+**Examples:**
+* `Find-AzurePublicResource -Name "contoso" -PrivateLinkOnly`
+
+---
+
+## v1.2.10 [2026-03-14] Reconnaissance Performance: Public-Only Azure Resource Search
+
+_Further reduced unnecessary work in `Find-AzurePublicResource` by aligning it with its documented scope_
+
+**`Find-AzurePublicResource` Improvements:**
+* Removed Private Link DNS suffixes from candidate generation
+* Function now focuses on public-facing Azure resources only, matching the README description
+* Added caching for empty result sets so repeated misses do not trigger the full DNS enumeration again
+
+**Impact:**
+* Lower candidate count per search
+* Less unnecessary DNS traffic for non-public endpoints
+* Re-running the same miss becomes near-instant until cache expiry
+
+---
+
+## v1.2.9 [2026-03-14] Reconnaissance Performance: Azure Public Resource Discovery
+
+_Reduced DNS enumeration overhead in `Find-AzurePublicResource`_
+
+**`Find-AzurePublicResource` Improvements:**
+* Removed the extra per-candidate Cloudflare DoH CNAME lookup
+* Now uses a single local DNS resolution path and derives canonical host information from the result
+* Avoids re-adding the same base DNS candidate for every permutation
+* Removed unnecessary sorting of an already de-duplicated candidate set
+
+**Impact:**
+* Significantly fewer network calls during large permutation runs
+* Lower startup overhead before useful results begin to appear
+* Better performance for names with large session permutation sets
+
+---
+
+## v1.2.8 [2026-03-14] Auth State Refactor
+
+_Extracted shared authentication state reset logic into a private helper_
+
+**Refactor:**
+* Added `Private/Clear-BlackCatAuthState.ps1`
+* Replaced duplicated token/header reset code in `Invoke-BlackCat`
+* Replaced duplicated token/header reset code in `Connect-ServicePrincipal`
+* `Connect-ServicePrincipal` now also clears `lastAccountId` through helper
+
+**Module Manifest Updates:**
+* Added `Private\Clear-BlackCatAuthState.ps1` to `FileList`
+* Bumped module version to `1.2.8`
+
+---
+
+## v1.2.7 [2026-03-14] MITRE Folder Realignment for Auth Functions
+
+_Reclassified authentication functions to align with Initial Access behavior_
+
+**Function Reclassification:**
+* Moved `Connect-ServicePrincipal` from Resource Development to Initial Access
+* Moved `Connect-EntraApplication` from Resource Development to Initial Access
+* Updated MITRE ATT&CK tactic references in both functions from TA0042 to TA0001
+
+**Module Manifest Updates:**
+* Updated `FunctionsToExport` category grouping for both authentication functions
+* Updated `FileList` paths to new Initial Access folder locations
+* Bumped module version to `1.2.7`
+
+---
+
+## v1.2.6 [2026-03-14] Az Context Change Detection
+
+_Invoke-BlackCat now detects when the Az context changes and refreshes tokens automatically_
+
+**Bug Fixes:**
+* `Invoke-BlackCat` now tracks the active Az account identity and invalidates cached tokens when it changes
+* Running `Login-AzAccount`, `Connect-AzAccount`, or `Switch-AzContext` is now detected automatically
+* Stored `lastAccountId` in `Get-AccessToken` to enable cross-call context comparison
+
+---
+
+## v1.2.5 [2026-03-13] Session Reset on Service Principal Reconnect
+
+_Fixes stale session state when switching from Connect-GraphToken to Connect-ServicePrincipal_
+
+**Bug Fixes:**
+* Fixed `Connect-ServicePrincipal` not clearing prior `Connect-GraphToken` session state
+* After calling `Connect-GraphToken`, re-running `Connect-ServicePrincipal` now properly resets `$script:graphHeader`, `$script:authHeader`, and `$script:SessionVariables.AccessToken`
+* `Invoke-BlackCat` no longer short-circuits with stale Graph tokens after a service principal reconnect
+
+---
+
+## v1.2.4 [2026-02-27] Reconnaissance: Caching Support
+
+_Added result caching to all Reconnaissance functions for improved repeated-scan performance_
+
+**`Find-PublicStorageContainer` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered containers per storage account name and type
+* Returns cached results on repeated calls without re-running DNS resolution
+
+**`Find-AzurePublicResource` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches discovered resources per resource name
+* Skips full DNS enumeration on cache hits for faster repeated lookups
+
+**`Find-SubDomain` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches results per domain, category, and search depth
+* Uses `continue` to skip DNS resolution for already-cached domains in batch runs
+
+**`Test-DomainRegistration` Improvements:**
+* Added `SkipCache`, `CacheExpirationMinutes`, `MaxCacheSize`, and `CompressCache` parameters
+* Caches RDAP/DNS registration check results per domain and method
+* Avoids repeated RDAP lookups and rate-limiting on re-checks
+
+**Module Enhancements:**
+* Version bump to 1.2.4
+* All Reconnaissance functions now share a consistent caching pattern matching `Find-DnsRecords`
+
+---
+
+## v1.2.3 [2026-02-16] 🔍 Reconnaissance: Private Link Classification
+
+_Differentiates public vs privatelink endpoints and captures CNAME-only hits_
+
+**`Find-AzurePublicResource` Improvements:**
+* Maps privatelink zones directly in the resource-type switch for accurate classification
+* Returns `ResourceType` as `{Service}-PrivateLink` and adds `EndpointType`/`BaseResource`
+* Resolves CNAME first so privatelink aliases are retained even if A records are blocked
+* Includes CNAME in live output to avoid double-counting public vs private endpoints
+
+**Module Enhancements:**
+* Version bump to 1.2.3
+
+---
+
+## v1.2.2 [2026-02-16] 🔍 Reconnaissance: Private Link CNAMEs
+
+_Surfaced CNAME targets for private endpoint resolutions_
+
+**`Find-AzurePublicResource` Improvements:**
+* Resolves CNAME records for discovered hosts (including privatelink zones)
+* Adds `CNameTarget` and `PrivateLink` flags to returned objects and live output
+* Helps trace private endpoint aliases (e.g., storage, SQL, Key Vault, Event Grid)
+
+**Module Enhancements:**
+* Version bump to 1.2.2
+
+---
+
+## v1.2.1 [2026-02-16] 🔍 Reconnaissance: Private Link Discovery
+
+_Expanded Azure resource reconnaissance with private endpoint detection_
+
+**`Find-AzurePublicResource` Improvements:**
+* Adds privatelink DNS permutations for Key Vault, Storage, SQL, Cosmos DB, Redis, Service Bus, API Management, Web Apps, Synapse, and more
+* Flags results with `PrivateLink` and surfaces private-link status in the immediate output summary
+* Keeps Key Vault HTTP probing while classifying private-link hosts where reachable
+
+**Module Enhancements:**
+* Version bump to 1.2.1
+
+---
+
 ## v1.2.0 [2026-02-11] 🔑 Credential Access: Federated Token Exchange
 
 _New function to extract UAMI tokens via OIDC federated identity credential exchange_
@@ -681,7 +1104,7 @@ _Improvements_
 
 ### Group Management Enhancements:
 
-* Renamed `Add-GroupOwner` to `Add-GroupObject` and extended functionality to allow adding both owners and members to Entra ID groups. Added a new `ObjectType` parameter to specify the role (`Owner` or `Member`).
+* Renamed `Add-GroupOwner` to `Add-EntraGroupMember` (aliased as `Add-GroupObject`) and extended functionality to allow adding both owners and members to Entra ID groups. Added a new `ObjectType` parameter to specify the role (`Owner` or `Member`).
 
 ### Logging Improvements:
 * Enhanced verbose logging in `Invoke-BlackCat` to include the selected user agent for better debugging.

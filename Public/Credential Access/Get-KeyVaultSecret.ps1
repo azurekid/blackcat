@@ -20,10 +20,15 @@ function Get-KeyVaultSecret {
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat = "Table"
+        [string]$OutputFormat = "Table",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Summary
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
@@ -50,8 +55,11 @@ function Get-KeyVaultSecret {
                 $policyForbiddenBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
                 $permissionForbiddenBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
                 $generalErrorsBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
-                
+
                 $VaultNames | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $vaultName = $_
                     $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $vaultName
 
@@ -59,11 +67,10 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = $uri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
-                        $apiResponse = Invoke-RestMethod @requestParam
+                        $apiResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
                         if ($apiResponse.value.Count -gt 0) {
                             Write-Host "    Found $($apiResponse.value.Count) secrets in vault: $vaultName" -ForegroundColor Green
                             foreach ($value in $apiResponse.value) {
@@ -76,18 +83,18 @@ function Get-KeyVaultSecret {
                     catch {
                         $errorMsg = $_.Exception.Message
                         Write-Verbose "Full vault access error: $errorMsg"
-                        
+
                         if ($errorMsg -match "NotFound") {
                             Write-Host "    Key Vault not found: $vaultName" -ForegroundColor Red
                             ($using:generalErrorsBag).Add(1)
-                        } 
+                        }
                         elseif ($errorMsg -match "Forbidden|AccessDenied|Unauthorized") {
                             # Check for policy-related errors
                             if (($errorMsg -match "ForbiddenByPolicy") -or
-                                ($errorMsg -match "[Pp]olicy") -or 
+                                ($errorMsg -match "[Pp]olicy") -or
                                 ($errorMsg -match "RBAC") -or
                                 ($errorMsg -match "AccessPolicy")) {
-                                
+
                                 ($using:policyForbiddenBag).Add(1)
                             } else {
                                 ($using:permissionForbiddenBag).Add(1)
@@ -98,14 +105,14 @@ function Get-KeyVaultSecret {
                         }
                     }
                 } -ThrottleLimit $ThrottleLimit
-                
+
                 # Count the results from concurrent bags
                 $policyForbidden = $policyForbiddenBag.Count
                 $permissionForbidden = $permissionForbiddenBag.Count
                 $generalErrors = $generalErrorsBag.Count
-                
+
                 Write-Host "    Vault access summary: $policyForbidden policy denials, $permissionForbidden permission denials" -ForegroundColor Cyan
-                
+
                 return @{
                     SecretUris = $secretUris
                     PolicyForbidden = $policyForbidden
@@ -123,6 +130,9 @@ function Get-KeyVaultSecret {
                 $generalErrorBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
 
                 $SecretUris.id | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $currentUri = $_
                     $vault = $currentUri.split('.')[0].Split('https://')[1]
                     $secretName = $currentUri.Split('/')[4]
@@ -131,11 +141,10 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $currentUri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
-                        $secretResponse = Invoke-RestMethod @requestParam
+                        $secretResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
                         $currentItem = [PSCustomObject]@{
                             "KeyVaultName" = $vault
                             "SecretName"   = $secretName
@@ -146,13 +155,13 @@ function Get-KeyVaultSecret {
                     catch {
                         $errorMsg = $_.Exception.Message
                         Write-Verbose "Exception message: $errorMsg"
-                        
+
                         if ($errorMsg -match "Forbidden|AccessDenied|Unauthorized") {
                             if (($errorMsg -match "ForbiddenByPolicy") -or
-                                ($errorMsg -match "[Pp]olicy") -or 
+                                ($errorMsg -match "[Pp]olicy") -or
                                 ($errorMsg -match "RBAC") -or
                                 ($errorMsg -match "AccessPolicy")) {
-                                    
+
                                 ($using:policyForbiddenBag).Add(1)
                             } else {
                                 ($using:permissionForbiddenBag).Add(1)
@@ -168,7 +177,7 @@ function Get-KeyVaultSecret {
                 $policyForbiddenCount = $policyForbiddenBag.Count
                 $permissionForbiddenCount = $permissionForbiddenBag.Count
                 $generalErrorCount = $generalErrorBag.Count
-                
+
                 return @{
                     SecretValues = $secretValues
                     ForbiddenByPolicyCount = $policyForbiddenCount
@@ -204,12 +213,12 @@ function Get-KeyVaultSecret {
 
             $urisResult = Get-KeyVaultSecretUris @requestParam
             $uris = $urisResult.SecretUris
-            
+
             $stats.ForbiddenByPolicy = $urisResult.PolicyForbidden
             $stats.InsufficientPermissions = $urisResult.PermissionForbidden
             $stats.ProcessingErrors = $urisResult.GeneralErrors
             $stats.TotalAccessDenied = $stats.ForbiddenByPolicy + $stats.InsufficientPermissions
-            
+
             Write-Verbose "Stats after vault processing:"
             Write-Verbose "  ForbiddenByPolicy: $($stats.ForbiddenByPolicy)"
             Write-Verbose "  InsufficientPermissions: $($stats.InsufficientPermissions)"
@@ -247,20 +256,31 @@ function Get-KeyVaultSecret {
     end {
         $Duration = (Get-Date) - $stats.StartTime
 
-        Write-Host "`nKey Vault Secret Discovery Summary:" -ForegroundColor Magenta
-        Write-Host "   Total Key Vaults Analyzed: $($stats.TotalVaults)" -ForegroundColor White
-        Write-Host "   Key Vaults with Secrets: $($stats.VaultsWithSecrets)" -ForegroundColor Yellow
-        Write-Host "   Total Secrets Retrieved: $($stats.TotalSecrets)" -ForegroundColor Green
-        
-        Write-Host "   Access Summary:" -ForegroundColor Cyan
-        Write-Host "     • Secrets Forbidden by Policy: $($stats.ForbiddenByPolicy)" -ForegroundColor Red 
-        Write-Host "     • Insufficient Permissions: $($stats.InsufficientPermissions)" -ForegroundColor Yellow
-        Write-Host "     • Total Access Denied: $($stats.TotalAccessDenied)" -ForegroundColor Red
-        
-        if ($stats.ProcessingErrors -gt 0) {
-            Write-Host "   Processing Errors: $($stats.ProcessingErrors)" -ForegroundColor Red
+        if ($Summary) {
+            Write-Host "`nKey Vault Secret Discovery Summary:" `
+                -ForegroundColor Magenta
+            Write-Host "   Total Key Vaults Analyzed: $($stats.TotalVaults)" `
+                -ForegroundColor White
+            Write-Host "   Key Vaults with Secrets: $($stats.VaultsWithSecrets)" `
+                -ForegroundColor Yellow
+            Write-Host "   Total Secrets Retrieved: $($stats.TotalSecrets)" `
+                -ForegroundColor Green
+
+            Write-Host "   Access Summary:" -ForegroundColor Cyan
+            Write-Host "     • Secrets Forbidden by Policy: $($stats.ForbiddenByPolicy)" `
+                -ForegroundColor Red
+            Write-Host "     • Insufficient Permissions: $($stats.InsufficientPermissions)" `
+                -ForegroundColor Yellow
+            Write-Host "     • Total Access Denied: $($stats.TotalAccessDenied)" `
+                -ForegroundColor Red
+
+            if ($stats.ProcessingErrors -gt 0) {
+                Write-Host "   Processing Errors: $($stats.ProcessingErrors)" `
+                    -ForegroundColor Red
+            }
+            Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" `
+                -ForegroundColor White
         }
-        Write-Host "   Duration: $($Duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor White
 
         Write-Verbose "Completed function $($MyInvocation.MyCommand.Name)"
 
@@ -337,6 +357,9 @@ Optional. Specifies the output format for results. Valid values are:
 - CSV: Creates timestamped CSV file (KeyVaultSecrets_TIMESTAMP.csv) with no console output
 - Table: Returns results in a formatted table (default)
 Aliases: output, o
+
+.PARAMETER SkipSummary
+Switch. Suppresses the console summary block in the end section.
 
 .EXAMPLE
 PS C:\> Get-KeyVaultSecret -Name "MyKeyVault1", "MyKeyVault2"

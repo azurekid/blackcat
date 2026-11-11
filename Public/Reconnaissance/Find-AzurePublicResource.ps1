@@ -14,18 +14,75 @@ function Find-AzurePublicResource {
         [int]$ThrottleLimit = 50,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Object", "JSON", "CSV")]
+        [ValidateSet("Object", "JSON", "CSV", "Table")]
         [Alias("output", "o")]
-        [string]$OutputFormat
+        [string]$OutputFormat,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("no-cache", "bypass-cache")]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("cache-expiration", "expiration")]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("max-cache")]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("compress")]
+        [switch]$CompressCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("private-links", "private-link")]
+        [switch]$PrivateLinkOnly,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("fast", "quick")]
+        [switch]$FastMode
     )
 
     begin {
-        $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $validDnsNames  = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+        $results        = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
+        $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
     }
 
     process {
-        Write-Host " Analyzing Azure resources for: $Name" -ForegroundColor Green
-        
+        $searchScope = if ($PrivateLinkOnly) {
+            'Azure Private Link resources'
+        }
+        else {
+            'Azure public resources'
+        }
+
+        Write-Host " Analyzing $searchScope for: $Name" -ForegroundColor Green
+
+        # Generate cache key and check for cached results
+        $cacheParams = @{
+            Name            = $Name
+            FastMode        = $FastMode.IsPresent
+            PrivateLinkOnly = $PrivateLinkOnly.IsPresent
+        }
+        $cacheKey = ConvertTo-CacheKey `
+            -BaseIdentifier "Find-AzurePublicResource" `
+            -Parameters $cacheParams
+
+        if (-not $SkipCache) {
+            try {
+                $cachedResult = Get-BlackCatCache -Key $cacheKey -CacheType 'General'
+                if ($null -ne $cachedResult) {
+                    Write-Verbose "Retrieved Azure resource results from cache for: $Name"
+                    foreach ($item in $cachedResult) { $results.Add($item) }
+                    return
+                }
+            }
+            catch {
+                Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh queries."
+            }
+        }
+
         try {
             if ($WordList) {
                 Write-Host "   Loading permutations from word list..." -ForegroundColor Cyan
@@ -51,60 +108,155 @@ function Find-AzurePublicResource {
             $resourceAbbreviations | ForEach-Object { [void]$permutations.Add("-$_") ; [void]$permutations.Add("$_") }
 
             Write-Host "   Generating Azure service DNS names..." -ForegroundColor Yellow
+            if ($FastMode) {
+                Write-Host "   Fast mode enabled: using high-signal Azure endpoint suffixes only..." -ForegroundColor Cyan
+            }
 
             $dnsNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
-            $domains = @(
+            $publicDomains = @(
                 # Storage
-                'blob.core.windows.net',           # Blob Storage
-                'file.core.windows.net',           # File Storage
-                'table.core.windows.net',          # Table Storage
-                'queue.core.windows.net',          # Queue Storage
-                'dfs.core.windows.net',            # Data Lake Storage Gen2
+                'blob.core.windows.net',
+                'file.core.windows.net',
+                'table.core.windows.net',
+                'queue.core.windows.net',
+                'dfs.core.windows.net',
 
                 # Databases
-                'database.windows.net',            # SQL Database
-                'documents.azure.com',             # Cosmos DB
-                'redis.cache.windows.net',         # Redis Cache
-                'mysql.database.azure.com',        # MySQL
-                'postgres.database.azure.com',     # PostgreSQL
-                'mariadb.database.azure.com',      # MariaDB
+                'database.windows.net',
+                'documents.azure.com',
+                'redis.cache.windows.net',
+                'mysql.database.azure.com',
+                'postgres.database.azure.com',
+                'mariadb.database.azure.com',
 
                 # Security
-                'vault.azure.net',                 # Key Vault
+                'vault.azure.net',
 
                 # Compute & Containers
-                'azurecr.io',                      # Container Registry
-                'azurewebsites.net',               # App Service/Functions
-                'scm.azurewebsites.net',           # App Service Kudu
+                'azurecr.io',
+                'azurewebsites.net',
+                'scm.azurewebsites.net',
 
                 # AI/ML
                 'cognitiveservices.azure.com',
-                'openai.azure.com',                # Azure OpenAI
-                'search.windows.net',              # Azure Search
-                'azureml.net',                     # Machine Learning
+                'openai.azure.com',
+                'search.windows.net',
+                'azureml.net',
 
                 # Integration
                 'servicebus.windows.net',
-                'azure-api.net',                   # API Management
-                'service.signalr.net',             # SignalR Service
-                'webpubsub.azure.com',             # Web PubSub
+                'azure-api.net',
+                'service.signalr.net',
+                'webpubsub.azure.com',
 
                 # Other
-                'azureedge.net',                   # CDN
-                'azure-devices.net',               # IoT Hub
-                'eventgrid.azure.net',             # Event Grid
-                'azuremicroservices.io',           # Spring Apps
-                'azuresynapse.net',                # Synapse Analytics
-                'batch.azure.com'                  # Azure Batch
+                'azureedge.net',
+                'azure-devices.net',
+                'eventgrid.azure.net',
+                'azuremicroservices.io',
+                'azuresynapse.net',
+                'batch.azure.com'
             )
 
-            $domains | ForEach-Object {
-                $domain = $_
-                $permutations | ForEach-Object {
-                    [void] $dnsNames.Add(('{0}{1}.{2}' -f $Name, $_, $domain))
-                    [void] $dnsNames.Add(('{1}{0}.{2}' -f $Name, $_, $domain))
-                    [void] $dnsNames.Add(('{0}.{1}' -f $Name, $domain))
+            $privateLinkDomains = @(
+                # Storage
+                'privatelink.blob.core.windows.net',
+                'privatelink.file.core.windows.net',
+                'privatelink.table.core.windows.net',
+                'privatelink.queue.core.windows.net',
+                'privatelink.dfs.core.windows.net',
+
+                # Databases
+                'privatelink.database.windows.net',
+                'privatelink.documents.azure.com',
+                'privatelink.redis.cache.windows.net',
+                'privatelink.mysql.database.azure.com',
+                'privatelink.postgres.database.azure.com',
+                'privatelink.mariadb.database.azure.com',
+
+                # Security
+                'privatelink.vaultcore.azure.net',
+
+                # Compute & Containers
+                'privatelink.azurecr.io',
+                'privatelink.azurewebsites.net',
+                'privatelink.scm.azurewebsites.net',
+
+                # AI/ML
+                'privatelink.cognitiveservices.azure.com',
+                'privatelink.search.windows.net',
+                'privatelink.azureml.net',
+
+                # Integration
+                'privatelink.servicebus.windows.net',
+                'privatelink.azure-api.net',
+                'privatelink.service.signalr.net',
+                'privatelink.webpubsub.azure.com',
+
+                # Other
+                'privatelink.eventgrid.azure.net',
+                'privatelink.azuremicroservices.io',
+                'privatelink.azuresynapse.net'
+            )
+
+            $fastPublicDomains = @(
+                'blob.core.windows.net',
+                'vault.azure.net',
+                'azurewebsites.net',
+                'scm.azurewebsites.net',
+                'azurecr.io',
+                'openai.azure.com',
+                'search.windows.net',
+                'servicebus.windows.net',
+                'azure-api.net',
+                'azureedge.net'
+            )
+
+            $fastPrivateLinkDomains = @(
+                'privatelink.blob.core.windows.net',
+                'privatelink.vaultcore.azure.net',
+                'privatelink.azurewebsites.net',
+                'privatelink.scm.azurewebsites.net',
+                'privatelink.azurecr.io',
+                'privatelink.search.windows.net',
+                'privatelink.servicebus.windows.net',
+                'privatelink.azure-api.net'
+            )
+
+            $domains = if ($PrivateLinkOnly) {
+                if ($FastMode) {
+                    $fastPrivateLinkDomains
+                }
+                else {
+                    $privateLinkDomains
+                }
+            }
+            else {
+                if ($FastMode) {
+                    $fastPublicDomains
+                }
+                else {
+                    $publicDomains
+                }
+            }
+
+            foreach ($domain in $domains) {
+                # Add the base candidate once per domain instead of
+                # re-adding it for every permutation.
+                [void]$dnsNames.Add(('{0}.{1}' -f $Name, $domain))
+
+                foreach ($permutation in $permutations) {
+                    if ([string]::IsNullOrEmpty($permutation)) {
+                        continue
+                    }
+
+                    [void]$dnsNames.Add(
+                        ('{0}{1}.{2}' -f $Name, $permutation, $domain)
+                    )
+                    [void]$dnsNames.Add(
+                        ('{1}{0}.{2}' -f $Name, $permutation, $domain)
+                    )
                 }
             }
 
@@ -112,101 +264,173 @@ function Find-AzurePublicResource {
             Write-Host "     Testing $totalDns DNS name candidates..." -ForegroundColor Yellow
             Write-Host "   Starting DNS resolution with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
 
-            $results = [System.Collections.Concurrent.ConcurrentBag[psobject]]::new()
-            
-            # Create a thread-safe collection to track found resources for immediate display
-            $foundResources = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-
-            $dnsNames | Sort-Object -Unique | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
-                function Get-ResourceType {
-                    param($dnsName)
-                    switch -Regex ($dnsName) {
-                        # Storage
-                        '\.blob\.core\.windows\.net$'         { return 'StorageBlob' }
-                        '\.file\.core\.windows\.net$'         { return 'StorageFile' }
-                        '\.table\.core\.windows\.net$'        { return 'StorageTable' }
-                        '\.queue\.core\.windows\.net$'        { return 'StorageQueue' }
-                        '\.dfs\.core\.windows\.net$'          { return 'DataLakeStorage' }
-
-                        # Databases
-                        '\.database\.windows\.net$'           { return 'SqlDatabase' }
-                        '\.documents\.azure\.com$'            { return 'CosmosDB' }
-                        '\.redis\.cache\.windows\.net$'       { return 'RedisCache' }
-                        '\.mysql\.database\.azure\.com$'      { return 'MySQL' }
-                        '\.postgres\.database\.azure\.com$'   { return 'PostgreSQL' }
-                        '\.mariadb\.database\.azure\.com$'    { return 'MariaDB' }
-
-                        # Security
-                        '\.vault\.azure\.net$'                { return 'KeyVault' }
-
-                        # Compute & Containers
-                        '\.azurecr\.io$'                      { return 'ContainerRegistry' }
-                        '\.azurewebsites\.net$'               { return 'AppService' }
-                        '\.scm\.azurewebsites\.net$'          { return 'AppServiceKudu' }
-
-                        # AI/ML
-                        '\.cognitiveservices\.azure\.com$'    { return 'CognitiveServices' }
-                        '\.openai\.azure\.com$'               { return 'AzureOpenAI' }
-                        '\.search\.windows\.net$'             { return 'AzureSearch' }
-                        '\.azureml\.net$'                     { return 'MachineLearning' }
-
-                        # Integration
-                        '\.servicebus\.windows\.net$'         { return 'ServiceBus' }
-                        '\.azure-api\.net$'                   { return 'APIManagement' }
-                        '\.service\.signalr\.net$'            { return 'SignalR' }
-                        '\.webpubsub\.azure\.com$'            { return 'WebPubSub' }
-
-                        # Other
-                        '\.azureedge\.net$'                   { return 'CDN' }
-                        '\.azure-devices\.net$'               { return 'IoTHub' }
-                        '\.eventgrid\.azure\.net$'            { return 'EventGrid' }
-                        '\.azuremicroservices\.io$'           { return 'SpringApps' }
-                        '\.azuresynapse\.net$'                { return 'SynapseAnalytics' }
-                        '\.batch\.azure\.com$'                { return 'AzureBatch' }
-
-                        default                               { return 'Unknown' }
-                    }
-                }
-
+            $dnsNames | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 try {
                     $validDnsNames = $using:validDnsNames
                     $results = $using:results
                     $foundResources = $using:foundResources
-                    $dnsResult = [System.Net.Dns]::GetHostEntry($_)
-                    if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
-                        $resourceType = Get-ResourceType -dnsName $_
-                        $ipAddresses = $dnsResult.AddressList.IPAddressToString -join ", "
+                    $recordTypes = [System.Collections.Generic.HashSet[string]]::new()
+                    $cnameTarget = $null
+                    $dnsResult = $null
+
+                    try {
+                        $dnsResult = [System.Net.Dns]::GetHostEntry($_)
+                        if ($dnsResult -and $dnsResult.AddressList.Count -gt 0) {
+                            [void]$recordTypes.Add('A')
+                        }
+
+                        if (
+                            $dnsResult -and
+                            $dnsResult.HostName -and
+                            $dnsResult.HostName.TrimEnd('.') -ne $_.TrimEnd('.')
+                        ) {
+                            $cnameTarget = $dnsResult.HostName.TrimEnd('.')
+                            [void]$recordTypes.Add('CNAME')
+                        }
+                    }
+                    catch [System.Net.Sockets.SocketException] {
+                    }
+
+                    if ($recordTypes.Count -gt 0) {
+                        $resourceTypeBase = switch -Regex ($_) {
+                            # Storage
+                            '\.blob\.core\.windows\.net$' { 'StorageBlob'; break }
+                            '\.file\.core\.windows\.net$' { 'StorageFile'; break }
+                            '\.table\.core\.windows\.net$' { 'StorageTable'; break }
+                            '\.queue\.core\.windows\.net$' { 'StorageQueue'; break }
+                            '\.dfs\.core\.windows\.net$' { 'DataLakeStorage'; break }
+                            '\.privatelink\.blob\.core\.windows\.net$' { 'StorageBlob'; break }
+                            '\.privatelink\.file\.core\.windows\.net$' { 'StorageFile'; break }
+                            '\.privatelink\.table\.core\.windows\.net$' { 'StorageTable'; break }
+                            '\.privatelink\.queue\.core\.windows\.net$' { 'StorageQueue'; break }
+                            '\.privatelink\.dfs\.core\.windows\.net$' { 'DataLakeStorage'; break }
+
+                            # Databases
+                            '\.database\.windows\.net$' { 'SqlDatabase'; break }
+                            '\.documents\.azure\.com$' { 'CosmosDB'; break }
+                            '\.redis\.cache\.windows\.net$' { 'RedisCache'; break }
+                            '\.mysql\.database\.azure\.com$' { 'MySQL'; break }
+                            '\.postgres\.database\.azure\.com$' { 'PostgreSQL'; break }
+                            '\.mariadb\.database\.azure\.com$' { 'MariaDB'; break }
+                            '\.privatelink\.database\.windows\.net$' { 'SqlDatabase'; break }
+                            '\.privatelink\.documents\.azure\.com$' { 'CosmosDB'; break }
+                            '\.privatelink\.redis\.cache\.windows\.net$' { 'RedisCache'; break }
+                            '\.privatelink\.mysql\.database\.azure\.com$' { 'MySQL'; break }
+                            '\.privatelink\.postgres\.database\.azure\.com$' { 'PostgreSQL'; break }
+                            '\.privatelink\.mariadb\.database\.azure\.com$' { 'MariaDB'; break }
+
+                            # Security
+                            '\.vault\.azure\.net$' { 'KeyVault'; break }
+                            '\.vaultcore\.azure\.net$' { 'KeyVault'; break }
+                            '\.privatelink\.vaultcore\.azure\.net$' { 'KeyVault'; break }
+
+                            # Compute & Containers
+                            '\.azurecr\.io$' { 'ContainerRegistry'; break }
+                            '\.azurewebsites\.net$' { 'AppService'; break }
+                            '\.scm\.azurewebsites\.net$' { 'AppServiceKudu'; break }
+                            '\.privatelink\.azurecr\.io$' { 'ContainerRegistry'; break }
+                            '\.privatelink\.azurewebsites\.net$' { 'AppService'; break }
+                            '\.privatelink\.scm\.azurewebsites\.net$' { 'AppServiceKudu'; break }
+
+                            # AI/ML
+                            '\.cognitiveservices\.azure\.com$' { 'CognitiveServices'; break }
+                            '\.openai\.azure\.com$' { 'AzureOpenAI'; break }
+                            '\.search\.windows\.net$' { 'AzureSearch'; break }
+                            '\.azureml\.net$' { 'MachineLearning'; break }
+                            '\.privatelink\.cognitiveservices\.azure\.com$' { 'CognitiveServices'; break }
+                            '\.privatelink\.search\.windows\.net$' { 'AzureSearch'; break }
+                            '\.privatelink\.azureml\.net$' { 'MachineLearning'; break }
+
+                            # Integration
+                            '\.servicebus\.windows\.net$' { 'ServiceBus'; break }
+                            '\.azure-api\.net$' { 'APIManagement'; break }
+                            '\.service\.signalr\.net$' { 'SignalR'; break }
+                            '\.webpubsub\.azure\.com$' { 'WebPubSub'; break }
+                            '\.privatelink\.servicebus\.windows\.net$' { 'ServiceBus'; break }
+                            '\.privatelink\.azure-api\.net$' { 'APIManagement'; break }
+                            '\.privatelink\.service\.signalr\.net$' { 'SignalR'; break }
+                            '\.privatelink\.webpubsub\.azure\.com$' { 'WebPubSub'; break }
+
+                            # Other
+                            '\.azureedge\.net$' { 'CDN'; break }
+                            '\.azure-devices\.net$' { 'IoTHub'; break }
+                            '\.eventgrid\.azure\.net$' { 'EventGrid'; break }
+                            '\.azuremicroservices\.io$' { 'SpringApps'; break }
+                            '\.azuresynapse\.net$' { 'SynapseAnalytics'; break }
+                            '\.batch\.azure\.com$' { 'AzureBatch'; break }
+                            '\.privatelink\.eventgrid\.azure\.net$' { 'EventGrid'; break }
+                            '\.privatelink\.azuremicroservices\.io$' { 'SpringApps'; break }
+                            '\.privatelink\.azuresynapse\.net$' { 'SynapseAnalytics'; break }
+                            default { 'Unknown' }
+                        }
+                        $isPrivateLink = $_ -match '\.privatelink\.'
                         $resourceName = $_.Split('.')[0]
 
-                        # Create the result object
+                        $ipAddresses = if ($dnsResult) {
+                            $dnsResult.AddressList.IPAddressToString -join ", "
+                        }
+
+                        $endpointType = if ($isPrivateLink) { 'PrivateLink' } else { 'Public' }
+                        $resourceType = if ($isPrivateLink) {
+                            "$resourceTypeBase-PrivateLink"
+                        }
+                        else { $resourceTypeBase }
+
                         $obj = [PSCustomObject]@{
-                            Domain       = $_
-                            RecordType   = "A"
-                            Data         = $ipAddresses
-                            TTL          = $null
-                            DNSProvider  = "System.Net.Dns"
-                            ProviderType = "System"
+                            Domain         = $_
+                            RecordType     = ($recordTypes -join ',')
+                            Data           = $ipAddresses
+                            TTL            = $null
+                            DNSProvider    = "System.Net.Dns"
+                            ProviderType   = "System"
                             ProviderRegion = "Local"
-                            Reliability  = $null
-                            Timestamp    = Get-Date
-                            QueryMethod  = "GetHostEntry"
-                            ResourceName = $resourceName
-                            ResourceType = $resourceType
-                            Uri          = "https://$_"
-                            HostName     = $dnsResult.HostName
-                            IPAddress    = $dnsResult.AddressList
+                            Reliability    = $null
+                            Timestamp      = Get-Date
+                            QueryMethod    = "GetHostEntry"
+                            ResourceName   = $resourceName
+                            BaseResource   = $resourceTypeBase
+                            ResourceType   = $resourceType
+                            EndpointType   = $endpointType
+                            Uri            = "https://$_"
+                            HostName       = if ($dnsResult) { $dnsResult.HostName }
+                            IPAddress      = if ($dnsResult) { $dnsResult.AddressList }
+                            PrivateLink    = $isPrivateLink
+                            CNameTarget    = $cnameTarget
                         }
                         $results.Add($obj)
-                        
-                        # Add to found resources for immediate display
+
                         $foundMessage = "       $resourceName -> $ipAddresses [$resourceType]"
+                        if ($isPrivateLink) { $foundMessage = "$foundMessage [PrivateLink]" }
+                        if ($cnameTarget) { $foundMessage = "$foundMessage CNAME:$cnameTarget" }
                         $foundResources.Add($foundMessage)
                     }
                 }
-                catch [System.Net.Sockets.SocketException] {
+                catch {
                 }
             }
-            
+
+            # Cache results, including empty result sets, so
+            # repeated misses do not re-run the full enumeration.
+            if (-not $SkipCache) {
+                try {
+                    $resultsToCache = if ($results.Count -gt 0) {
+                        [array]$results
+                    }
+                    else {
+                        @()
+                    }
+
+                    Set-BlackCatCache -Key $cacheKey -Data $resultsToCache `
+                        -ExpirationMinutes $CacheExpirationMinutes `
+                        -CacheType 'General' -MaxCacheSize $MaxCacheSize `
+                        -CompressData:$CompressCache
+                    Write-Verbose "Cached Azure resource results for: $Name (expires in $CacheExpirationMinutes minutes)"
+                }
+                catch {
+                    Write-Verbose "Failed to cache results: $($_.Exception.Message)"
+                }
+            }
+
             # Display found resources immediately after parallel processing
             if ($foundResources.Count -gt 0) {
                 foreach ($message in $foundResources) {
@@ -218,14 +442,21 @@ function Find-AzurePublicResource {
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message $($_.Exception.Message) -Severity 'Error'
         }
     }
-    
+
     end {
         Write-Verbose "Function $($MyInvocation.MyCommand.Name) completed"
-        
+
+        $noResultsMessage = if ($PrivateLinkOnly) {
+            'No Azure Private Link resources found'
+        }
+        else {
+            'No public Azure resources found'
+        }
+
         if ($results -and $results.Count -gt 0) {
             Write-Host "`n Azure Resource Discovery Summary:" -ForegroundColor Magenta
             Write-Host "   Total Resources Found: $($results.Count)" -ForegroundColor Yellow
-            
+
             # Group by resource type for summary
             $resourceTypeCounts = $results | Group-Object ResourceType | Sort-Object Count -Descending
             foreach ($group in $resourceTypeCounts) {
@@ -237,12 +468,12 @@ function Find-AzurePublicResource {
                     "JSON" { return $results | ConvertTo-Json -Depth 3 }
                     "CSV" { return $results | ConvertTo-CSV }
                     "Object" { return $results }
-                    default  { return $results | Format-Table -AutoSize }
+                    "Table"  { return $results | Format-Table -AutoSize }
                 }
         }
         else {
-            Write-Host "`n No public Azure resources found" -ForegroundColor Red
-            Write-Information "No public Azure resources found" -InformationAction Continue
+            Write-Host "`n $noResultsMessage" -ForegroundColor Red
+            Write-Information $noResultsMessage -InformationAction Continue
         }
     }
 <#
@@ -250,7 +481,10 @@ function Find-AzurePublicResource {
     Finds publicly accessible Azure resources.
 
 .DESCRIPTION
-    Discovers publicly accessible Azure resources through DNS permutation and testing. Enumerates potential Azure resource names in specific patterns and tests each for public accessibility. Useful for identifying overlooked exposed resources and weak naming conventions.
+    Discovers Azure resource endpoints through DNS permutation and testing.
+    By default it enumerates publicly accessible Azure resources. When
+    PrivateLinkOnly is specified, it limits enumeration to Azure Private
+    Link endpoints.
 
 .PARAMETER Name
     The base name of the Azure resource to search for. Must match the pattern: starts and ends with an alphanumeric character, and may contain hyphens.
@@ -272,6 +506,31 @@ function Find-AzurePublicResource {
     - CSV: Returns results in CSV format
     Aliases: output, o
 
+.PARAMETER SkipCache
+    Bypasses the cache and forces a fresh DNS enumeration.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store results in cache before expiry.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (LRU eviction).
+    Default: 100
+
+.PARAMETER CompressCache
+    Enables compression of cached data to reduce memory usage.
+
+.PARAMETER PrivateLinkOnly
+    Limits DNS enumeration to Azure Private Link endpoint suffixes only.
+    This skips public Azure endpoint suffixes and is useful when searching
+    specifically for private endpoint naming patterns.
+
+.PARAMETER FastMode
+    Reduces the search scope to high-signal Azure endpoint suffixes only.
+    This improves runtime but may miss resources that only appear on less
+    common Azure service domains.
+
 .EXAMPLE
     Find-AzurePublicResource -Name "contoso" -WordList "./wordlist.txt" -ThrottleLimit 100 -OutputFormat JSON
 
@@ -283,12 +542,30 @@ function Find-AzurePublicResource {
 
     Searches for Azure resources and displays results in a formatted table.
 
+.EXAMPLE
+    Find-AzurePublicResource -Name "contoso" -PrivateLinkOnly
+
+    Searches only Azure Private Link DNS suffixes for resources matching
+    the name "contoso".
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "contoso" -FastMode
+
+    Searches a reduced, high-signal set of public Azure endpoint suffixes
+    for faster initial triage.
+
+.EXAMPLE
+    Find-AzurePublicResource -Name "contoso" -PrivateLinkOnly -FastMode
+
+    Searches a reduced, high-signal set of Azure Private Link endpoint
+    suffixes for faster private endpoint triage.
+
 
 
 .NOTES
-    - Requires PowerShell 7+ for parallel processing functionality
-    - Useful for reconnaissance and security assessments of Azure environments
-    - Only DNS names that successfully resolve are returned as results
+    - Requires PowerShell 7+ for parallel processing
+    - Only DNS names that successfully resolve are returned
+    - FastMode reduces endpoint suffixes for speed
 
 .LINK
     MITRE ATT&CK Tactic: TA0043 - Reconnaissance

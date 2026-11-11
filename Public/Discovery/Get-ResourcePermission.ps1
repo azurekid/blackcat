@@ -5,7 +5,7 @@ function Get-ResourcePermission {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [ValidatePattern('^[0-9a-fA-F-]{36}$', ErrorMessage = "It does not match expected pattern '{1}'")]
         [Alias('subscription-id')]
-        [string]$SubscriptionId,
+        [string[]]$SubscriptionId,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $false)]
         [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
@@ -38,13 +38,15 @@ function Get-ResourcePermission {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
         
         Write-Host " Starting Azure Resource Permission Analysis..." -ForegroundColor Green
         
         if ($SubscriptionId) {
-            Write-Host "   Scope: Specific Subscription = $SubscriptionId" -ForegroundColor Cyan
+            Write-Host "   Scope: Specific Subscription = $($SubscriptionId -join ', ')" -ForegroundColor Cyan
         }
         if ($ResourceGroupName) {
             Write-Host "   Filter: Resource Group = $ResourceGroupName" -ForegroundColor Cyan
@@ -65,29 +67,36 @@ function Get-ResourcePermission {
         try {
             Write-Verbose "Retrieving all resources for the current user context"
 
-            # Build a dynamic filter string based on provided parameters
-            $filterParts = @()
+            $queryParts = @(
+                'resources'
+            )
 
-            if ($SubscriptionId) {
-                $filterParts += "| where subscriptionId == '$SubscriptionId'"
-            }
             if ($ResourceGroupName) {
-                $filterParts += "| where resourceGroup == '$ResourceGroupName'"
+                $escapedResourceGroupName = $ResourceGroupName.Replace("'", "''")
+                $queryParts += "| where resourceGroup =~ '$escapedResourceGroupName'"
             }
             if ($ResourceType) {
-                $filterParts += "| where type == '$($ResourceType.ToLower())'"
+                $escapedResourceType = $ResourceType.ToLower().Replace("'", "''")
+                $queryParts += "| where type =~ '$escapedResourceType'"
             }
             if ($ResourceName) {
-                $filterParts += "| where name == '$ResourceName'"
+                $escapedResourceName = $ResourceName.Replace("'", "''")
+                $queryParts += "| where name =~ '$escapedResourceName'"
             }
 
-            if ($filterParts.Count -gt 0) {
-                $filterString = $filterParts -join ' '
-                $resources = Invoke-AzBatch -filter $filterString
-                Write-Verbose "Filter string: $filterString"
-            } else {
-                $resources = Invoke-AzBatch
+            $queryParts += '| project id, name, type, resourceGroup, subscriptionId'
+            $resourceQuery = $queryParts -join "`n"
+            Write-Verbose "Resource query: $resourceQuery"
+
+            $queryParams = @{
+                Query  = $resourceQuery
+                Silent = $true
             }
+            if ($SubscriptionId) {
+                $queryParams.SubscriptionId = $SubscriptionId
+            }
+
+            $resources = Invoke-AzBatch @queryParams
 
             if (-not $resources -or $resources.Count -eq 0) {
                 Write-Host " No resources found matching the specified criteria" -ForegroundColor Yellow
@@ -104,6 +113,9 @@ function Get-ResourcePermission {
 
             Write-Host "   Analyzing resource permissions across $($resources.Count) resources with $ThrottleLimit concurrent threads..." -ForegroundColor Cyan
             $resources | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $resourceId          = $_.id
                 $permissionType      = $using:PermissionType
                 $resourcePermissions = $using:resourcePermissions
@@ -122,7 +134,7 @@ function Get-ResourcePermission {
                 }
 
                 try {
-                    $permissions = (Invoke-RestMethod @permRequestParam).value
+                    $permissions = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @permRequestParam).value
 
                     if (-not $permissions -or $permissions.Count -eq 0) {
                         Write-Verbose "No permissions found for resource: $resourceId"
@@ -238,7 +250,7 @@ function Get-ResourcePermission {
         Validates user permissions on Azure resources.
 
     .DESCRIPTION
-Validates which Azure resources the authenticated user has write or action permissions on. This function tests the current user's effective permissions across Azure subscriptions and resources by attempting operations and capturing authorization responses. Useful for privilege discovery and identifying exploitable resource access.
+Tests the current user's effective write and action permissions across Azure subscriptions and resources by probing operations and capturing authorization responses.
     .PARAMETER SubscriptionId
         Optional. Specifies a specific subscription ID to check. If omitted, all accessible subscriptions are checked.
 

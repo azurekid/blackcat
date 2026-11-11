@@ -8,29 +8,21 @@ function Read-SASToken {
     )
 
     process {
-        #region common
-
-        Write-Output "[+] Start collection SAS Token information"
-
-        #Variables
         Add-Type -AssemblyName system.web
 
-        # Clean up input - remove leading ? if present
         $InputString = $InputString.TrimStart('?')
 
         # Auto-detect if input is a full URI or just a token
         if ($InputString -match '^https?://') {
-            # Input is a full URI - extract the token portion
             $storageUri = $InputString -split "\?"
             $baseUri = $storageUri[0]
             $tokenArray = $storageUri[1] -split '&'
-            Write-Verbose "[+] Detected full URI input"
+            Write-Verbose "Detected full URI input"
         }
         elseif ($InputString -match 'sv=') {
-            # Input is just a SAS token
             $tokenArray = $InputString -split '&'
             $baseUri = $null
-            Write-Verbose "[+] Detected SAS token input"
+            Write-Verbose "Detected SAS token input"
         }
         else {
             Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Invalid input: expected a SAS URI or SAS token containing 'sv=' parameter" -Severity 'Error'
@@ -42,96 +34,82 @@ function Read-SASToken {
             break
         }
 
-        $permissionList = New-Object System.Collections.ArrayList
-        $resourceList = New-Object System.Collections.ArrayList
-        $resourceTypes = New-Object System.Collections.ArrayList
-        $services = New-Object System.Collections.ArrayList
+        $resourceTypeMap = @{
+            's' = 'Service-level APIs'
+            'c' = 'Container-level APIs'
+            'o' = 'Object-level APIs'
+        }
+        $storageResourceMap = @{
+            'b'  = 'Blob'
+            'bv' = 'Blob version'
+            'bs' = 'Blob snapshot'
+            'c'  = 'Container'
+            'd'  = 'Directory'
+        }
+        $serviceMap = @{
+            'b' = 'Blob'
+            'q' = 'Queue'
+            't' = 'Table'
+            'f' = 'File'
+        }
+        $permissionMap = @{
+            'r' = 'Read'
+            'a' = 'Add'
+            'c' = 'Create'
+            'w' = 'Write'
+            'd' = 'Delete'
+            'x' = 'Delete Version'
+            'y' = 'Permanent Delete'
+            'l' = 'List'
+            't' = 'Tags'
+            'f' = 'Find'
+            'm' = 'Move'
+            'e' = 'Execute'
+            'o' = 'Ownership'
+            'P' = 'Permissions'
+            'i' = 'Set Immutability Policy'
+        }
 
         $tokenObjects = [ordered]@{}
-        
-        # Only add Storage Uri if we detected a full URI
         if ($baseUri) {
             $tokenObjects.'Storage Uri' = $baseUri
         }
 
-        Write-Verbose '[+] Processing token properties'
+        Write-Verbose "Processing SAS token properties"
         $tokenArray | ForEach-Object {
-            if ($_ -like "spr=*") { $tokenObjects.Protocol = ($_).substring(4) }
-            if ($_ -like "st=*") { $tokenObjects."Start Time" = ($_).substring(3) }
-            if ($_ -like "se=*") { $tokenObjects."Expiry Time" = ($_).substring(3) }
-            if ($_ -like "sv=*") { $tokenObjects."Service Version" = ($_).substring(3) }
-            if ($_ -like "sp=*") { $tokenObjects."Permissions" = ($_).substring(3) }
-            if ($_ -like "sip=*") { $tokenObjects."IP Address" = ($_).substring(4) }
+            if ($_ -like "spr=*") { $tokenObjects.Protocol = $_.substring(4) }
+            if ($_ -like "st=*")  { $tokenObjects."Start Time" = $_.substring(3) }
+            if ($_ -like "se=*")  { $tokenObjects."Expiry Time" = $_.substring(3) }
+            if ($_ -like "sv=*")  { $tokenObjects."Service Version" = $_.substring(3) }
+            if ($_ -like "sp=*")  { $tokenObjects."Permissions" = $_.substring(3) }
+            if ($_ -like "sip=*") { $tokenObjects."IP Address" = $_.substring(4) }
 
             if ($_ -like "sig=*") {
-                $tokenObjects."Signature" = ($_).substring(4)
+                $tokenObjects."Signature" = $_.substring(4)
                 $tokenObjects."Base64 Signature" = [System.Web.HttpUtility]::UrlDecode($tokenObjects."Signature")
             }
 
             if ($_ -like "srt=*") {
-                $tokenObjects."Resource Types" = ($_).substring(4)
+                $tokenObjects."Resource Types" = $_.substring(4)
                 $tokenObjects."Token Type" = 'Account-level SAS'
-
-                $tokenObjects."Resource Types".ToCharArray() | ForEach-Object {
-                    if ($_ -eq 's') { $resourceTypes += ('Service-level APIs') }
-                    if ($_ -eq 'c') { $resourceTypes += ('Container-level APIs') }
-                    if ($_ -eq 'o') { $resourceTypes += ('Object-level APIs') }
-                }
-
-                $tokenObjects."Resource Types" = $resourceTypes
-
+                $tokenObjects."Resource Types" = [string[]]($tokenObjects."Resource Types".ToCharArray() | ForEach-Object { $resourceTypeMap[$_.ToString()] })
             }
 
             if ($_ -like "sr=*") {
-                $tokenObjects."Storage Resource" = ($_).substring(3)
+                $tokenObjects."Storage Resource" = $_.substring(3)
                 $tokenObjects."Token Type" = 'user-level SAS'
-
-                $tokenObjects."Storage Resource".ToCharArray() | ForEach-Object {
-                    if ($_ -eq 'b') { $resourceList += ('Blob') }
-                    if ($_ -eq 'bv') { $resourceList += ('Blob version') }
-                    if ($_ -eq 'bs') { $resourceList += ('Blob snapshot') }
-                    if ($_ -eq 'c') { $resourceList += ('Container') }
-                    if ($_ -eq 'd') { $resourceList += ('Directory') }
-                }
-
-                $tokenObjects."Storage Resource" = $resourceList
+                $tokenObjects."Storage Resource" = [string[]]($tokenObjects."Storage Resource".ToCharArray() | ForEach-Object { $storageResourceMap[$_.ToString()] })
             }
 
             if ($_ -like "ss=*") {
-                $tokenObjects."Services" = ($_).substring(3)
-                Write-Verbose "[+] Processing Services"
-
-                $tokenObjects."Services".ToCharArray() | ForEach-Object {
-                    if ($_ -eq 'b') { $services += ('Blob') }
-                    if ($_ -eq 'q') { $services += ('Queue') }
-                    if ($_ -eq 't') { $services += ('Table') }
-                    if ($_ -eq 'f') { $services += ('File') }
-                }
-
-                $tokenObjects."Services" = $services
+                $tokenObjects."Services" = $_.substring(3)
+                Write-Verbose "Processing service types: $($tokenObjects.Services)"
+                $tokenObjects."Services" = [string[]]($tokenObjects."Services".ToCharArray() | ForEach-Object { $serviceMap[$_.ToString()] })
             }
 
             if ($_ -like "sp=*") {
-                Write-Verbose "[+] Processing Permissions"
-                $tokenObjects.Permissions.ToCharArray() | ForEach-Object {
-                    if ($_ -eq 'r') { $permissionList += ('Read') }
-                    if ($_ -eq 'a') { $permissionList += ('Add') }
-                    if ($_ -eq 'c') { $permissionList += ('Create') }
-                    if ($_ -eq 'w') { $permissionList += ('Write') }
-                    if ($_ -eq 'd') { $permissionList += ('Delete') }
-                    if ($_ -eq 'x') { $permissionList += ('Delete Version') }
-                    if ($_ -eq 'y') { $permissionList += ('Permanent Delete') }
-                    if ($_ -eq 'l') { $permissionList += ('List') }
-                    if ($_ -eq 't') { $permissionList += ('Tags') }
-                    if ($_ -eq 'f') { $permissionList += ('Find') }
-                    if ($_ -eq 'm') { $permissionList += ('Move') }
-                    if ($_ -eq 'e') { $permissionList += ('Execute') }
-                    if ($_ -eq 'o') { $permissionList += ('Ownership') }
-                    if ($_ -eq 'P') { $permissionList += ('Permissions') }
-                    if ($_ -eq 'i') { $permissionList += ('Set Immutability Policy') }
-                }
-
-                $tokenObjects."Permissions" = $permissionList
+                Write-Verbose "Processing permission flags: $($tokenObjects.Permissions)"
+                $tokenObjects."Permissions" = [string[]]($tokenObjects.Permissions.ToCharArray() | ForEach-Object { $permissionMap[$_.ToString()] })
             }
         }
         return $tokenObjects | ConvertTo-Json | ConvertFrom-Json

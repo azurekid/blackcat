@@ -144,7 +144,7 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
         $roleDefsUri = "https://management.azure.com$scope/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01"
         Write-Verbose "Fetching role definitions from: $roleDefsUri"
         
-        $roleDefinitionsResponse = Invoke-RestMethod -Uri $roleDefsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
+        $roleDefinitionsResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $roleDefsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
         $roleDefinitions = $roleDefinitionsResponse.value
         
         Write-Host "  Retrieved $($roleDefinitions.Count) role definitions" -ForegroundColor Green
@@ -227,7 +227,7 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
     } else {
         try {
             $subscriptionsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
-            $subscriptionsResponse = Invoke-RestMethod -Uri $subscriptionsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
+            $subscriptionsResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $subscriptionsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
             $subscriptions += $subscriptionsResponse.value.subscriptionId
             Write-Host "  Found $($subscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
         }
@@ -247,7 +247,7 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
             
             # Get role assignments for this subscription
             $roleAssignmentsUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
-            $roleAssignmentsResponse = Invoke-RestMethod -Uri $roleAssignmentsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
+            $roleAssignmentsResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $roleAssignmentsUri -Headers $script:authHeader -Method 'GET' -ErrorAction Stop
             $assignments = $roleAssignmentsResponse.value
             
             # Filter assignments to only those with matching role definitions
@@ -282,11 +282,11 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
     $principalGroups = $roleAssignments | Group-Object { $_.properties.principalType }
 
     foreach ($group in $principalGroups) {
-        $principalType = $group.Name
+        $assignmentPrincipalType = $group.Name
         $principalIds = $group.Group.properties.principalId | Select-Object -Unique
         
         # Skip groups if not requested
-        if ($principalType -eq 'Group' -and -not $IncludeGroups) {
+        if ($assignmentPrincipalType -eq 'Group' -and -not $IncludeGroups) {
             continue
         }
     }
@@ -294,10 +294,10 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
     foreach ($assignment in $roleAssignments) {
         $roleDefId = ($assignment.properties.roleDefinitionId -split '/')[-1]
         $principalId = $assignment.properties.principalId
-        $principalType = $assignment.properties.principalType
+        $assignmentPrincipalType = $assignment.properties.principalType
         
         # Skip groups if not requested
-        if ($principalType -eq 'Group' -and -not $IncludeGroups) {
+        if ($assignmentPrincipalType -eq 'Group' -and -not $IncludeGroups) {
             continue
         }
         
@@ -307,7 +307,7 @@ Identifies Azure RBAC roles containing specified permissions and returns all ass
         
         $result = [PSCustomObject]@{
             PrincipalId = $principalId
-            PrincipalType = $principalType
+            PrincipalType = $assignmentPrincipalType
             RoleName = $roleInfo.RoleName
             RoleDefinitionId = $roleDefId
             Scope = $assignment.properties.scope
@@ -399,8 +399,7 @@ function Test-PermissionMatch {
         $patternBase = $matches[1]
         $patternAction = $matches[2].ToLower()
         
-        # Reset $matches to avoid conflicts
-        $null = $Target -match '^(.+)/([^/]+)$'
+        [void]($Target -match '^(.+)/([^/]+)$')
         $targetBase = $matches[1]
         $targetAction = $matches[2].ToLower()
         
@@ -413,5 +412,4 @@ function Test-PermissionMatch {
     }    
     return $false
 }
-
 

@@ -31,15 +31,32 @@ function Find-PublicStorageContainer {
         [Parameter(Mandatory = $false)]
         [ValidateSet("Object", "JSON", "CSV")]
         [Alias("output", "o")]
-        [string]$OutputFormat
+        [string]$OutputFormat,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("no-cache", "bypass-cache")]
+        [switch]$SkipCache,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("cache-expiration", "expiration")]
+        [int]$CacheExpirationMinutes = 30,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("max-cache")]
+        [int]$MaxCacheSize = 100,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("compress")]
+        [switch]$CompressCache
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         Write-Host "Analyzing Azure Storage for: $StorageAccountName ($Type)" -ForegroundColor Green
 
         $validDnsNames = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-        $userAgent = ($sessionVariables.userAgents.agents | Get-Random).value
         $result = New-Object System.Collections.ArrayList
         
         $foundContainers = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
@@ -47,6 +64,30 @@ function Find-PublicStorageContainer {
 
     process {
         try {
+            # Generate cache key and check for cached results
+            $cacheParams = @{
+                StorageAccountName = $StorageAccountName
+                Type               = $Type
+            }
+            $cacheKey = ConvertTo-CacheKey `
+                -BaseIdentifier "Find-PublicStorageContainer" `
+                -Parameters $cacheParams
+
+            if (-not $SkipCache) {
+                try {
+                    $cachedResult = Get-BlackCatCache `
+                        -Key $cacheKey -CacheType 'General'
+                    if ($null -ne $cachedResult) {
+                        Write-Verbose "Retrieved results from cache for: $StorageAccountName"
+                        foreach ($item in $cachedResult) { [void]$result.Add($item) }
+                        return
+                    }
+                }
+                catch {
+                    Write-Verbose "Error retrieving from cache: $($_.Exception.Message). Proceeding with fresh queries."
+                }
+            }
+
             if ($WordList) {
                 Write-Host "  Loading permutations from word list..." -ForegroundColor Cyan
                 $permutations = [System.Collections.Generic.HashSet[string]](Get-Content $WordList)
@@ -96,24 +137,28 @@ function Find-PublicStorageContainer {
                 Write-Host "   Starting container enumeration for $totalContainers combinations..." -ForegroundColor Cyan
 
                 $validDnsNames | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $dns = $_
                     $permutations = $using:permutations
                     $result = $using:result
                     $includeEmpty = $using:IncludeEmpty
                     $IncludeMetadata = $using:IncludeMetadata
-                    $userAgent = $using:userAgent
                     $foundContainers = $using:foundContainers
 
                     $permutations | ForEach-Object -Parallel {
+                        $blackCatUserAgentState = $using:blackCatUserAgentState
+                        $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                        Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                         $dns = $using:dns
                         $result = $using:result
                         $includeEmpty = $using:IncludeEmpty
                         $IncludeMetadata = $using:IncludeMetadata
-                        $userAgent = $using:userAgent
                         $foundContainers = $using:foundContainers
 
                         $uri = "https://$dns/$_/?restype=container&comp=list"
-                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
+                        $response = Invoke-WebRequest -Uri $uri -Method GET -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -UseBasicParsing -SkipHttpErrorCheck
 
                         if ($response.StatusCode -eq 200) {
                             $hasContent = $response.Content -match '<Blob>'
@@ -166,7 +211,7 @@ function Find-PublicStorageContainer {
 
                             if ($shouldProcess -and $IncludeMetadata) {
                                 $metadataUri = "https://$dns/$_/?restype=container&comp=metadata"
-                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent $userAgent -UseBasicParsing -SkipHttpErrorCheck
+                                $metaResponse = Invoke-WebRequest -Uri $metadataUri -Method GET -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) -UseBasicParsing -SkipHttpErrorCheck
 
                                 $metaHeaders = @{}
                                 $metadataText = ""
@@ -200,6 +245,20 @@ function Find-PublicStorageContainer {
             }
             else {
                 Write-Host "    No valid storage accounts found" -ForegroundColor Red
+            }
+
+            # Cache results if any were found
+            if (-not $SkipCache -and $result -and $result.Count -gt 0) {
+                try {
+                    Set-BlackCatCache -Key $cacheKey -Data $result `
+                        -ExpirationMinutes $CacheExpirationMinutes `
+                        -CacheType 'General' -MaxCacheSize $MaxCacheSize `
+                        -CompressData:$CompressCache
+                    Write-Verbose "Cached results for: $StorageAccountName (expires in $CacheExpirationMinutes minutes)"
+                }
+                catch {
+                    Write-Verbose "Failed to cache results: $($_.Exception.Message)"
+                }
             }
         }
         catch {
@@ -240,7 +299,7 @@ function Find-PublicStorageContainer {
     Finds publicly accessible Azure Storage containers.
 
 .DESCRIPTION
-    Discovers public Azure Storage containers through account name enumeration and accessibility testing. Tests various storage account naming patterns and verifies public access. Useful for finding exposed data in storage services.
+    Discovers public Azure Storage containers through account name enumeration and accessibility testing.
 
 .PARAMETER StorageAccountName
     The base name of the Azure Storage account to check. Permutations will be generated based on this value.
@@ -267,7 +326,20 @@ function Find-PublicStorageContainer {
     - CSV: Returns results in CSV format
     Aliases: output, o
 
-.OUTPUTS
+.PARAMETER SkipCache
+    Bypasses the cache and forces a fresh scan.
+    Default: False (cache is used if available)
+
+.PARAMETER CacheExpirationMinutes
+    Number of minutes to store results in cache before expiry.
+    Default: 30 minutes
+
+.PARAMETER MaxCacheSize
+    Maximum number of entries to keep in the cache (LRU eviction).
+    Default: 100
+
+.PARAMETER CompressCache
+    Enables compression of cached data to reduce memory usage.
     System.Collections.ArrayList
     Returns an array list of PSCustomObject items, each representing a discovered public storage container with properties such as StorageAccountName, Container, FileCount, IsEmpty, Uri, and optionally Metadata.
 

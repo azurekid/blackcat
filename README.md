@@ -189,10 +189,36 @@ These functions test whether credentials and secrets are accessible to the curre
 |----------|-----------|---------|
 | `Get-KeyVaultSecret` | T1552.001 | Retrieve secrets from accessible Key Vaults |
 | `Get-StorageAccountKey` | T1552.001 | Extract storage account access keys |
+| `Get-ManagedIdentityToken` | T1528 | Extract bearer tokens from user-assigned managed identities (deploymentScripts) |
+| `Invoke-FederatedTokenExchange` | T1528 | Extract UAMI tokens via federated credential exchange (faster, no ACI) |
 
 ```powershell
 # Enumerate Key Vaults and attempt secret retrieval
 Get-KeyVaultSecret -OutputFormat JSON
+
+# Extract managed identity token (two approaches available)
+
+# Approach 1: Federated exchange (recommended — fast, ~20-30s, no ACI dependencies)
+Invoke-FederatedTokenExchange `
+    -Name "my-uami" `
+    -IssuerUrl "https://blackcatoidc.blob.core.windows.net/oidc" `
+    -Cleanup
+
+# Approach 2: Deployment scripts (120-180s, requires ACI capacity)
+Get-ManagedIdentityToken -Name "my-uami" -ResourceGroupName "rg-prod"
+```
+
+**Managed Identity Token Extraction:** BlackCat offers two techniques to extract bearer tokens from user-assigned managed identities (UAMIs):
+
+- **`Invoke-FederatedTokenExchange`** (recommended): Uses federated identity credentials with a pre-configured OIDC issuer. Fastest method (~20-30 seconds), no Azure Container Instances (ACI) required. [Setup guide](Attacks/Federated-Token-Exchange/Invoke-FederatedTokenExchange-Setup.md) available.
+- **`Get-ManagedIdentityToken`**: Uses `Microsoft.Resources/deploymentScripts` with ACI to invoke IMDS. Takes 120-180 seconds and requires ACI capacity (which may be exhausted in certain regions).
+
+For one-time setup of the federated exchange infrastructure:
+
+```powershell
+# Pure PowerShell — no az CLI or OpenSSL required
+Connect-AzAccount
+./Attacks/Federated-Token-Exchange/Setup-FederatedTokenExchange.ps1
 ```
 
 The output includes a summary showing successful reads, RBAC denials, and policy-blocked vaults, giving an instant risk picture of your secret management posture. Results are exported to a timestamped JSON file for evidence.
@@ -203,7 +229,7 @@ Persistence functions demonstrate how an attacker with sufficient privileges can
 
 | Function | Technique | Purpose |
 |----------|-----------|---------|
-| `Add-GroupObject` | T1098 | Add members or owners to Entra ID groups |
+| `Add-EntraGroupMember` | T1098 | Add members or owners to Entra ID groups |
 | `Add-StorageAccountSasToken` | T1098 | Generate SAS tokens for persistent storage access |
 | `Set-AdministrativeUnit` | T1098 | Manage administrative unit membership boundaries |
 | `Set-FederatedIdentity` | T1098.001 | Inject federated identity credentials on managed identities |
@@ -281,6 +307,7 @@ Helper functions provide the plumbing that powers every tactic-specific function
 |----------|---------|
 | `Invoke-StealthOperation` | Schedule API calls with configurable stealth timing patterns |
 | `Set-UserAgentRotation` | Configure user-agent rotation settings and intervals |
+| `Set-UserAgent` | Immediately draw a random user-agent from the configured list |
 | `Get-CurrentUserAgent` | Show the currently active user-agent string |
 | `Get-UserAgentStatus` | Display user-agent rotation status and configuration |
 
@@ -294,12 +321,63 @@ Helper functions provide the plumbing that powers every tactic-specific function
   -Country "UK" | ForEach-Object { Find-SubDomain -Domain $_ }
 
 # Enable user-agent rotation to prevent request correlation
-Set-UserAgentRotation -Enable
+Set-UserAgentRotation
+
+# Make a fresh random draw now (the previous value may be selected again)
+Set-UserAgent
 
 # Check the current user-agent and rotation status
 Get-CurrentUserAgent
 Get-UserAgentStatus
 ```
+
+`Set-UserAgent` atomically updates the current and legacy agent fields, timestamp,
+and resets the request count. It ignores null, whitespace and nonstring entries;
+an unusable list uses `Mozilla/5.0 (BlackCat Security Tool)`. It does not change
+rotation settings or a configured custom agent. A disabled fixed custom agent is
+restored by the next `Get-CurrentUserAgent` call. Otherwise the getter caches the
+selected agent until rotation is due, including initialization with rotation disabled.
+
+### Refreshing browser user agents
+
+Run `./scripts/Update-UserAgents.ps1` with PowerShell 7 to refresh both
+`Private/Reference/userAgents.json` and `support-files/userAgents.json` (downloaded
+by `Invoke-Update`). The weekly **Refresh stable browser user agents** GitHub
+Action also supports manual dispatch and proposes changes through a pull request.
+Enable **Allow GitHub Actions to create and approve pull requests** in repository
+settings for this workflow. No module-wide HTTP defaults are changed.
+
+The updater uses [Mozilla stable metadata](https://product-details.mozilla.org/1.0/firefox_versions.json),
+[Chrome VersionHistory](https://developer.chrome.com/docs/web-platform/versionhistory/reference)
+for currently serving Windows/macOS/Linux stable releases, and
+[Microsoft Edge stable metadata](https://edgeupdates.microsoft.com/api/products?view=enterprise).
+If Mozilla's endpoint is unavailable, it uses Mozilla's official production
+repository. If VersionHistory is unavailable, it uses recent
+[Chrome for Testing Stable metadata](https://github.com/GoogleChromeLabs/chrome-for-testing/blob/main/data/last-known-good-versions-with-downloads.json)
+only for platforms with published downloads; this fallback verifies a released
+Stable build, not its consumer rollout fraction.
+[Brave stable releases](https://github.com/brave/brave-browser/releases/latest)
+are matched to tagged Brave Core metadata for their own embedded Chromium version.
+It rejects missing or malformed metadata before writing either file, logs source
+URLs and versions, and respects [Chromium user-agent reduction](https://www.chromium.org/updates/ua-reduction/).
+Edge also uses [Microsoft's reduced desktop UA format](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/user-agent-guidance#user-agent-strings).
+Safari, ChromeOS, Opera and Vivaldi are retained with warnings until their
+stable releases and embedded engines can be independently verified.
+
+**Verified metadata (2026-10-12):**
+
+| Browser | Official metadata | Rendered UA version |
+|---------|-------------------|---------------------|
+| Firefox | [157.0.1, released 2026-10-09](https://github.com/mozilla-releng/product-details/blob/0c2803fd75a57f8262b20f8e30c83fbd993f496a/public/1.0/firefox_versions.json) | `157.0` |
+| Chrome | [Chrome for Testing Stable 155.0.8059.39](https://github.com/GoogleChromeLabs/chrome-for-testing/blob/df9c8fc89b8a9c9eacf1b5a747b3f0bf366fe21d/data/last-known-good-versions-with-downloads.json), timestamp 2026-10-11; Windows x64, macOS x64 and Linux x64 downloads verified | `155.0.0.0` |
+| Brave | [1.97.56, Chromium 155.0.8059.40](https://github.com/brave/brave-core/blob/b01cdf43be4b4d5559bf7e58229e666e24454f50/package.json) | `155.0.0.0`, no `Brave/` suffix |
+
+**Remaining verification limitation:** direct vendor endpoints could not be
+resolved in the implementation environment. Edge, Safari, ChromeOS, Opera and
+Vivaldi retain legacy private-list versions with corrected formats; they are
+**not** claimed to be current stable releases. Unverified values previously
+present in the support-file copy were removed. Run the updater in a
+network-enabled environment to verify and refresh Edge as well.
 
 `Invoke-StealthOperation` supports four delay patterns: `Random`, `Progressive`, `BusinessHours`, and `Exponential`. The BusinessHours mode is country-aware — it understands siesta patterns in Spain and Italy, long-work cultures in Japan and Korea, and standard 9-to-5 schedules across 13 country profiles. UserAgent rotation generates realistic browser signatures with platform-aware headers, preventing SOC analysts from correlating assessment traffic by user-agent string.
 

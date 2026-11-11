@@ -138,7 +138,7 @@ function Write-BlackCatLog {
 .DESCRIPTION
     The Write-BlackCatLog function provides standardized logging capabilities across the entire BlackCat module.
     It supports multiple log levels, optional file output, function context tracking, and can be used by any
-    BlackCat function for consistent logging behavior. The function handles errors gracefully and provides
+    BlackCat function for consistent logging behavior. The function handles errors by logging them as ERROR-level messages and provides
     both console output and file logging capabilities.
 
 .PARAMETER Message
@@ -158,11 +158,9 @@ function Write-BlackCatLog {
 
 .PARAMETER WriteHost
     Switch to write INFO and WARN messages to the host using Write-Host instead of Write-Verbose.
-    Useful for user-facing messages that should always be visible.
 
 .PARAMETER NoTimestamp
-    Switch to exclude timestamps from log entries. Useful for formatted output or when timestamps
-    are not needed.
+    Switch to exclude timestamps from log entries.
 
 .PARAMETER Color
     Console color for Write-Host output. Valid PowerShell colors. Defaults are:
@@ -199,11 +197,11 @@ function Write-BlackCatLog {
     Logs a fatal error that will be displayed prominently to the user.
 
 .NOTES
-    This function is designed to be used throughout the BlackCat module by any function that needs logging.
-    It provides consistent formatting, error handling, and supports both development debugging and user output.
+    Used throughout the BlackCat module by any function that needs logging.
+    Provides consistent formatting, error handling, and supports both development debugging and user output.
 
-    The function automatically detects the calling function name when not explicitly provided.
-    File I/O errors are handled gracefully to avoid disrupting the main operation.
+    The calling function name is auto-detected when not explicitly provided.
+    File I/O errors are logged rather than thrown.
 
     Log levels follow standard logging conventions:
     - TRACE: Most detailed, for tracing program flow

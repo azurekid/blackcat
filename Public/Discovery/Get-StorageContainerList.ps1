@@ -3,21 +3,15 @@ function Get-StorageContainerList {
     [OutputType([System.Collections.Generic.List[PSObject]])]
     param (
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceNameCompleterAttribute(
-            "Microsoft.Storage/StorageAccounts",
-            "ResourceGroupName"
-        )]
         [Alias('storageAccount', 'storage-account-name', 'storageAccountName')]
         [string[]]$Name,
 
     [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [Alias('resource-id')]
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceIdCompleter(
-            "Microsoft.storage/storageAccounts"
-        )][object]$Id,
+        [object]$Id,
 
 
-        [Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters.ResourceGroupCompleterAttribute()]
+        [Parameter(Mandatory = $false)]
         [Alias('rg', 'resource-group')]
         [string[]]$ResourceGroupName,
 
@@ -31,8 +25,8 @@ function Get-StorageContainerList {
     )
 
     begin {
-        [void] $ResourceGroupName #Only used to trigger the ResourceGroupCompleter
-
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function: $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat
 
@@ -45,15 +39,45 @@ function Get-StorageContainerList {
             Write-Verbose "Building payload for API request"
 
             if (!$($Name) -and !$Id) {
-                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts').id
+                $queryParts = @(
+                    'resources'
+                    "| where type =~ 'microsoft.storage/storageaccounts'"
+                )
+
+                if ($ResourceGroupName) {
+                    $resourceGroupNames = ($ResourceGroupName | ForEach-Object { "'$($_.Replace("'", "''"))'" }) -join ', '
+                    $queryParts += "| where resourceGroup in~ ($resourceGroupNames)"
+                }
+
+                $queryParts += '| project id'
+                $storageAccountQuery = $queryParts -join "`n"
+                $id = (Invoke-AzBatch -Query $storageAccountQuery -Silent).id
             } elseif ($($Name)) {
-                $id = (Invoke-AzBatch -ResourceType 'Microsoft.Storage/storageaccounts' -Name $($Name)).id
+                $queryParts = @(
+                    'resources'
+                    "| where type =~ 'microsoft.storage/storageaccounts'"
+                )
+
+                $storageAccountNames = ($Name | ForEach-Object { "'$($_.Replace("'", "''"))'" }) -join ', '
+                $queryParts += "| where name in~ ($storageAccountNames)"
+
+                if ($ResourceGroupName) {
+                    $resourceGroupNames = ($ResourceGroupName | ForEach-Object { "'$($_.Replace("'", "''"))'" }) -join ', '
+                    $queryParts += "| where resourceGroup in~ ($resourceGroupNames)"
+                }
+
+                $queryParts += '| project id'
+                $storageAccountQuery = $queryParts -join "`n"
+                $id = (Invoke-AzBatch -Query $storageAccountQuery -Silent).id
             } else {
                 $id = $Id
             }
 
 
             $id | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $authHeader = $using:script:authHeader
                 $result     = $using:result
                 $totalItems = $using:totalItems
@@ -81,7 +105,7 @@ function Get-StorageContainerList {
                 }
 
                 Write-Verbose "Sending API request"
-                $apiResponse = (Invoke-RestMethod @requestParam).responses.content.value
+                $apiResponse = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam).responses.content.value
                 Write-Verbose "API request completed successfully"
 
                 if ($using:PublicAccess) {

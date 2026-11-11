@@ -17,8 +17,22 @@ function Invoke-BlackCat {
     $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
 
     try {
-            $randomUserAgent = "BlackCat/$($manifest.ModuleVersion) PowerShell Client"
-            Write-Verbose "Using default user agent: $randomUserAgent"
+        # Detect if Az context changed since last
+        # token acquisition and invalidate cached state
+        if ($azProfile.Contexts.Count -ne 0) {
+            $currentAccountId = $azProfile.DefaultContext.Account.Id
+            if (
+                $script:SessionVariables.lastAccountId -and
+                $currentAccountId -ne
+                    $script:SessionVariables.lastAccountId
+            ) {
+                Write-Verbose (
+                    "Az context changed, " +
+                    "clearing cached tokens"
+                )
+                Clear-BlackCatAuthState
+            }
+        }
 
         # Check if we're using Connect-GraphToken authentication (graphHeader already set)
         # Only return early if we have BOTH a graph header AND a valid session access token (Connect-GraphToken case)
@@ -61,7 +75,6 @@ function Invoke-BlackCat {
             # Set the subscription from AzContext
             $script:SessionVariables.armUri  = 'https://management.azure.com'
             $script:SessionVariables.baseUri = "https://management.azure.com/subscriptions/$($script:SessionVariables.subscriptionId)"
-            $script:SessionVariables.UserAgent = $randomUserAgent
 
             $script:authHeader = @{
                 'Authorization' = 'Bearer ' + [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($($script:SessionVariables.AccessToken)))

@@ -21,13 +21,13 @@ function Invoke-FederatedTokenExchange {
         [string]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Azure', 'MSGraph', 'KeyVault', 'Storage', 'SQLDatabase', 'OSSDatabase')]
+        [ValidateSet('Azure', 'MSGraph', 'KeyVault', 'Storage', 'SQLDatabase', 'OSSDatabase', 'Monitor')]
         [Alias('resource', 'audience', 'aud')]
-        [string]$EndpointType = 'Azure',
+        [string]$EndpointType = 'MSGraph',
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [Alias('issuer')]
-        [string]$IssuerUrl,
+        [string]$IssuerUrl = 'https://blackcatoidc.blob.core.windows.net/oidc',
 
         [Parameter(Mandatory = $false)]
         [Alias('key', 'pem')]
@@ -74,6 +74,7 @@ function Invoke-FederatedTokenExchange {
             Storage     = 'https://storage.azure.com'
             SQLDatabase = 'https://database.windows.net'
             OSSDatabase = 'https://ossrdbms-aad.database.windows.net'
+            Monitor     = 'https://monitor.azure.com'
         }
         $resourceUrl = $endpoints[$EndpointType]
 
@@ -82,16 +83,67 @@ function Invoke-FederatedTokenExchange {
             $CredentialName = 'bc-fic-{0}' -f $suffix
         }
 
+        # Resolve short URL redirection if present
+        $baseIssuerUrl = $IssuerUrl.TrimEnd('/')
+        $resolvedIssuerUrl = $baseIssuerUrl
+
+        Write-Verbose "Resolving short URL redirection natively for: $baseIssuerUrl"
+        $maxHops = 5
+        $hop = 0
+        while ($hop -lt $maxHops) {
+            $hop++
+            try {
+                $resp = Invoke-WebRequest -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $resolvedIssuerUrl -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+            }
+            catch {
+                $resp = $null
+            }
+
+            $location = $null
+            if ($resp -and $resp.Headers) {
+                if ($resp.Headers.Location) {
+                    $location = $resp.Headers.Location
+                }
+                elseif ($resp.Headers['Location']) {
+                    $location = $resp.Headers['Location']
+                }
+            }
+
+            if ($location) {
+                if ($location -is [System.Collections.IEnumerable] -and $location -isnot [string]) {
+                    $location = @($location)[0]
+                }
+                if ($location -is [System.Uri]) {
+                    $location = $location.AbsoluteUri
+                }
+                $locationStr = $location.ToString().TrimEnd('/')
+                if ($locationStr -notmatch '^https?://') {
+                    $baseUri = [Uri]$resolvedIssuerUrl
+                    $resolvedIssuerUrl = [Uri]::new($baseUri, $locationStr).AbsoluteUri.TrimEnd('/')
+                }
+                else {
+                    $resolvedIssuerUrl = $locationStr
+                }
+                Write-Verbose "Successfully resolved short URL redirect to: $resolvedIssuerUrl"
+            }
+            else {
+                break
+            }
+        }
+        $IssuerUrl = $resolvedIssuerUrl
+
         # Auto-download private key from issuer URL if not provided locally
         if (-not $PrivateKeyPath) {
-            $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl.TrimEnd('/')
-            Write-Verbose "Downloading private key from: $keyUrl"
+            $keyUrl = '{0}/blackcat-oidc.pem' -f $IssuerUrl
+            Write-Verbose "Downloading private key asset payload from: $keyUrl"
+
             try {
-                $pemContent = Invoke-RestMethod -Uri $keyUrl -Method GET -ErrorAction Stop
+                # This request follows redirects naturally to download the true text payload
+                $pemContent = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $keyUrl -Method GET -ErrorAction Stop
                 Write-Verbose "Private key downloaded successfully"
             }
             catch {
-                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
+                Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to download private key content from $keyUrl : $($_.Exception.Message)" -Severity 'Error'
                 return
             }
         }
@@ -118,11 +170,11 @@ function Invoke-FederatedTokenExchange {
 
         if (-not $KeyId) {
             try {
-                $discUrl = '{0}/.well-known/openid-configuration' -f $IssuerUrl.TrimEnd('/')
+                $discUrl = '{0}/.well-known/openid-configuration' -f $IssuerUrl
                 $discoveryParams = @{ Uri = $discUrl; Method= 'GET' }
-                $disc = Invoke-RestMethod @discoveryParams
+                $disc = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @discoveryParams
                 $jwksParams = @{ Uri = $disc.jwks_uri; Method = 'GET' }
-                $jwks = Invoke-RestMethod @jwksParams
+                $jwks = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @jwksParams
                 $KeyId = $jwks.keys[0].kid
                 Write-Verbose "Auto-detected KeyId: $KeyId"
             }
@@ -131,8 +183,6 @@ function Invoke-FederatedTokenExchange {
                 return
             }
         }
-
-        $IssuerUrl = $IssuerUrl.TrimEnd('/')
     }
 
     process {
@@ -159,14 +209,14 @@ function Invoke-FederatedTokenExchange {
                 $uamiName = ($Id -split '/')[-1]
                 Write-Host "  Resolving identity: $uamiName" -ForegroundColor Cyan
                 $uamiUri = '{0}{1}?api-version=2023-01-31' -f $script:SessionVariables.armUri, $Id
+                
                 $uamiGetParams = @{
                     Uri       = $uamiUri
                     Headers   = $script:authHeader
                     Method    = 'GET'
-                    UserAgent = $script:SessionVariables.userAgent
                 }
                 try {
-                    $detail = Invoke-RestMethod @uamiGetParams
+                    $detail = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @uamiGetParams
                     $clientId = $detail.properties.clientId
                 }
                 catch {
@@ -189,19 +239,42 @@ function Invoke-FederatedTokenExchange {
                 $staleName = ($stale.name -split '/')[-1]
                 Write-Host "    Found existing FIC: $staleName (reusing)" -ForegroundColor Yellow
                 $CredentialName = $staleName
+                $reusingIdenticalFic = $true
             }
             else {
-                $ficResult = Set-FederatedIdentity -Id $Id -Name $CredentialName -Issuer $IssuerUrl -Subject $Subject -Confirm:$false
+                $params = @{
+                    Id             = $Id
+                    Name           = $CredentialName
+                    Issuer         = $IssuerUrl
+                    Subject        = $Subject
+                    Confirm        = $false
+                }
+                $ficResult = Set-FederatedIdentity @params
+                
                 if (-not $ficResult) {
                     Write-Message -FunctionName $MyInvocation.MyCommand.Name -Message "Failed to create FIC" -Severity 'Error'
                     $stats.ErrorCount++
                     return
                 }
+                $ficCreated = $true
             }
 
             Write-Host "    Subject: $Subject" -ForegroundColor White
-            Write-Host "  Waiting for FIC propagation..." -ForegroundColor Yellow
-            Start-Sleep -Seconds 15
+            
+            # Only wait for propagation if we created a new FIC
+            # Skip wait if reusing FIC with identical issuer + subject
+            if ($ficCreated) {
+                Write-Host "  Waiting for FIC propagation..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 15
+            }
+            elseif ($reusingIdenticalFic) {
+                Write-Host "  Skipping propagation wait (FIC already exists with same issuer + subject)" -ForegroundColor Green
+            }
+            else {
+                # Safety fallback: wait if state is uncertain
+                Write-Host "  Waiting for FIC propagation (safety)..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 15
+            }
 
             Write-Host "  Signing JWT assertion (RS256)..." -ForegroundColor Cyan
 
@@ -240,55 +313,45 @@ function Invoke-FederatedTokenExchange {
                 ContentType = 'application/x-www-form-urlencoded'
             }
 
-            # Retry loop for FIC propagation delays
             $maxRetries = 3
             for ($i = 1; $i -le $maxRetries; $i++) {
                 try {
-                    $tokenResponse = Invoke-RestMethod @tokenParams
+                    $tokenResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @tokenParams
                     break
                 }
                 catch {
                     $errBody = $null
                     if ($_.ErrorDetails.Message) {
                         try {
-                            $errBody = $_.ErrorDetails.Message |
-                                ConvertFrom-Json
+                            $errBody = $_.ErrorDetails.Message | ConvertFrom-Json
                         } catch { }
                     }
-                    $retryable = (
-                        $errBody.error_description -match
-                        'AADSTS7002(11|22|23)'
-                    )
-                    if ($retryable -and $i -lt $maxRetries) {
-                        $wait = 5 * $i
-                        Write-Host (
-                            "    FIC not propagated " +
-                            "(attempt $i/$maxRetries)" +
-                            ", retrying in ${wait}s..."
-                        ) -ForegroundColor Yellow
-                        Start-Sleep -Seconds $wait
-                        continue
+                    
+                    switch ($true) {
+                        # Retryable FIC propagation error with retries remaining
+                        {
+                            $errBody.error_description -match 'AADSTS7002(11|22|23)' -and 
+                            $i -lt $maxRetries
+                        } {
+                            $wait = 5 * $i
+                            Write-Host "    FIC not propagated (attempt $i/$maxRetries), retrying in ${wait}s..." -ForegroundColor Yellow
+                            Start-Sleep -Seconds $wait
+                            continue
+                        }
+                        # Error with structured error description
+                        { $errBody.error_description } {
+                            Write-Warning "Token exchange failed: $($errBody.error_description)"
+                            Write-Host "    Error: $($errBody.error)" -ForegroundColor Red
+                            Write-Host "    Correlation ID: $($errBody.correlation_id)" -ForegroundColor Gray
+                            break
+                        }
+                        # Fallback to exception message
+                        default {
+                            Write-Warning "Token exchange failed: $($_.Exception.Message)"
+                            break
+                        }
                     }
-                    if ($errBody.error_description) {
-                        Write-Warning (
-                            "Token exchange failed: " +
-                            "$($errBody.error_description)"
-                        )
-                        Write-Host (
-                            "    Error: " +
-                            "$($errBody.error)"
-                        ) -ForegroundColor Red
-                        Write-Host (
-                            "    Correlation ID: " +
-                            "$($errBody.correlation_id)"
-                        ) -ForegroundColor Gray
-                    }
-                    else {
-                        Write-Warning (
-                            "Token exchange failed: " +
-                            "$($_.Exception.Message)"
-                        )
-                    }
+                    
                     $stats.ErrorCount++
                     return
                 }

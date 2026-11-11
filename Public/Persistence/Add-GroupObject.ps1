@@ -1,6 +1,7 @@
 
-function Add-GroupObject {
+function Add-EntraGroupMember {
     [CmdletBinding(DefaultParameterSetName = 'ObjectId')]
+    [Alias('Add-GroupObject')]
     param (
         [Parameter(Mandatory = $true, ParameterSetName = 'ObjectId')]
         [string]$GroupObjectId,
@@ -104,7 +105,7 @@ function Add-GroupObject {
                 ErrorAction = 'SilentlyContinue'
             }
 
-            Invoke-RestMethod @requestParameters
+            Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParameters
 
             Write-Message -FunctionName $($MyInvocation.MyCommand.Name) -Message "$ObjectType with $ObjectId added to group with id $GroupObjectId." -Severity Information
         }
@@ -143,12 +144,12 @@ function Add-GroupObject {
     Specifies whether to add the object as an 'Owner' or 'Member' of the group. Default is 'Owner'.
 
 .EXAMPLE
-    Add-GroupObject -GroupObjectId "12345678-90ab-cdef-1234-567890abcdef" -UserPrincipalName "user@domain.com" -ObjectType "Member"
+    Add-EntraGroupMember -GroupObjectId "12345678-90ab-cdef-1234-567890abcdef" -UserPrincipalName "user@domain.com" -ObjectType "Member"
 
     Adds the user with the specified UserPrincipalName as a member to the specified group.
 
 .EXAMPLE
-    Add-GroupObject -GroupName "MyGroup" -ServicePrincipalId "abcdef12-3456-7890-abcd-ef1234567890" -ObjectType "Owner"
+    Add-EntraGroupMember -GroupName "MyGroup" -ServicePrincipalId "abcdef12-3456-7890-abcd-ef1234567890" -ObjectType "Owner"
 
     Adds the service principal as an owner to the group with a display name starting with "MyGroup".
 

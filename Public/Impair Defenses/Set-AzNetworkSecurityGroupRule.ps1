@@ -33,6 +33,8 @@ function Set-AzNetworkSecurityGroupRule {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         [void] $ResourceGroupName # Only used to trigger the ResourceGroupCompleter
 
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
@@ -50,6 +52,9 @@ function Set-AzNetworkSecurityGroupRule {
         }
 
         $id | ForEach-Object -Parallel {
+            $blackCatUserAgentState = $using:blackCatUserAgentState
+            $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+            Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
             try {
                 $authHeader = $using:script:authHeader
                 $nsgUrl = '{0}{1}?api-version={2}' -f $using:baseUri, $_, '2021-02-01'
@@ -58,10 +63,9 @@ function Set-AzNetworkSecurityGroupRule {
                     Headers = $authHeader
                     Uri     = $nsgUrl
                     Method  = 'GET'
-                    UserAgent = $using:sessionVariables.userAgent
                 }
 
-                $nsg = Invoke-RestMethod @requestParam
+                $nsg = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
 
                 $ruleName = "remote-management"
                 if ($nsg.properties.securityRules.name -notcontains $ruleName) {
@@ -89,9 +93,8 @@ function Set-AzNetworkSecurityGroupRule {
                         Headers     = $authHeader
                         Body        = ($nsg | ConvertTo-Json -Depth 10)
                         ContentType = "application/json"
-                        UserAgent   = $using:sessionVariables.userAgent
                     }
-                    Invoke-RestMethod @requestParam
+                    Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
                     Write-Verbose "Updated NSG successfully."
                 }
                 else {
@@ -112,7 +115,7 @@ function Set-AzNetworkSecurityGroupRule {
 Configures or updates a rule in an Azure Network Security Group (NSG).
 
 .DESCRIPTION
-Configures or updates security rules in Azure Network Security Groups to allow traffic on specified ports/IPs. Enables ingress rule creation or modification to bypass network-level access controls. Useful for establishing network-based persistence or enabling lateral movement channels.
+Configures or updates security rules in Azure Network Security Groups to allow traffic on specified ports and IP ranges.
 
 .PARAMETER Name
 Specifies the name(s) of the Network Security Group(s) to configure. This parameter supports pipeline input.

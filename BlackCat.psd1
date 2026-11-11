@@ -4,7 +4,7 @@
     RootModule        = 'BlackCat.psm1'
 
     # Version number of this module
-    ModuleVersion     = '1.2.0'
+    ModuleVersion     = '1.3.3'
 
     # ID used to uniquely identify this module
     GUID              = '767ce24a-f027-4e34-891f-f6246489dd61'
@@ -26,10 +26,15 @@
 
     FunctionsToExport = @(
         # Credential Access
+        'Get-ApiConnectionToken',
         'Get-KeyVaultSecret',
         'Get-ManagedIdentityToken',
         'Get-StorageAccountKey',
         'Invoke-FederatedTokenExchange',
+        'Invoke-LogicAppInjection',
+        'Invoke-ConnectorProxy',
+        'Get-AutomationCertificateKey',
+        'Get-EntraCertificateToken',
 
         # Discovery
         'Find-EntraPermissionHolder',
@@ -44,6 +49,7 @@
         'Get-ManagedIdentity',
         'Get-PrivilegedApp',
         'Get-PrivilegedServicePrincipal',
+        'Get-ApiConnection',
         'Get-ResourcePermission',
         'Get-RoleAssignment',
         'Get-ServicePrincipalCredential',
@@ -73,6 +79,7 @@
         'Read-SASToken',
         'Select-AzureContext',
         'Set-UserAgentRotation',
+        'Set-UserAgent',
         'Show-BlackCatCommands',
         'Update-AzureServiceTag',
         'Write-CacheTypeStats',
@@ -83,9 +90,11 @@
 
         # Initial Access
         'Connect-GraphToken',
+        'Connect-EntraApplication',
+        'Connect-ServicePrincipal',
 
         # Persistence
-        'Add-GroupObject',
+        'Add-EntraGroupMember',
         'Add-StorageAccountSasToken',
         'Set-AdministrativeUnit',
         'Set-AppRegistrationOwner',
@@ -104,8 +113,6 @@
 
         # Resource Development
         'Add-EntraApplication',
-        'Connect-EntraApplication',
-        'Connect-ServicePrincipal',
         'Copy-PrivilegedUser',
         'Restore-DeletedIdentity'
     )
@@ -129,13 +136,19 @@
         'Private\Get-AllPages.ps1',
         'Private\ConvertTo-Base64Url.ps1',
         'Private\ConvertFrom-AzAccessToken.ps1',
+        'Private\Clear-BlackCatAuthState.ps1',
         'Private\Use-BlackCatCache.ps1',
 
         # Credential Access
+        'Public\Credential Access\Get-ApiConnectionToken.ps1',
         'Public\Credential Access\Get-KeyVaultSecret.ps1',
         'Public\Credential Access\Get-ManagedIdentityToken.ps1',
         'Public\Credential Access\Get-StorageAccountKey.ps1',
         'Public\Credential Access\Invoke-FederatedTokenExchange.ps1',
+        'Public\Credential Access\Invoke-LogicAppInjection.ps1',
+        'Public\Credential Access\Invoke-ConnectorProxy.ps1',
+        'Public\Credential Access\Get-AutomationCertificateKey.ps1',
+        'Public\Credential Access\Get-EntraCertificateToken.ps1',
 
         # Discovery
         'Public\Discovery\Find-EntraPermissionHolder.ps1',
@@ -146,6 +159,7 @@
         'Public\Discovery\Get-PrivilegedServicePrincipal.ps1',
         'Public\Discovery\Get-ServicePrincipalCredential.ps1',
         'Public\Discovery\Get-ServicePrincipalsPermission.ps1',
+        'Public\Discovery\Get-ApiConnection.ps1',
         'Public\Discovery\Get-ResourcePermission.ps1',
         'Public\Discovery\Get-RoleAssignment.ps1',
         'Public\Discovery\Get-AdministrativeUnit.ps1',
@@ -180,6 +194,7 @@
         'Public\Helpers\Optimize-BlackCatCacheMemory.ps1',
         'Public\Helpers\Write-CacheTypeStats.ps1',
         'Public\Helpers\Set-UserAgentRotation.ps1',
+        'Public\Helpers\Set-UserAgent.ps1',
         'Public\Helpers\Get-CurrentUserAgent.ps1',
         'Public\Helpers\Get-UserAgentStatus.ps1',
 
@@ -189,7 +204,7 @@
 
         # Persistence
         'Public\Persistence\Add-StorageAccountSasToken.ps1',
-        'Public\Persistence\Add-GroupObject.ps1',
+        'Public\Persistence\Add-EntraGroupMember.ps1',
         'Public\Persistence\Set-AdministrativeUnit.ps1',
         'Public\Persistence\Set-AppRegistrationOwner.ps1',
         'Public\Persistence\Set-FederatedIdentity.ps1',
@@ -207,13 +222,13 @@
 
         # Initial Access
         'Public\Initial Access\Connect-GraphToken.ps1',
+        'Public\Initial Access\Connect-ServicePrincipal.ps1',
+        'Public\Initial Access\Connect-EntraApplication.ps1',
 
         # Resource Development
         'Public\Resource Development\Add-EntraApplication.ps1',
         'Public\Resource Development\Copy-PrivilegedUser.ps1',
         'Public\Resource Development\Restore-DeletedIdentity.ps1',
-        'Public\Resource Development\Connect-ServicePrincipal.ps1',
-        'Public\Resource Development\Connect-EntraApplication.ps1',
 
         # Module files
         'BlackCat.psd1',

@@ -1,8 +1,11 @@
 /WebApp/
 /Documentation/
 /Examples/
-/Tests/
+/Tests/*
+!/Tests/UpdateUserAgents.Tests.ps1
+/testResults.xml
 *.ps1x
 *.html
 *.txt
 *.bak
+Invoke-OllamaRecon.ps1
