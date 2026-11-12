@@ -30,7 +30,7 @@
 - [Getting Started](#getting-started)
 - [Conclusion](#conclusion)
 
-## Highlights
+## Highlights 
 
 - Functions are organised by **MITRE ATT&CK tactics**, making it straightforward to map assessments to real-world attack chains
 - Supports **three installation methods**: PSGallery, Git clone, and GitHub Codespaces with a pre-configured devcontainer
