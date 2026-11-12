@@ -4,7 +4,7 @@
 
 # CHANGELOG 
 
-## v1.3.3 [2026-10-12] — Explicit random user-agent selection
+## v1.3.3 [2026-10-12] — Explicit random user-agent selection 
 
 * Add atomic `Set-UserAgent` random selection and initialize disabled rotation from valid list entries.
 * Synchronize both user-agent lists and correct browser UA formats without inventing release versions.
