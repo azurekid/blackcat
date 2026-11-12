@@ -43,7 +43,7 @@ function Set-AppRegistrationOwner {
                 ContentType = 'application/json'
             }
 
-            Invoke-RestMethod @requestParameters
+            Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParameters
             Write-Verbose "Owner '$OwnerObjectId' added to App Registration '$AppId'."
         }
     }

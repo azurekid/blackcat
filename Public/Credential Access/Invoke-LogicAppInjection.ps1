@@ -165,7 +165,7 @@ function Invoke-LogicAppInjection {
                         -Uri       $getUri `
                         -Headers   $auth `
                         -Method    'GET' `
-                        -UserAgent $sv.userAgent
+                        -UserAgent (Get-CurrentUserAgent -IncrementCount)
 
                     # Snapshot for optional restore
                     $originalJson = $la |
@@ -440,7 +440,7 @@ function Invoke-LogicAppInjection {
                         -Method      'PUT' `
                         -Body        $putBody `
                         -ContentType 'application/json' `
-                        -UserAgent   $sv.userAgent | Out-Null
+                        -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
 
                     $stats.Injected++
                     Write-Host (
@@ -482,9 +482,9 @@ function Invoke-LogicAppInjection {
                                 -Uri       $cbUri `
                                 -Headers   $auth `
                                 -Method    'POST' `
-                                -UserAgent $sv.userAgent
+                                -UserAgent (Get-CurrentUserAgent -IncrementCount)
 
-                            Invoke-RestMethod `
+                            Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) `
                                 -Uri    $cb.value `
                                 -Method 'POST' | Out-Null
 
@@ -522,7 +522,7 @@ function Invoke-LogicAppInjection {
                             -Method      'PUT' `
                             -Body        $originalJson `
                             -ContentType 'application/json' `
-                            -UserAgent   $sv.userAgent | Out-Null
+                            -UserAgent (Get-CurrentUserAgent -IncrementCount) | Out-Null
 
                         $restored = $true
                         $stats.Restored++

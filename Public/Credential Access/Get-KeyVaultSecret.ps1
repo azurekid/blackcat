@@ -27,6 +27,8 @@ function Get-KeyVaultSecret {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose " Starting function $($MyInvocation.MyCommand.Name)"
         $MyInvocation.MyCommand.Name | Invoke-BlackCat -ResourceTypeName 'KeyVault'
 
@@ -55,6 +57,9 @@ function Get-KeyVaultSecret {
                 $generalErrorsBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
 
                 $VaultNames | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $vaultName = $_
                     $uri = 'https://{0}.vault.azure.net/secrets?api-version=7.3' -f $vaultName
 
@@ -62,11 +67,10 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = $uri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
-                        $apiResponse = Invoke-RestMethod @requestParam
+                        $apiResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
                         if ($apiResponse.value.Count -gt 0) {
                             Write-Host "    Found $($apiResponse.value.Count) secrets in vault: $vaultName" -ForegroundColor Green
                             foreach ($value in $apiResponse.value) {
@@ -126,6 +130,9 @@ function Get-KeyVaultSecret {
                 $generalErrorBag = [System.Collections.Concurrent.ConcurrentBag[int]]::new()
 
                 $SecretUris.id | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     $currentUri = $_
                     $vault = $currentUri.split('.')[0].Split('https://')[1]
                     $secretName = $currentUri.Split('/')[4]
@@ -134,11 +141,10 @@ function Get-KeyVaultSecret {
                         Headers = $using:AuthHeader
                         Uri     = '{0}/?api-version=7.4' -f $currentUri
                         Method  = 'GET'
-                        UserAgent = $using:sessionVariables.userAgent
                     }
 
                     try {
-                        $secretResponse = Invoke-RestMethod @requestParam
+                        $secretResponse = Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @requestParam
                         $currentItem = [PSCustomObject]@{
                             "KeyVaultName" = $vault
                             "SecretName"   = $secretName

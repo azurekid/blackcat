@@ -59,6 +59,8 @@ function Get-RoleAssignment {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
         
         # Only use MSGraph authentication if CurrentUser is specified
@@ -95,7 +97,6 @@ function Get-RoleAssignment {
 
         $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
         $subscriptions = @()
-        $randomUserAgent = $script:SessionVariables.userAgent
     }
 
     process {
@@ -164,7 +165,7 @@ function Get-RoleAssignment {
                     Method  = 'GET'
                 }
 
-                $retrievedSubscriptions = @((Invoke-RestMethod @requestParam).value.subscriptionId)
+                $retrievedSubscriptions = @((Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam).value.subscriptionId)
                 
                 Write-Host "   Found $($retrievedSubscriptions.Count) accessible subscriptions" -ForegroundColor Cyan
                 return $retrievedSubscriptions
@@ -183,7 +184,6 @@ function Get-RoleAssignment {
             param($CurrentUserFlag, $ObjectIdParam, $SubscriptionsParam, $PrincipalTypeParam, $IsCustomParam, $ExcludeCustomParam, $IncludeEligibleParam, $ThrottleLimitParam)
             
             $roleAssignmentsList = [System.Collections.Concurrent.ConcurrentBag[PSCustomObject]]::new()
-            $randomUserAgent = $script:SessionVariables.userAgent
             $baseUri = 'https://management.azure.com'
 
             try {
@@ -347,10 +347,12 @@ function Get-RoleAssignment {
                 Write-Host "   Retrieving PIM eligible role assignments..." -ForegroundColor Yellow
                 
                 $SubscriptionsParam | ForEach-Object -Parallel {
+                    $blackCatUserAgentState = $using:blackCatUserAgentState
+                    $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                    Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                     try {
                         $baseUri             = $using:baseUri
                         $authHeader          = $using:script:authHeader
-                        $userAgent           = $using:randomUserAgent
                         $roleAssignmentsList = $using:roleAssignmentsList
                         $ObjectId            = $using:ObjectId
                         $Groups              = $using:Groups
@@ -377,7 +379,6 @@ function Get-RoleAssignment {
                             Headers   = $authHeader
                             Method    = 'GET'
                             Uri       = $pimUri
-                            UserAgent = $userAgent
                         }
 
                         $pimResponse = @()
@@ -385,7 +386,7 @@ function Get-RoleAssignment {
                             foreach ($principalId in $principalIds) {
                                 $pimRequestParam.Uri = "$pimUri&`$filter=principalId eq '$principalId'"
                                 try {
-                                    $pimResponse += (Invoke-RestMethod @pimRequestParam).value
+                                    $pimResponse += (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @pimRequestParam).value
                                 }
                                 catch {
                                     Write-Verbose " No PIM eligible assignments found for principal $principalId in subscription $subscriptionId"
@@ -393,7 +394,7 @@ function Get-RoleAssignment {
                             }
                         } else {
                             try {
-                                $pimResponse += @(Invoke-RestMethod @pimRequestParam).value
+                                $pimResponse += @(Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @pimRequestParam).value
                             }
                             catch {
                                 Write-Verbose " No PIM eligible assignments found in subscription $subscriptionId or insufficient permissions"
@@ -427,13 +428,12 @@ function Get-RoleAssignment {
                                         Headers = $authHeader
                                         Uri     = $roleDefinitionsUri
                                         Method  = 'GET'
-                                        UserAgent = $userAgent
                                     }
 
                                     if (-not $ExcludeCustom) {
                                         Write-Verbose " Retrieving custom role definition for PIM assignment in subscription: $subscriptionId"
                                         try {
-                                            $roleName = (Invoke-RestMethod @roleDefinitionsRequestParam).properties.roleName
+                                            $roleName = (Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @roleDefinitionsRequestParam).properties.roleName
                                         }
                                         catch {
                                             $roleName = "Unknown Role"

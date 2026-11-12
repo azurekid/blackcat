@@ -257,7 +257,7 @@ function Copy-PrivilegedUser {
             
             $createUserBodyJson = $createUserBody | ConvertTo-Json
 
-            $newUserResponse = Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/users" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $createUserBodyJson
+            $newUserResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri "$($sessionVariables.graphUri)/users" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $createUserBodyJson
             
             $newUser = Get-EntraInformation -ObjectId $newUserResponse.id
             Write-Host "  New user created: $NewDisplayName ($NewUserPrincipalName)" -ForegroundColor Green
@@ -282,7 +282,7 @@ function Copy-PrivilegedUser {
                             } | ConvertTo-Json
 
                             try {
-                                Invoke-RestMethod -Uri "$($sessionVariables.graphUri)/roleManagement/directory/roleAssignments" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $roleAssignmentBody
+                                Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri "$($sessionVariables.graphUri)/roleManagement/directory/roleAssignments" -Headers $script:graphHeader -Method POST -ContentType "application/json" -Body $roleAssignmentBody
                                 Write-Host "   Assigned role: $($role.RoleName)" -ForegroundColor Green
                             }
                             catch {

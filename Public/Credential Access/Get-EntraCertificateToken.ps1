@@ -96,7 +96,7 @@ function Get-EntraCertificateToken {
     }
 
     try {
-        $response = Invoke-RestMethod -Uri $tokenUri -Method POST -Body $body -ContentType 'application/x-www-form-urlencoded'
+        $response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $tokenUri -Method POST -Body $body -ContentType 'application/x-www-form-urlencoded'
         Write-Host "[+] Token acquired successfully for $AppId" -ForegroundColor Green
 
         $tokenResult = [PSCustomObject]@{

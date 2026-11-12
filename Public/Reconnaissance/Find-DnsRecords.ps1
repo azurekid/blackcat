@@ -111,18 +111,6 @@ function Find-DnsRecords {
             "DNSPod" = @{ URL = "https://dns.pub/dns-query"; Region = "China/Global"; Type = "Commercial"; Reliability = 99.0 }
         }
 
-        # User agents - integrate with BlackCat module if available (replaces UseRandomUserAgent parameter)
-        if ($BlackCatAvailable -and $script:SessionVariables -and $script:SessionVariables.userAgents) {
-            Write-Verbose "Using BlackCat module user agents from session variables"
-            $UserAgents = $script:SessionVariables.userAgents.agents | ForEach-Object { $_.value }
-        } else {
-            Write-Verbose "Using built-in user agents (anonymous mode)"
-            $UserAgents = @(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.132 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.132 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
-            )
-        }
 
 
 
@@ -274,10 +262,9 @@ function Find-DnsRecords {
                             $QueryUrl = "$($Provider.URL)?name=$QueryDomain&type=$RecordType"
                             $Headers = @{ 
                                 "Accept" = "application/dns-json"
-                                "User-Agent" = ($UserAgents | Get-Random)
                             }
                             
-                            $Response = Invoke-RestMethod -Uri $QueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
+                            $Response = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $QueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
                             
                             # Debug output for CNAME queries
                             if ($DNSInfoLevel -eq "Detailed" -and $RecordType -eq "CNAME") {
@@ -291,7 +278,7 @@ function Find-DnsRecords {
                             if ($RecordType -eq "CNAME" -and -not $Response.Answer) {
                                 try {
                                     $DnssecQueryUrl = "$($Provider.URL)?name=$QueryDomain&type=$RecordType&do=true"
-                                    $DnssecResponse = Invoke-RestMethod -Uri $DnssecQueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
+                                    $DnssecResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $DnssecQueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
                                     
                                     if ($DnssecResponse.Answer) {
                                         $Response = $DnssecResponse
@@ -310,7 +297,7 @@ function Find-DnsRecords {
                                 if (-not $Response.Answer) {
                                     try {
                                         $AQueryUrl = "$($Provider.URL)?name=$QueryDomain&type=A"
-                                        $AResponse = Invoke-RestMethod -Uri $AQueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
+                                        $AResponse = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) -Uri $AQueryUrl -Headers $Headers -TimeoutSec $Config.Timeout -ErrorAction Stop
                                         
                                         if ($AResponse.Answer) {
                                             # Check if the A records point to CDN IPs (indicating CNAME flattening/proxying)

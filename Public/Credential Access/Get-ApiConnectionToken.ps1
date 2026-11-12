@@ -24,7 +24,7 @@ function Resolve-MiConnectionChain {
             -Uri       $laUri `
             -Headers   $Auth `
             -Method    'GET' `
-            -UserAgent $Sv.userAgent).value
+            -UserAgent (Get-CurrentUserAgent -IncrementCount)).value
     }
     catch {
         Write-Verbose "Could not list Logic Apps: $($_.Exception.Message)"
@@ -124,7 +124,7 @@ function Resolve-MiConnectionChain {
                     -Uri       $roleUri `
                     -Headers   $Auth `
                     -Method    'GET' `
-                    -UserAgent $Sv.userAgent).value
+                    -UserAgent (Get-CurrentUserAgent -IncrementCount)).value
 
                 foreach ($ra in $assignments) {
                     $roleParts = $ra.properties.roleDefinitionId `
@@ -143,7 +143,7 @@ function Resolve-MiConnectionChain {
                             -Uri       $roleNameUri `
                             -Headers   $Auth `
                             -Method    'GET' `
-                            -UserAgent $Sv.userAgent).properties.roleName
+                            -UserAgent (Get-CurrentUserAgent -IncrementCount)).properties.roleName
                     }
                     catch { $roleDefId }
 
@@ -354,7 +354,7 @@ function Get-ApiConnectionToken {
                         -Uri       $getUri `
                         -Headers   $auth `
                         -Method    'GET' `
-                        -UserAgent $sv.userAgent
+                        -UserAgent (Get-CurrentUserAgent -IncrementCount)
 
                     $props           = $conn.properties
                     $connectorId     = $props.api.name
@@ -464,7 +464,7 @@ function Get-ApiConnectionToken {
                             -Method      'POST' `
                             -Body        $body `
                             -ContentType 'application/json' `
-                            -UserAgent   $sv.userAgent
+                            -UserAgent (Get-CurrentUserAgent -IncrementCount)
                     }
                     catch {
                         $previewErr = if ($_.ErrorDetails.Message) {
@@ -489,7 +489,7 @@ function Get-ApiConnectionToken {
                             -Method      'POST' `
                             -Body        $body `
                             -ContentType 'application/json' `
-                            -UserAgent   $sv.userAgent
+                            -UserAgent (Get-CurrentUserAgent -IncrementCount)
                     }
 
                     # Normalise response across API version variants

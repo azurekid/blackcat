@@ -29,7 +29,7 @@ function Get-AllPages {
                     ContentType = 'application/json'
                 }
 
-                $apiResponse = (Invoke-RestMethod @requestParam)
+                $apiResponse = (Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @requestParam)
                 $allItems += $apiResponse.value
                 $nextLink = $apiResponse.'@odata.nextLink'
                 $pageCount++

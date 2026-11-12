@@ -35,6 +35,8 @@ function Get-PublicBlobContent {
     )
 
     begin {
+        $blackCatUserAgentState = $script:SessionVariables
+        $blackCatUserAgentProvider = ${function:Get-BlackCatUserAgent}.ToString()
         Write-Verbose "Starting function $($MyInvocation.MyCommand.Name)"
 
         # If StorageAccountName and ContainerName are provided, construct the BlobUrl
@@ -77,7 +79,7 @@ function Get-PublicBlobContent {
                 UseBasicParsing = $true
             }
 
-            $fileContent = Invoke-RestMethod @params
+            $fileContent = Invoke-RestMethod -UserAgent (Get-CurrentUserAgent -IncrementCount) @params
 
             if ($BlobUrl -match '^(https?://[^/]+)/([^/?]+)') {
                 $matchResults = $matches
@@ -125,6 +127,9 @@ function Get-PublicBlobContent {
             Write-Host "Starting parallel downloads with throttle limit of 100..." -ForegroundColor Cyan
             
             $fileMatches | ForEach-Object -Parallel {
+                $blackCatUserAgentState = $using:blackCatUserAgentState
+                $blackCatUserAgentProvider = $using:blackCatUserAgentProvider
+                Set-Item -Path Function:Get-BlackCatUserAgent -Value ([scriptblock]::Create($blackCatUserAgentProvider))
                 $fileName         = $_.Groups[1].Value
                 $versionId        = $_.Groups[2].Value
                 $isCurrentVersion = $_.Groups[3].Value -eq 'true'
@@ -157,7 +162,7 @@ function Get-PublicBlobContent {
                 }
 
                 try {
-                    Invoke-RestMethod @params
+                    Invoke-RestMethod -UserAgent (Get-BlackCatUserAgent -State $blackCatUserAgentState -IncrementCount) @params
                     Write-Information "Downloaded: $fileName" -InformationAction Continue
                 }
                 catch {

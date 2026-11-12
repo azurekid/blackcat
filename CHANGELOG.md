@@ -4,6 +4,18 @@
 
 # CHANGELOG
 
+## v1.3.3 [2026-10-12] — Explicit random user-agent selection
+
+* Add atomic `Set-UserAgent` random selection and initialize disabled rotation from valid list entries.
+* Synchronize both user-agent lists and correct browser UA formats without inventing release versions.
+* Add official stable metadata refresh tooling and a weekly/manual pull-request workflow.
+* Verify Firefox and Brave through official GitHub metadata and Chrome through published Chrome for Testing Stable builds; remaining browsers retain legacy versions pending verification.
+
+## 2026-10-08 — User-Agent rotation consistency
+
+* Resolve the User-Agent immediately before HTTP attempts and share rotation state across parallel batch requests.
+* Add test coverage for User-Agent rotation across request paths.
+
 ## v1.2.21 [2026-02-06] 🔌 Connector Proxy & OAuth Pipeline
 
 _Adds `Invoke-ConnectorProxy` and completes the three-function API connection pipeline_
