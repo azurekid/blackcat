@@ -2,6 +2,9 @@ name: GitHub Audit Logging
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/logging
 
 permissions:
   contents: read
