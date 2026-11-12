@@ -2,7 +2,7 @@
 
 ![logo](/.github/media/cateye.png?raw=true)
 
-# CHANGELOG
+# CHANGELOG 
 
 ## v1.3.3 [2026-10-12] — Explicit random user-agent selection
 
